@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'textmgmt.apps.TextmgmtConfig',
+    'recordingmgmt.apps.RecordingmgmtConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
