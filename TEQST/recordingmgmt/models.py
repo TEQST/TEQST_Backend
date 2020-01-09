@@ -1,3 +1,7 @@
 from django.db import models
 
-# Create your models here.
+class TextRecording(models.Model):
+    pass
+
+class SenctenceRecording(models.Model):
+    pass
