@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+import teqst.settings
+#import .utils
 
 
 class Folder(models.Model):
@@ -16,6 +18,8 @@ class Folder(models.Model):
     
     def save(self, *args, **kwargs):
         # TODO if not exists yet: create actual Folder
+        if not self.pk:
+            pass
         super().save(*args, **kwargs)
     
     def delete(self, *args, **kwargs):
