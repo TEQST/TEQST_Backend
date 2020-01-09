@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-import teqst.settings
+from django.conf import settings
 #import .utils
 
 
@@ -9,7 +9,7 @@ class Folder(models.Model):
     # maybe useful:
     # limit_choices_to={'groups__name': 'Publisher'}
     # TODO rethink on_delete
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='folder')  
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='folder')  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
 
     # this method is useful for the shell and for the admin view
@@ -28,7 +28,7 @@ class Folder(models.Model):
 
 
 class SharedFolder(Folder):
-    speaker = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sharedfolder')
+    speaker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sharedfolder')
 
     # __str__() is inherited
 
