@@ -1,7 +1,9 @@
 from django.db import models
-from django.contrib.auth.models import User
+#from django.contrib.auth.models import User
 from django.conf import settings
-#import .utils
+from .utils import folder_path
+import os
+import shutil
 
 
 class Folder(models.Model):
@@ -17,13 +19,22 @@ class Folder(models.Model):
         return self.name
     
     def save(self, *args, **kwargs):
-        # TODO if not exists yet: create actual Folder
-        if not self.pk:
-            pass
+        path = folder_path(self)
+        if not self.pk:  # if folder is newly created
+            os.makedirs(path)  # maybe mkdir works as well
+            # maybe catch exceptions
+        else:  # object already exists
+            f_old = Folder.objects.get(id=self.id)
+            path_f_old = folder_path(f_old)
+            if not os.path.exists(path_f_old):  # if object exists, but not actual folder
+                os.makedirs(path_f_old)
+            if f_old.name != self.name:  # if name changed
+                os.rename(path_f_old, path)
         super().save(*args, **kwargs)
     
     def delete(self, *args, **kwargs):
-        # TODO do not delete actual folder. Except maybe if it is empty.
+        # TODO maybe this is desired, maybe not.
+        shutil.rmtree(folder_path(self))
         super().delete(*args, **kwargs)
 
 

@@ -1,4 +1,4 @@
-import teqst.settings as settings
+from django.conf import settings
 import os
 
 
