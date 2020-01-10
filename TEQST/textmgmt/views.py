@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from .serializers import FolderSerializer, SharedFolderSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer
+from .models import Folder, SharedFolder, Text
 from rest_framework import generics, mixins
 
 # Create your views here.
