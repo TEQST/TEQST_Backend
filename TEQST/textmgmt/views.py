@@ -72,3 +72,4 @@ class TextListView(generics.ListCreateAPIView):
 class TextDetailedView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Text.objects.all()
     serializer_class = TextFullSerializer
+    # TODO make fields sharedfolder, textfile read only; add field content (callable)

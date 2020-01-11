@@ -32,7 +32,7 @@ class TextFullSerializer(serializers.ModelSerializer):
     class Meta:
         model = Text
         # TODO adjust fields
-        fields = ['id', 'title', 'shared_folder', 'sentences_count', 'sentences', 'textfile']
+        fields = ['id', 'title', 'shared_folder', 'sentences_count', 'textfile']
         read_only_fields = ['sentences_count', 'sentences']
 
 

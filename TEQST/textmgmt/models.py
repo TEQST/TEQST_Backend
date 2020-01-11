@@ -1,7 +1,7 @@
 from django.db import models
 #from django.contrib.auth.models import User
 from django.conf import settings
-from .utils import folder_path
+from .utils import folder_path, folder_relative_path, sentence_count
 import os
 import shutil
 
@@ -35,11 +35,24 @@ class Folder(models.Model):
     def delete(self, *args, **kwargs):
         # TODO maybe this is desired, maybe not.
         shutil.rmtree(folder_path(self))
+        # does not work if the folder is not there
         super().delete(*args, **kwargs)
+    
+    def is_shared_folder(self):
+        return hasattr(self, 'sharedfolder')
+
+    def make_shared_folder(self):
+        #Check for folder having no children is required:
+        # len(self.subfolder.all()) == 0
+        if self.is_shared_folder():
+            return self
+        sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
+        sf.save()
+        return sf
 
 
 class SharedFolder(Folder):
-    speaker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sharedfolder')
+    speaker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sharedfolder', null=True, blank=True)
 
     # __str__() is inherited
 
@@ -48,16 +61,21 @@ class SharedFolder(Folder):
         # TODO create other necessary stuff like temp folders etc.
         super().save(*args, **kwargs)
 
+    def get_path(self):
+        # TODO implement
+        return folder_relative_path(self)
 
-def upload_path():
-    # TODO implement
-    pass
+
+def upload_path(instance, filename):
+    path = instance.shared_folder.get_path() + '/' + filename
+    return path
 
 
 class Text(models.Model):
     title = models.CharField(max_length=30)
     sentences_count = models.IntegerField(null=True)
-    sentences = models.TextField(null=True)
+    # sentences = models.TextField(null=True)
+    # sentences can be replaced. A file read can easily be done from within the model
     shared_folder = models.ForeignKey(SharedFolder, on_delete=models.CASCADE, related_name='text')
     textfile = models.FileField(upload_to=upload_path)
 
@@ -66,4 +84,10 @@ class Text(models.Model):
     
     def save(self, *args, **kwargs):
         # TODO open file, fill fields sentences, sentences_count, close file
+        if not self.pk:
+            count = 1
+            self.textfile.open('r')
+            for line in self.textfile:
+                count += 1
+            self.sentences_count = int(count / 2)
         super().save(*args, **kwargs)
