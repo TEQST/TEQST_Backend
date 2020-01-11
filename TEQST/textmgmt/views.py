@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .serializers import FolderSerializer, SharedFolderSerializer
+from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer
 from .models import Folder, SharedFolder, Text
 from rest_framework import generics, mixins
@@ -9,7 +9,7 @@ from rest_framework import generics, mixins
 
 class FolderListView(generics.ListCreateAPIView):
     queryset = Folder.objects.all()
-    serializer_class = FolderSerializer
+    serializer_class = FolderFullSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -17,11 +17,14 @@ class FolderListView(generics.ListCreateAPIView):
             #if parent is a sharedfolder: error message
             return Folder.objects.filter(parent=self.request.query_params['parent'], owner=user.pk)
         return Folder.objects.filter(parent=None, owner=user.pk)
+    
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin):
     queryset = Folder.objects.all()
-    serializer_class = FolderSerializer
+    serializer_class = FolderBasicSerializer
 
     # not sure if this is really necessary
     def get_queryset(self):
@@ -73,3 +76,8 @@ class TextDetailedView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Text.objects.all()
     serializer_class = TextFullSerializer
     # TODO make fields sharedfolder, textfile read only; add field content (callable)
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return TextFullSerializer
+        return TextBasicSerializer

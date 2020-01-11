@@ -1,7 +1,7 @@
 from django.db import models
 #from django.contrib.auth.models import User
 from django.conf import settings
-from .utils import folder_path, folder_relative_path, sentence_count
+from .utils import folder_path, folder_relative_path
 import os
 import shutil
 
@@ -91,3 +91,7 @@ class Text(models.Model):
                 count += 1
             self.sentences_count = int(count / 2)
         super().save(*args, **kwargs)
+    
+    def get_content(self):
+        self.textfile.open('r')
+        return self.textfile.read()
