@@ -22,18 +22,29 @@ class CustomUser(AbstractUser):
     language = models.ManyToManyField(Language, blank=True)
 
     #Below is not core funcionality
-    tag_usage = models.ManyToManyField(Tag, through='Usage', related_name='Publisher', blank=True)
-    tag_coloring = models.ManyToManyField(Tag, through='Customization', related_name='Einsprecher', blank=True)
+    #TODO maybe move tag_usage to Tag class to allow limit_choices_to publisher
+    tag_usage = models.ManyToManyField(Tag, through='Usage', related_name='publisher', blank=True)
+    tag_coloring = models.ManyToManyField(Tag, through='Customization', related_name='speaker', blank=True)
 
+    def get_meaning(self, tag, language):
+        usage = Usage.objects.get(publisher=self, tag=tag, language=language)
+        return usage.meaning
+
+    def get_color(self, tag):
+        customization_set = Customization.objects.filter(speaker=self, tag=tag)
+        if len(customization_set) == 0:
+            return tag.default_color
+        return customization_set[0].custom_color
 
 class Usage(models.Model):
     #TODO maybe limit_choices_to publisher if it works properly
     publisher = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
+    language = models.ForeignKey(Language, on_delete=models.CASCADE)
     meaning = models.CharField(max_length=200)
 
 class Customization(models.Model):
-    einsprecher = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     custom_color = models.CharField(max_length=10)
 
