@@ -9,7 +9,7 @@ class FolderSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Folder
-        fields = ['id', 'name', 'owner', 'parent']
+        fields = ['id', 'name', 'owner', 'parent', 'subfolder']
         read_only_fields = ['subfolder']
 
 
@@ -32,7 +32,7 @@ class TextFullSerializer(serializers.ModelSerializer):
     class Meta:
         model = Text
         # TODO adjust fields
-        fields = ['id', 'title', 'shared_folder', 'textfile']
+        fields = ['id', 'title', 'shared_folder', 'sentences_count', 'sentences', 'textfile']
         read_only_fields = ['sentences_count', 'sentences']
 
 
