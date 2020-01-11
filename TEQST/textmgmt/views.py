@@ -4,7 +4,10 @@ from .serializers import TextBasicSerializer, TextFullSerializer
 from .models import Folder, SharedFolder, Text
 from rest_framework import generics, mixins
 
-# Create your views here.
+################################
+# important todos:
+# - the get_queryset method from textlistview
+################################
 
 
 class FolderListView(generics.ListCreateAPIView):
