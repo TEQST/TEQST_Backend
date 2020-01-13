@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .forms import CustomUserChangeForm
-from .models import CustomUser, Language, Tag
+from .models import CustomUser, Language, Tag, Usage, Customization
 
 class CustomUserAdmin(UserAdmin):
     form = CustomUserChangeForm
@@ -13,3 +13,5 @@ class CustomUserAdmin(UserAdmin):
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Language)
 admin.site.register(Tag)
+admin.site.register(Usage)
+admin.site.register(Customization)

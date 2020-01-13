@@ -43,6 +43,9 @@ class Usage(models.Model):
     language = models.ForeignKey(Language, on_delete=models.CASCADE)
     meaning = models.CharField(max_length=200)
 
+    def __str__(self):
+        return "by " + self.publisher.__str__() + " for " + self.tag.__str__() + " in " + self.language.__str__()
+
 class Customization(models.Model):
     speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
