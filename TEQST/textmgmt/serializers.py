@@ -44,6 +44,7 @@ class SharedFolderSerializer(serializers.ModelSerializer):
     class Meta:
         model = SharedFolder
         fields = ['id', 'name', 'owner', 'parent', 'speaker']
+        read_only_fields = ['owner', 'parent']
 
 
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):

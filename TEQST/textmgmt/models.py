@@ -52,7 +52,8 @@ class Folder(models.Model):
 
 
 class SharedFolder(Folder):
-    speaker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sharedfolder', null=True, blank=True)
+    # "null has no effect"
+    speaker = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='sharedfolder', null=True, blank=True)
 
     # __str__() is inherited
 
@@ -64,6 +65,8 @@ class SharedFolder(Folder):
     def get_path(self):
         # TODO implement
         return folder_relative_path(self)
+    
+    # maybe override delete() to not call shutil.rmtree()
 
 
 def upload_path(instance, filename):
