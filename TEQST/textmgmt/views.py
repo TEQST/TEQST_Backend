@@ -48,13 +48,15 @@ class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mix
         return self.destroy(request, *args, **kwargs)
 
 
-class SharedFolderView(generics.ListAPIView):
+class SharedFolderByPublisherView(generics.ListAPIView):
     queryset = SharedFolder.objects.all()
     serializer_class = SharedFolderSerializer
 
     def get_queryset(self):
+        # TODO test if this works
         user = self.request.user
-        return SharedFolder.objects.filter(speaker=user.pk)
+        shares_folders = SharedFolder.objects.filter(speaker=user.pk)
+        return shares_folders.filter(owner=self.kwargs['pub_pk'])
 
 
 class TextListView(generics.ListCreateAPIView):

@@ -58,13 +58,13 @@ class TextFullSerializer(serializers.ModelSerializer):
     to be used by view: TextDetailedView, TextListView
     for: opening a text, creation of a text
     """
-    content = serializers.CharField(source='get_content', read_only=True)
+    content = serializers.ListField(source='get_content', child=serializers.DictField(), read_only=True)
     shared_folder = SharedFolderPKField()
     class Meta:
         model = Text
         # TODO maybe make the textfile write only
-        fields = ['id', 'title', 'shared_folder', 'sentences_count', 'content', 'textfile']
-        read_only_fields = ['sentences_count', 'sentences']
+        fields = ['id', 'title', 'shared_folder', 'content', 'textfile']
+        read_only_fields = ['content']
 
 
 class TextBasicSerializer(serializers.ModelSerializer):

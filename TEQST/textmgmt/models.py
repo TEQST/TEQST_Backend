@@ -73,7 +73,7 @@ def upload_path(instance, filename):
 
 class Text(models.Model):
     title = models.CharField(max_length=30)
-    sentences_count = models.IntegerField(null=True)
+    # sentences_count = models.IntegerField(null=True)
     # sentences = models.TextField(null=True)
     # sentences can be replaced. A file read can easily be done from within the model
     shared_folder = models.ForeignKey(SharedFolder, on_delete=models.CASCADE, related_name='text')
@@ -84,14 +84,25 @@ class Text(models.Model):
     
     def save(self, *args, **kwargs):
         # TODO open file, fill fields sentences, sentences_count, close file
-        if not self.pk:
-            count = 1
-            self.textfile.open('r')
-            for line in self.textfile:
-                count += 1
-            self.sentences_count = int(count / 2)
+        # if not self.pk:
+        #     count = 1
+        #     self.textfile.open('r')
+        #     for line in self.textfile:
+        #         count += 1
+        #     self.sentences_count = int(count / 2)
         super().save(*args, **kwargs)
     
     def get_content(self):
+        content = []
+        count = -1
         self.textfile.open('r')
-        return self.textfile.read()
+        for line in self.textfile:
+            count += 1
+            if count % 2 != 0:
+                continue
+            s = {}
+            s['s_num'] = count // 2
+            s['content'] = line
+            content.append(s)
+        self.textfile.close()
+        return content
