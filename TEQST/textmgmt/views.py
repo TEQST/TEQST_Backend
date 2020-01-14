@@ -7,6 +7,7 @@ from rest_framework import generics, mixins
 ################################
 # important todos:
 # - the get_queryset method from textlistview
+# - test if sharedfolderbypublisherview works
 ################################
 
 

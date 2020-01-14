@@ -3,13 +3,15 @@ from .models import Folder, SharedFolder, Text
 
 ################################
 # important todos:
+# - sharedfolder speaker add/rem
 ################################
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
+        # TODO sharedfolders should not be allowed to be parent folders for other folders
         user = self.context['request'].user
-        queryset = Folder.objects.filter(owner=user)
+        queryset = Folder.objects.filter(owner=user, sharedfolder=None)
         return queryset
 
 
@@ -50,7 +52,7 @@ class SharedFolderSerializer(serializers.ModelSerializer):
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
-        queryset = SharedFolder.objects.filter(owner=user)
+        queryset = Folder.objects.filter(owner=user, subfolder=None)
         return queryset
 
 
