@@ -27,6 +27,10 @@ class FolderListView(generics.ListCreateAPIView):
 
 
 class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin):
+    """
+    Update Mixin: Folder name change
+    Delete Mixin: Folder deletion
+    """
     queryset = Folder.objects.all()
     serializer_class = FolderBasicSerializer
 

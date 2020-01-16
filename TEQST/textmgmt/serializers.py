@@ -4,6 +4,7 @@ from .models import Folder, SharedFolder, Text
 ################################
 # important todos:
 # - sharedfolder speaker add/rem
+# - add folder name change functionality
 ################################
 
 
@@ -34,7 +35,7 @@ class FolderBasicSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Folder
-        fields = ['id', 'name']
+        fields = ['id']  # add 'name' for folder name change
 
 
 class SharedFolderSerializer(serializers.ModelSerializer):
