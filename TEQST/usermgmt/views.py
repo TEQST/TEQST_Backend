@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .serializers import UserFullSerializer, UserBasicSerializer
+from .serializers import UserFullSerializer, UserBasicSerializer, UserRegisterSerializer
 from .models import CustomUser
 from rest_framework import generics, mixins
 
@@ -11,3 +11,8 @@ class UserListView(generics.ListAPIView):
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserFullSerializer
+
+class UserRegisterView(generics.CreateAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserRegisterSerializer
+    permission_classes = []
