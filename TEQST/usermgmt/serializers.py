@@ -34,3 +34,14 @@ class UserBasicSerializer(serializers.ModelSerializer):
         depth = 1
         fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages']
         read_only_fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages']
+
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    """
+    Used for user ceration. Maybe this serializer can be integrated in another serializer later on.
+    Other fields should probably be added.
+    """
+    class Meta:
+        model = CustomUser
+        fields = ['username', 'password']
+        extra_kwargs = {'password': {'write_only': True, 'required': True}}

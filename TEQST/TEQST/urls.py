@@ -17,7 +17,11 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import urls
 
+version = 1
+version_str = 'v' + str(version) + '/'
+
 urlpatterns = [
+    path('api/' + version_str, include('textmgmt.urls')),
     path('admin/', admin.site.urls),
     path('api/', include('usermgmt.urls'))
 ]
