@@ -40,16 +40,22 @@ class Folder(models.Model):
             sf = self.sharedfolder
             sf.name = self.name
             sf.save()
-    
+    '''
     def delete(self, *args, **kwargs):
         # TODO maybe this is desired, maybe not.
         if not isinstance(self, SharedFolder):
             shutil.rmtree(folder_path(self))
         # does not work if the folder is not there
         super().delete(*args, **kwargs)
-    
+    '''
     def is_shared_folder(self):
         return hasattr(self, 'sharedfolder')
+
+    def get_filesystem_name(self):
+        name = str(self.name)
+        if self.is_shared_folder():
+            name += '_' + str(self.id)
+        return name
 
     def make_shared_folder(self):
         #Check for folder having no children is required:
@@ -76,8 +82,6 @@ class SharedFolder(Folder):
     def get_path(self):
         # TODO implement
         return folder_relative_path(self)
-    
-    # maybe override delete() to not call shutil.rmtree()
 
 
 def upload_path(instance, filename):
