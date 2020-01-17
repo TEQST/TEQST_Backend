@@ -63,7 +63,7 @@ class TextFullSerializer(serializers.ModelSerializer):
     to be used by view: TextDetailedView, TextListView
     for: opening a text, creation of a text
     """
-    content = serializers.ListField(source='get_content', child=serializers.DictField(), read_only=True)
+    content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
     shared_folder = SharedFolderPKField()
     class Meta:
         model = Text

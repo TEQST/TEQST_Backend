@@ -120,9 +120,6 @@ class Text(models.Model):
             count += 1
             if count % 2 != 0:
                 continue
-            s = {}
-            s['s_num'] = count // 2
-            s['content'] = line
-            content.append(s)
+            content.append(line)
         self.textfile.close()
         return content
