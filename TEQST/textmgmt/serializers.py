@@ -21,7 +21,7 @@ class FolderFullSerializer(serializers.ModelSerializer):
     to be used by view: FolderListView
     for: Folder creation, subfolder list retrieval
     """
-    parent = FolderPKField()
+    parent = FolderPKField(allow_null=True)
     class Meta:
         model = Folder
         fields = ['id', 'name', 'owner', 'parent', 'subfolder']
@@ -35,7 +35,8 @@ class FolderBasicSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Folder
-        fields = ['id']  # add 'name' for folder name change
+        fields = ['id', 'name']
+        read_only_fields = ['name']  # remove 'name' for folder name change
 
 
 class SharedFolderSerializer(serializers.ModelSerializer):

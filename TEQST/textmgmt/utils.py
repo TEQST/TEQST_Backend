@@ -6,7 +6,7 @@ def folder_relative_path(folder):
     dirs = []
     user = str(folder.owner.username)
     while folder != None:  # go through the folders
-        dirs.append(str(folder.get_filesystem_name()))
+        dirs.append(str(folder.name))
         folder = folder.parent
     dirs.append(user)
     dirs.reverse()
