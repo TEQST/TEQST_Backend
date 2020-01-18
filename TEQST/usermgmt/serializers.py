@@ -3,10 +3,11 @@ from .models import CustomUser, Language
 
 class LanguageSerializer(serializers.ModelSerializer):
 
+    id = serializers.IntegerField(read_only = False)
+
     class Meta():
         model = Language
         fields = ['id', 'english_name', 'native_name', 'short']
-        read_only_fields = fields
 
 class UserFullSerializer(serializers.ModelSerializer):
 
@@ -18,12 +19,12 @@ class UserFullSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'username']
 
     def update(self, instance, validated_data):
-        language_data = validated_data.pop('languages')
+        languages_data = validated_data.pop('languages', instance.languages)
         instance = super().update(instance, validated_data)
-        #instance.languages.clear()
-        #for language_data_item in language_data:
-        #    language = Language.objects.get(id = language_data_item['id'])
-        #    instance.languages.add(language)
+        instance.languages.clear()
+        for language_data in languages_data:
+            language = Language.objects.get(**language_data)
+            instance.languages.add(language)
         return instance
         
 
