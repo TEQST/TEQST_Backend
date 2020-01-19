@@ -19,7 +19,7 @@ class UserFullSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'username']
 
     def update(self, instance, validated_data):
-        languages_data = validated_data.pop('languages', instance.languages)
+        languages_data = validated_data.pop('languages')
         instance = super().update(instance, validated_data)
         instance.languages.clear()
         for language_data in languages_data:
@@ -34,7 +34,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
         model = CustomUser
         depth = 1
         fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages']
-        read_only_fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages']
+        read_only_fields = fields
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
