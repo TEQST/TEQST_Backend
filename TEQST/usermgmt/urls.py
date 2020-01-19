@@ -4,7 +4,7 @@ from .views import UserListView, UserDetailedView, UserRegisterView, LanguageVie
 
 urlpatterns = [
     path('users/', UserListView.as_view()),
-    path('users/<int:pk>/', UserDetailedView.as_view()),
+    path('user/', UserDetailedView.as_view()),
     path('langs/', LanguageView.as_view()),
     path('auth/register/', UserRegisterView.as_view()),
     #path('auth/login/', GetAuthToken.as_view())

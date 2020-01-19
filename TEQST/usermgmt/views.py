@@ -15,6 +15,9 @@ class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserFullSerializer
 
+    def get_object(self):
+        return self.request.user
+
 class LanguageView(generics.ListAPIView):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
