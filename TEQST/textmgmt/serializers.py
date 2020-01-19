@@ -21,7 +21,7 @@ class FolderFullSerializer(serializers.ModelSerializer):
     to be used by view: FolderListView
     for: Folder creation, subfolder list retrieval
     """
-    parent = FolderPKField()
+    parent = FolderPKField(allow_null=True)
     class Meta:
         model = Folder
         fields = ['id', 'name', 'owner', 'parent', 'subfolder']
@@ -35,19 +35,20 @@ class FolderBasicSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Folder
-        fields = ['id']  # add 'name' for folder name change
+        fields = ['id', 'name']
+        read_only_fields = ['name']  # remove 'name' for folder name change
 
 
 class SharedFolderSerializer(serializers.ModelSerializer):
     # TODO add read only field of path (callable)
     """
-    to be used by view: SharedFolderListView, FolderDetailedView
+    to be used by view: SharedFolderListView, maybe also speaker change by Pub
     for: SharedFolder list retrieval in speaker view, edit (e.g. speaker set) by publisher
     """
     class Meta:
         model = SharedFolder
         fields = ['id', 'name', 'owner', 'parent', 'speaker']
-        read_only_fields = ['owner', 'parent']
+        read_only_fields = ['name', 'owner', 'parent']
 
 
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
@@ -62,7 +63,7 @@ class TextFullSerializer(serializers.ModelSerializer):
     to be used by view: TextDetailedView, TextListView
     for: opening a text, creation of a text
     """
-    content = serializers.ListField(source='get_content', child=serializers.DictField(), read_only=True)
+    content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
     shared_folder = SharedFolderPKField()
     class Meta:
         model = Text
