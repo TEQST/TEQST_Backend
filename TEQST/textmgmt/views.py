@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderSerializer
+from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderListSerializer, SharedFolderSpeakerSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer
 from .models import Folder, SharedFolder, Text
 from rest_framework import generics, mixins
@@ -8,6 +8,7 @@ from rest_framework import generics, mixins
 # important todos:
 # - the get_queryset method from textlistview
 # - test if sharedfolderbypublisherview works
+# - implement view for 'api/publishers/'
 ################################
 
 
@@ -55,13 +56,22 @@ class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mix
 
 class SharedFolderByPublisherView(generics.ListAPIView):
     queryset = SharedFolder.objects.all()
-    serializer_class = SharedFolderSerializer
+    serializer_class = SharedFolderListSerializer
 
     def get_queryset(self):
         # TODO test if this works
         user = self.request.user
         shares_folders = SharedFolder.objects.filter(speaker=user.pk)
         return shares_folders.filter(owner=self.kwargs['pub_pk'])
+
+
+class SharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
+    """
+    use: retrieve and update the speakers of a shared folder
+    """
+    queryset = SharedFolder.objects.all()
+    serializer_class = SharedFolderSpeakerSerializer
+
 
 
 class TextListView(generics.ListCreateAPIView):

@@ -1,9 +1,9 @@
 from rest_framework import serializers
 from .models import Folder, SharedFolder, Text
+from usermgmt.models import CustomUser
 
 ################################
 # important todos:
-# - sharedfolder speaker add/rem
 # - add folder name change functionality
 ################################
 
@@ -22,10 +22,13 @@ class FolderFullSerializer(serializers.ModelSerializer):
     for: Folder creation, subfolder list retrieval
     """
     parent = FolderPKField(allow_null=True)
+    is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
+    # is_sharedfolder in the sense that there exists a Sharedfolder object 
+    # with the same pk as this Folder 
     class Meta:
         model = Folder
-        fields = ['id', 'name', 'owner', 'parent', 'subfolder']
-        read_only_fields = ['owner', 'subfolder']
+        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
+        read_only_fields = ['owner', 'subfolder', 'is_sharedfolder']
 
 
 class FolderBasicSerializer(serializers.ModelSerializer):
@@ -39,16 +42,29 @@ class FolderBasicSerializer(serializers.ModelSerializer):
         read_only_fields = ['name']  # remove 'name' for folder name change
 
 
-class SharedFolderSerializer(serializers.ModelSerializer):
+class SharedFolderListSerializer(serializers.ModelSerializer):
     # TODO add read only field of path (callable)
     """
-    to be used by view: SharedFolderListView, maybe also speaker change by Pub
-    for: SharedFolder list retrieval in speaker view, edit (e.g. speaker set) by publisher
+    to be used by view: SharedFolderListView
+    for: SharedFolder list retrieval in speaker view
     """
+    path = serializers.CharField(read_only=True, source='get_path')
     class Meta:
         model = SharedFolder
-        fields = ['id', 'name', 'owner', 'parent', 'speaker']
-        read_only_fields = ['name', 'owner', 'parent']
+        fields = ['id', 'name', 'owner', 'path']
+        read_only_fields = ['name', 'owner', 'path']  # is path neede in read_only_fields?
+
+
+class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: 
+    for: sharedfolder speaker retrieval and update
+    """
+    speaker = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), many=True, allow_null=True)
+    class Meta:
+        model = SharedFolder
+        fields = ['id', 'name', 'speaker']
+        depth = 1
 
 
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):

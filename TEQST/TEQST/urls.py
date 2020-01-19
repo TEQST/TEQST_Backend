@@ -21,9 +21,9 @@ version = 1
 version_str = 'v' + str(version) + '/'
 
 urlpatterns = [
-    path('api/' + version_str, include('textmgmt.urls')),
-    path('admin/', admin.site.urls),
-    path('api/', include('usermgmt.urls'))
+    path('api/', include('textmgmt.urls')),
+    path('api/', include('usermgmt.urls')),
+    path('admin/', admin.site.urls)
 ]
 
 urlpatterns += [
