@@ -11,6 +11,13 @@ class UserListView(generics.ListAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserBasicSerializer
 
+    def get_queryset(self):
+        if 'query' in self.request.query_params:
+            name_pre = self.request.query_params['query']
+            return CustomUser.objects.filter(username__startswith=name_pre)
+        else:
+            return CustomUser.objects.all()
+
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserFullSerializer
