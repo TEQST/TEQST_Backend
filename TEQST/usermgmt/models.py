@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from .utils import EDU_CHOICES
 
 class Language(models.Model):
     native_name = models.CharField(max_length=50)
@@ -19,7 +20,7 @@ class Tag(models.Model):
 class CustomUser(AbstractUser):
     gender = models.CharField(max_length=20, null=True, blank=True)
     date_of_birth = models.DateField(blank=True, null=True)
-    education = models.CharField(max_length=50, blank=True, null=True)
+    education = models.CharField(max_length=50, blank=True, null=True, choices=EDU_CHOICES)
     languages = models.ManyToManyField(Language, blank=True)
 
     #Below is not core funcionality
