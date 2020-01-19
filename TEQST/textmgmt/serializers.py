@@ -42,13 +42,13 @@ class FolderBasicSerializer(serializers.ModelSerializer):
 class SharedFolderSerializer(serializers.ModelSerializer):
     # TODO add read only field of path (callable)
     """
-    to be used by view: SharedFolderListView, FolderDetailedView
+    to be used by view: SharedFolderListView, maybe also speaker change by Pub
     for: SharedFolder list retrieval in speaker view, edit (e.g. speaker set) by publisher
     """
     class Meta:
         model = SharedFolder
         fields = ['id', 'name', 'owner', 'parent', 'speaker']
-        read_only_fields = ['owner', 'parent']
+        read_only_fields = ['name', 'owner', 'parent']
 
 
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
