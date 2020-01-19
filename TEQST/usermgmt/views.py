@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .serializers import UserFullSerializer, UserBasicSerializer, LanguageSerializer, UserRegisterSerializer
+from .serializers import UserFullSerializer, UserBasicSerializer, PublisherSerializer, LanguageSerializer, UserRegisterSerializer
 from .models import CustomUser, Language
 from rest_framework import generics, mixins
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -17,6 +17,24 @@ class UserListView(generics.ListAPIView):
             return CustomUser.objects.filter(username__startswith=name_pre)
         else:
             return CustomUser.objects.all()
+
+
+class PublisherListView(generics.ListAPIView):
+    """
+    use: get list of publishers who own sharedfolders shared with request.user
+    """
+    queryset = CustomUser.objects.all()
+    serializer_class = PublisherSerializer
+
+    def get_queryset(self):
+        """
+        does not check for is_publisher. this should not be necessary
+        """
+        pub_pks = []
+        user = self.request.user
+        for shf in user.sharedfolder.all():
+            pub_pks.append(shf.owner.pk)
+        return CustomUser.objects.filter(pk__in = pub_pks)
 
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CustomUser.objects.all()

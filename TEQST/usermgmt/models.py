@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group
 from .utils import EDU_CHOICES
 
 class Language(models.Model):
@@ -37,6 +37,11 @@ class CustomUser(AbstractUser):
         if len(customization_set) == 0:
             return tag.default_color
         return customization_set[0].custom_color
+    
+    # is this ever needed?
+    def is_publisher(self):
+        p = Group.objects.get(name='Publisher')
+        return p in self.groups.all()
 
 class Usage(models.Model):
     #TODO maybe limit_choices_to publisher if it works properly

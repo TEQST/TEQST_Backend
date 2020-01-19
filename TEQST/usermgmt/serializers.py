@@ -37,6 +37,17 @@ class UserBasicSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class PublisherSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PublisherListView
+    for: retrieval of list of publishers, who own sharedfolders shared with request.user
+    """
+    class Meta:
+        model = CustomUser
+        # remove id for production
+        fields = ['id', 'username']
+
+
 class UserRegisterSerializer(serializers.ModelSerializer):
     """
     Used for user ceration. Maybe this serializer can be integrated in another serializer later on.
@@ -44,7 +55,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = CustomUser
-        fields = ['username', 'password']
+        # languages still need to be added
+        fields = ['username', 'password', 'education', 'gender', 'date_of_birth']
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
     
     def create(self, validated_data):
