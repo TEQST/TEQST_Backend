@@ -98,6 +98,7 @@ class TextDetailedView(generics.RetrieveUpdateDestroyAPIView):
     # TODO make fields sharedfolder, textfile read only; add field content (callable)
 
     def get_serializer_class(self):
+        # TODO using BasicSerializer should not be necessary
         if self.request.method == 'GET':
             return TextFullSerializer
         return TextBasicSerializer
