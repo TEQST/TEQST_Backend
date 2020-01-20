@@ -8,6 +8,7 @@ class LanguageSerializer(serializers.ModelSerializer):
     class Meta():
         model = Language
         fields = ['id', 'english_name', 'native_name', 'short']
+        read_only_fields = ['english_name', 'native_name', 'short']
 
 class UserFullSerializer(serializers.ModelSerializer):
 

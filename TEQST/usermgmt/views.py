@@ -30,6 +30,7 @@ class PublisherListView(generics.ListAPIView):
         """
         does not check for is_publisher. this should not be necessary
         """
+        # CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         pub_pks = []
         user = self.request.user
         for shf in user.sharedfolder.all():
@@ -37,7 +38,7 @@ class PublisherListView(generics.ListAPIView):
         return CustomUser.objects.filter(pk__in = pub_pks)
 
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = CustomUser.objects.all()
+    #queryset = CustomUser.objects.all()
     serializer_class = UserFullSerializer
 
     def get_object(self):
@@ -64,5 +65,5 @@ class GetAuthToken(ObtainAuthToken):
         response = super(GetAuthToken, self).post(request, *args, **kwargs)
         token = Token.objects.get(key=response.data['token'])
         user = CustomUser.objects.get(id=token.user_id)
-        user_serializer = UserBasicSerializer(user, many=False)
+        user_serializer = UserFullSerializer(user, many=False)
         return Response({'token': token.key, 'user': user_serializer.data})
