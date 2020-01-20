@@ -115,7 +115,7 @@ class Text(models.Model):
     
     def save(self, *args, **kwargs):
         # TODO a sharedfolder must have been created
-        # TODO maybe move to serializer/view, so shared_folder ca be set to SharedFolder
+        # TODO maybe move to serializer/view, so shared_folder can be set to SharedFolder
         self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
     
