@@ -57,18 +57,24 @@ class Folder(models.Model):
     def get_filesystem_name(self):
         name = str(self.name)
         if self.is_shared_folder():
-            name += '_' + str(self.id)
+            name += '__' + str(self.id)
         return name
+    
+    def get_path(self):
+        # TODO implement
+        return folder_relative_path(self)
 
     def make_shared_folder(self):
-        #Check for folder having no children is required:
-        # len(self.subfolder.all()) == 0
-        if isinstance(self, SharedFolder):
-            return self
         if self.is_shared_folder():
             return self.sharedfolder
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
+        # create actual folders:
+        sf_path = 'media/' + sf.get_path() + '__' + str(self.id)
+        os.makedirs(sf_path + '/STM')
+        os.mkdir(sf_path + '/AudioData')
+        os.mkdir(sf_path + '/TempAudio')
+        open(sf_path + '/log.txt', 'w').close()
         return sf
 
 
@@ -81,11 +87,10 @@ class SharedFolder(Folder):
         # actual folder is created in super method
         # TODO upon creation create other necessary stuff like temp folders etc.
         super().save(*args, **kwargs)
-
-    def get_path(self):
-        # TODO implement
-        return folder_relative_path(self)
     
+    def make_shared_folder(self):
+        return self
+
     # Idea: override delete method and rename actual folder to ..._deleted
     # or sth similar to let people know that is has been deleted.
 
