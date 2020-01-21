@@ -2,7 +2,8 @@ from django.shortcuts import render
 from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderListSerializer, SharedFolderSpeakerSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer
 from .models import Folder, SharedFolder, Text
-from .permissions import IsTextOwnerPermission
+from usermgmt.permissions import IsPublisher
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, mixins
 
 ################################
@@ -16,6 +17,7 @@ from rest_framework import generics, mixins
 class FolderListView(generics.ListCreateAPIView):
     queryset = Folder.objects.all()
     serializer_class = FolderFullSerializer
+    permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
         user = self.request.user
@@ -35,6 +37,7 @@ class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mix
     """
     queryset = Folder.objects.all()
     serializer_class = FolderBasicSerializer
+    permission_classes = [IsAuthenticated, IsPublisher]
 
     # not sure if this is really necessary
     def get_queryset(self):
@@ -76,6 +79,7 @@ class SharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
     """
     queryset = SharedFolder.objects.all()
     serializer_class = SharedFolderSpeakerSerializer
+    permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
         user = self.request.user
@@ -85,6 +89,7 @@ class SharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
 class PublisherTextListView(generics.ListCreateAPIView):
     queryset = Text.objects.all()
     serializer_class = TextBasicSerializer
+    permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
         # TODO IMPORTANT: Rethink this
@@ -120,7 +125,7 @@ class SpeakerTextListView(generics.ListAPIView):
 class PublisherTextDetailedView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Text.objects.all()
     serializer_class = TextFullSerializer
-    # TODO make fields sharedfolder, textfile read only; add field content (callable)
+    permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
         user = self.request.user
