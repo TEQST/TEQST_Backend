@@ -60,9 +60,13 @@ class SharedFolderByPublisherView(generics.ListAPIView):
 
     def get_queryset(self):
         # TODO test if this works
+        # publisher query param should be mandatory
         user = self.request.user
-        shares_folders = SharedFolder.objects.filter(speaker=user.pk)
-        return shares_folders.filter(owner=self.kwargs['pub_pk'])
+        shared_folders = SharedFolder.objects.filter(speaker=user.pk)
+        if 'publisher' in self.request.query_params:
+            return shared_folders.filter(owner=self.request.query_params['publisher'])
+        #this should never be reached
+        return shared_folders
 
 
 class SharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
@@ -72,9 +76,12 @@ class SharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
     queryset = SharedFolder.objects.all()
     serializer_class = SharedFolderSpeakerSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        return SharedFolder.objects.filter(owner=user.pk)
 
 
-class TextListView(generics.ListCreateAPIView):
+class PublisherTextListView(generics.ListCreateAPIView):
     queryset = Text.objects.all()
     serializer_class = TextBasicSerializer
 
@@ -82,14 +89,31 @@ class TextListView(generics.ListCreateAPIView):
         # TODO IMPORTANT: Rethink this
         user = self.request.user
         if 'sharedfolder' in self.request.query_params:
-            return Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
-        # TODO this cant be the alternative. The 'sharedfolder' query param must be required
-        return Text.objects.all()
+            if SharedFolder.objects.get(pk=self.request.query_params['sharedfolder']).owner == user:
+                return Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
+
+        # TODO The 'sharedfolder' query param must be required.
+        # better solution would maybe be bad response or error
+        return Text.objects.none()
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return TextFullSerializer
         return TextBasicSerializer
+
+
+class SpeakerTextListView(generics.ListAPIView):
+    queryset = Text.objects.all()
+    serializer_class = TextBasicSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if 'sharedfolder' in self.request.query_params:
+            if user in SharedFolder.objects.get(pk=self.request.query_params['sharedfolder']).speaker.all():
+                return Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
+        
+        # TODO maybe theres a better alternative 
+        return Text.objects.none()
 
 
 class TextDetailedView(generics.RetrieveUpdateDestroyAPIView):
