@@ -29,6 +29,9 @@ class FolderFullSerializer(serializers.ModelSerializer):
         model = Folder
         fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
         read_only_fields = ['owner', 'subfolder', 'is_sharedfolder']
+    
+    # TODO add a validate(self, data) method, to check if the name is already taken.
+    # see DRF->Serializers->Validation->Object level validation
 
 
 class FolderBasicSerializer(serializers.ModelSerializer):
