@@ -2,6 +2,7 @@ from django.shortcuts import render
 from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderListSerializer, SharedFolderSpeakerSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer
 from .models import Folder, SharedFolder, Text
+from .permissions import IsTextOwnerPermission
 from rest_framework import generics, mixins
 
 ################################
@@ -116,13 +117,26 @@ class SpeakerTextListView(generics.ListAPIView):
         return Text.objects.none()
 
 
-class TextDetailedView(generics.RetrieveUpdateDestroyAPIView):
+class PublisherTextDetailedView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Text.objects.all()
     serializer_class = TextFullSerializer
     # TODO make fields sharedfolder, textfile read only; add field content (callable)
+
+    def get_queryset(self):
+        user = self.request.user
+        return Text.objects.filter(shared_folder__owner=user.pk)
 
     def get_serializer_class(self):
         # TODO using BasicSerializer should not be necessary
         if self.request.method == 'GET':
             return TextFullSerializer
         return TextBasicSerializer
+
+
+class SpeakerTextDetailedView(generics.RetrieveAPIView):
+    queryset = Text.objects.all()
+    serializer_class = TextFullSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return Text.objects.filter(shared_folder__sharedfolder__speaker__id=user.id)

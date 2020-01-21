@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import FolderListView, FolderDetailedView, SharedFolderByPublisherView, SharedFolderSpeakerView, PublisherTextListView, SpeakerTextListView, TextDetailedView
+from .views import FolderListView, FolderDetailedView, SharedFolderByPublisherView, SharedFolderSpeakerView, PublisherTextListView, SpeakerTextListView, PublisherTextDetailedView, SpeakerTextDetailedView
 
 
 urlpatterns = [
@@ -9,5 +9,6 @@ urlpatterns = [
     path('pub/texts/', PublisherTextListView.as_view()),
     path('spk/texts/', SpeakerTextListView.as_view()),
     path('sharedfolders/<int:pk>/', SharedFolderSpeakerView.as_view()),
-    path('texts/<int:pk>/', TextDetailedView.as_view())
+    path('pub/texts/<int:pk>/', PublisherTextDetailedView.as_view()),
+    path('spk/texts/<int:pk>/', SpeakerTextDetailedView.as_view())
 ]
