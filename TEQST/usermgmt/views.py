@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from .serializers import UserFullSerializer, UserBasicSerializer, PublisherSerializer, LanguageSerializer, UserRegisterSerializer
 from .models import CustomUser, Language
+from .permissions import IsPublisher
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, mixins
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
@@ -10,6 +12,7 @@ from rest_framework.response import Response
 class UserListView(generics.ListAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserBasicSerializer
+    permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
         if 'query' in self.request.query_params:
@@ -59,7 +62,6 @@ class GetAuthToken(ObtainAuthToken):
     This is the view used to get the Authentication Token
     """
     permission_classes = []
-    #authentication_classes = []
 
     def post(self, request, *args, **kwargs):
         response = super(GetAuthToken, self).post(request, *args, **kwargs)
