@@ -4,9 +4,11 @@ from .models import CustomUser, Language
 from .permissions import IsPublisher
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, mixins
+from rest_framework.views import APIView
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
+from rest_framework import status
 
 # Create your views here.
 class UserListView(generics.ListAPIView):
@@ -69,3 +71,11 @@ class GetAuthToken(ObtainAuthToken):
         user = CustomUser.objects.get(id=token.user_id)
         user_serializer = UserFullSerializer(user, many=False)
         return Response({'token': token.key, 'user': user_serializer.data})
+
+
+class LogoutView(APIView):
+
+    def post(self, request, *args, **kwargs):
+        token = request.auth 
+        token.delete()
+        return Response('Logout successful!', status=status.HTTP_200_OK)
