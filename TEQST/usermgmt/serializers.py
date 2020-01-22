@@ -12,7 +12,8 @@ class LanguageSerializer(serializers.ModelSerializer):
 
 class UserFullSerializer(serializers.ModelSerializer):
 
-    languages = LanguageSerializer(many = True, read_only = False)
+    #languages = LanguageSerializer(many = True, read_only = False)
+    languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True)
     is_publisher = serializers.BooleanField(read_only=True)  # source kwarg not needed, because name is same
 
     class Meta():
@@ -20,14 +21,14 @@ class UserFullSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages', 'is_publisher']
         read_only_fields = ['id', 'username', 'is_publisher']
 
-    def update(self, instance, validated_data):
-        languages_data = validated_data.pop('languages')
-        instance = super().update(instance, validated_data)
-        instance.languages.clear()
-        for language_data in languages_data:
-            language = Language.objects.get(**language_data)
-            instance.languages.add(language)
-        return instance
+    # def update(self, instance, validated_data):
+    #     languages_data = validated_data.pop('languages')
+    #     instance = super().update(instance, validated_data)
+    #     instance.languages.clear()
+    #     for language_data in languages_data:
+    #         language = Language.objects.get(**language_data)
+    #         instance.languages.add(language)
+    #     return instance
         
 
 class UserBasicSerializer(serializers.ModelSerializer):
