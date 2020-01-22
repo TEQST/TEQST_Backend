@@ -72,6 +72,7 @@ class Folder(models.Model):
         # create actual folders:
         sf_path = 'media/' + sf.get_path() + '__' + str(self.id)
         os.makedirs(sf_path + '/STM')
+        # TODO may be unnecessary because of upload_to in recordingmgmt
         os.mkdir(sf_path + '/AudioData')
         os.mkdir(sf_path + '/TempAudio')
         open(sf_path + '/log.txt', 'w').close()
@@ -114,6 +115,7 @@ class Text(models.Model):
     
     def save(self, *args, **kwargs):
         # TODO a sharedfolder must have been created
+        # TODO maybe move to serializer/view, so shared_folder can be set to SharedFolder
         self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
     

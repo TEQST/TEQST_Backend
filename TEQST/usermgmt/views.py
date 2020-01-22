@@ -1,15 +1,20 @@
 from django.shortcuts import render
 from .serializers import UserFullSerializer, UserBasicSerializer, PublisherSerializer, LanguageSerializer, UserRegisterSerializer
 from .models import CustomUser, Language
+from .permissions import IsPublisher
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, mixins
+from rest_framework.views import APIView
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
+from rest_framework import status
 
 # Create your views here.
 class UserListView(generics.ListAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = UserBasicSerializer
+    permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
         if 'query' in self.request.query_params:
@@ -30,6 +35,7 @@ class PublisherListView(generics.ListAPIView):
         """
         does not check for is_publisher. this should not be necessary
         """
+        # CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         pub_pks = []
         user = self.request.user
         for shf in user.sharedfolder.all():
@@ -37,7 +43,7 @@ class PublisherListView(generics.ListAPIView):
         return CustomUser.objects.filter(pk__in = pub_pks)
 
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = CustomUser.objects.all()
+    #queryset = CustomUser.objects.all()
     serializer_class = UserFullSerializer
 
     def get_object(self):
@@ -58,11 +64,18 @@ class GetAuthToken(ObtainAuthToken):
     This is the view used to get the Authentication Token
     """
     permission_classes = []
-    #authentication_classes = []
 
     def post(self, request, *args, **kwargs):
         response = super(GetAuthToken, self).post(request, *args, **kwargs)
         token = Token.objects.get(key=response.data['token'])
         user = CustomUser.objects.get(id=token.user_id)
-        user_serializer = UserBasicSerializer(user, many=False)
+        user_serializer = UserFullSerializer(user, many=False)
         return Response({'token': token.key, 'user': user_serializer.data})
+
+
+class LogoutView(APIView):
+
+    def post(self, request, *args, **kwargs):
+        token = request.auth 
+        token.delete()
+        return Response('Logout successful!', status=status.HTTP_200_OK)
