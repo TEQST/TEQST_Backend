@@ -61,7 +61,6 @@ class Folder(models.Model):
         return name
     
     def get_path(self):
-        # TODO implement
         return folder_relative_path(self)
 
     def make_shared_folder(self):
@@ -70,11 +69,10 @@ class Folder(models.Model):
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
         # create actual folders:
-        sf_path = 'media/' + sf.get_path() + '__' + str(self.id)
+        sf_path = 'media/' + sf.get_path()
         os.makedirs(sf_path + '/STM')
-        # TODO may be unnecessary because of upload_to in recordingmgmt
         os.mkdir(sf_path + '/AudioData')
-        os.mkdir(sf_path + '/TempAudio')
+        # os.mkdir(sf_path + '/TempAudio')
         open(sf_path + '/log.txt', 'w').close()
         return sf
 
@@ -91,14 +89,18 @@ class SharedFolder(Folder):
     
     def make_shared_folder(self):
         return self
+    
+    def get_path(self):
+        path = super().get_path()
+        return path + '__' + str(self.id)
 
     # Idea: override delete method and rename actual folder to ..._deleted
     # or sth similar to let people know that is has been deleted.
 
 
 def upload_path(instance, filename):
-    sf_path = instance.shared_folder.get_path()
-    path = sf_path + '__' + str(instance.shared_folder.id) + '/' + filename
+    sf_path = instance.shared_folder.sharedfolder.get_path()
+    path = sf_path + '/' + filename
     return path
 
 
