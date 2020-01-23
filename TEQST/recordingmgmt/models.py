@@ -2,6 +2,12 @@ from django.db import models
 from usermgmt.models import CustomUser
 from textmgmt.models import Text
 
+#May be needed in a future version
+def text_rec_upload_path(instance, filename):
+    sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
+    return sf_path + '/AudioData/' + instance.text.title + '_' + instance.speaker.username + '.wav'
+
+
 class TextRecording(models.Model):
     speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     text = models.ForeignKey(Text, on_delete=models.CASCADE)
@@ -11,10 +17,6 @@ class TextRecording(models.Model):
     def active_sentence(self):
         return SenctenceRecording.objects.filter(recording=self).count()
 
-#May be needed in a future version
-def text_rec_upload_path(instance, filename):
-    sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
-    return sf_path + '/AudioData/' + instance.text.title + '_' + instance.speaker.username + '.wav'
 
 def sentence_rec_upload_path(instance, filename):
     sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
