@@ -129,6 +129,6 @@ class Text(models.Model):
             count += 1
             if count % 2 != 0:
                 continue
-            content.append(line)
+            content.append(line[:-1])
         self.textfile.close()
         return content

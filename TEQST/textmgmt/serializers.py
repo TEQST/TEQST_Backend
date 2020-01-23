@@ -58,7 +58,7 @@ class SharedFolderListSerializer(serializers.ModelSerializer):
         read_only_fields = ['name', 'owner', 'path']  # is path neede in read_only_fields?
 
 
-class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
+class SharedFolderDetailSerializer(serializers.ModelSerializer):
     """
     to be used by view: 
     for: sharedfolder speaker retrieval and update
@@ -67,6 +67,7 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = SharedFolder
         fields = ['id', 'name', 'speaker']
+        read_only_fields = ['name']
         depth = 1
 
 
