@@ -26,7 +26,16 @@ class RecordingPKField(serializers.PrimaryKeyRelatedField):
         queryset = TextRecording.objects.filter(recording__speaker__id=user.id)
         return queryset
 
-class SenctenceRecordingCreateSerializer(serializers.ModelSerializer):
+#Former Create serializer
+class SenctenceRecordingSerializer(serializers.ModelSerializer):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            if self.context['request'].method == 'PUT':
+                self.read_only_fields.append('recording').append('index')
+        except KeyError:
+            pass
 
     recording = RecordingPKField()
 
@@ -34,6 +43,7 @@ class SenctenceRecordingCreateSerializer(serializers.ModelSerializer):
         model = SenctenceRecording
         fields = ['recording', 'audiofile', 'index']
 
+#deprecated
 class SenctenceRecordingUpdateSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField()
