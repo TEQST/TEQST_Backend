@@ -12,14 +12,27 @@ class LanguageSerializer(serializers.ModelSerializer):
 
 class UserFullSerializer(serializers.ModelSerializer):
 
-    #languages = LanguageSerializer(many = True, read_only = False)
+#    def __init__(self, *args, **kwargs):
+#        super().__init__(*args, **kwargs)
+#        try:
+#            if self.context['request'].method in ['PUT']:
+#                self.fields['languages'] = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True)
+#            #else:
+#                #self.fields['languages'] = LanguageSerializer(many = True, read_only = False)
+#        except KeyError:
+#            print('No context')
+#        
     languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True)
+    #languages = LanguageSerializer(many = True, read_only = True)
+    #language_ids = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, source='languages', write_only=True)
+    
     is_publisher = serializers.BooleanField(read_only=True)  # source kwarg not needed, because name is same
 
     class Meta():
         model = CustomUser
-        fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages', 'is_publisher']
-        read_only_fields = ['id', 'username', 'is_publisher']
+        fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages', 'language_ids', 'is_publisher']
+        read_only_fields = ['id', 'username', 'is_publisher', 'languages']
+        write_only_fields = ['language_ids']
 
     # def update(self, instance, validated_data):
     #     languages_data = validated_data.pop('languages')
