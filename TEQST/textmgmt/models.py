@@ -100,7 +100,7 @@ class SharedFolder(Folder):
 
 def upload_path(instance, filename):
     sf_path = instance.shared_folder.sharedfolder.get_path()
-    path = sf_path + '/' + instance.id + '_' + filename
+    path = sf_path + '/' + filename
     return path
 
 
