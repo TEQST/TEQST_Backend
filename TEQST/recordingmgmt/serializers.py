@@ -23,7 +23,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
 class RecordingPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
-        queryset = TextRecording.objects.filter(recording__speaker__id=user.id)
+        queryset = TextRecording.objects.filter(speaker__id=user.id)
         return queryset
 
 #Former Create serializer
@@ -39,9 +39,9 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField()
 
-    def validate(self, data):
-        if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
-            raise ValidationError("A recording for the given senctence in the given text already exists")
+    #def validate(self, data):
+    #    if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
+    #        raise ValidationError("A recording for the given senctence in the given text already exists")
 
     class Meta:
         model = SenctenceRecording

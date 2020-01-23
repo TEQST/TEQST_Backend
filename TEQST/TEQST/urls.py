@@ -23,6 +23,7 @@ version_str = 'v' + str(version) + '/'
 urlpatterns = [
     path('api/', include('textmgmt.urls')),
     path('api/', include('usermgmt.urls')),
+    path('api/', include('recordingmgmt.urls')),
     path('admin/', admin.site.urls)
 ]
 

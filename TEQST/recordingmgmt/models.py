@@ -23,7 +23,7 @@ class TextRecording(models.Model):
 
 def sentence_rec_upload_path(instance, filename):
     sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
-    return sf_path + '/TempAudio/' + instance.recording.id + '_' + instance.index + '.wav'
+    return sf_path + '/TempAudio/' + str(instance.recording.id) + '_' + str(instance.index) + '.wav'
 
 
 class SenctenceRecording(models.Model):

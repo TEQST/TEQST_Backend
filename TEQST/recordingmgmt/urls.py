@@ -3,6 +3,6 @@ from .views import TextRecordingView, SenctenceRecordingCreateView, SenctenceRec
 
 urlpatterns = [
     path('textrecordings/', TextRecordingView.as_view()),
-    path('senctencerecordings/', SenctenceRecordingCreateView.as_view()),
-    path('senctencerecordings/<int:rec>', SenctenceRecordingUpdateView.as_view())
+    path('sentencerecordings/', SenctenceRecordingCreateView.as_view()),
+    path('sentencerecordings/<int:rec>/', SenctenceRecordingUpdateView.as_view())
 ]
