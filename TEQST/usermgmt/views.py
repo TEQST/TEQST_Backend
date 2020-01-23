@@ -52,6 +52,7 @@ class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
 class LanguageView(generics.ListAPIView):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
+    permission_classes = []
 
 class UserRegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
