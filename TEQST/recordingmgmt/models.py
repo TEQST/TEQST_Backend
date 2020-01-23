@@ -5,7 +5,7 @@ from textmgmt.models import Text
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
     sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
-    return sf_path + '/AudioData/' + instance.text.title + '_' + instance.speaker.username + '.wav'
+    return sf_path + '/AudioData/' + instance.text.id + '_' + instance.speaker.id + '.wav'
 
 
 class TextRecording(models.Model):
@@ -20,7 +20,7 @@ class TextRecording(models.Model):
 
 def sentence_rec_upload_path(instance, filename):
     sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
-    return sf_path + '/TempAudio/' + instance.recording.text.title + '_' + instance.recording.speaker.username + '_' + instance.index + '.wav'
+    return sf_path + '/TempAudio/' + instance.recording.id + '_' + instance.index + '.wav'
 
 
 class SenctenceRecording(models.Model):

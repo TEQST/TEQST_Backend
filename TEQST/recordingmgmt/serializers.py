@@ -39,6 +39,10 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField()
 
+    def validate(self, data):
+        if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
+            raise ValidationError("A recording for the given senctence in the given text already exists")
+
     class Meta:
         model = SenctenceRecording
         fields = ['recording', 'audiofile', 'index']
