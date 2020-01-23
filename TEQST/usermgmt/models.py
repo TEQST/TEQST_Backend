@@ -22,6 +22,7 @@ class CustomUser(AbstractUser):
     date_of_birth = models.DateField(blank=True, null=True)
     education = models.CharField(max_length=50, blank=True, null=True, choices=EDU_CHOICES)
     languages = models.ManyToManyField(Language, blank=True)
+    country = models.CharField(max_length=50, null=True, blank=True)
 
     #Below is not core funcionality
     #TODO maybe move tag_usage to Tag class to allow limit_choices_to publisher
