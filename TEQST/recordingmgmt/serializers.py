@@ -17,7 +17,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TextRecording
-        fields = ['id', 'speaker', 'text', 'active_sentence']
+        fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence']
         read_only_fields = ['active_sentence']
 
 class RecordingPKField(serializers.PrimaryKeyRelatedField):
@@ -26,14 +26,28 @@ class RecordingPKField(serializers.PrimaryKeyRelatedField):
         queryset = TextRecording.objects.filter(recording__speaker__id=user.id)
         return queryset
 
-class SenctenceRecordingCreateSerializer(serializers.ModelSerializer):
+#Former Create serializer
+class SenctenceRecordingSerializer(serializers.ModelSerializer):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            if self.context['request'].method == 'PUT':
+                self.read_only_fields.append('recording').append('index')
+        except KeyError:
+            pass
 
     recording = RecordingPKField()
+
+    def validate(self, data):
+        if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
+            raise ValidationError("A recording for the given senctence in the given text already exists")
 
     class Meta:
         model = SenctenceRecording
         fields = ['recording', 'audiofile', 'index']
 
+#deprecated
 class SenctenceRecordingUpdateSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField()

@@ -1,6 +1,6 @@
 from rest_framework import generics, mixins
 from django.db.models import return_None
-from .serializers import TextRecordingSerializer, SenctenceRecordingCreateSerializer, SenctenceRecordingUpdateSerializer
+from .serializers import TextRecordingSerializer, SenctenceRecordingSerializer
 from .models import TextRecording, SenctenceRecording
 
 
@@ -16,11 +16,11 @@ class TextRecordingView(generics.ListCreateAPIView):
 
 class SenctenceRecordingCreateView(generics.CreateAPIView):
     queryset = SenctenceRecording.objects.all()
-    serializer_class = SenctenceRecordingCreateSerializer
+    serializer_class = SenctenceRecordingSerializer
 
 class SenctenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
     queryset = SenctenceRecording.objects.all()
-    serializer_class = SenctenceRecordingUpdateSerializer
+    serializer_class = SenctenceRecordingSerializer
 
     def get_object(self):
         rec = self.kwargs['rec']
