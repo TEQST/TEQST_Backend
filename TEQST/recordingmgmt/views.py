@@ -26,4 +26,4 @@ class SenctenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         rec = self.kwargs['rec']
         if 'index' in self.request.query_params:
             return SenctenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
-        return models.return_None
+        return models.return_None()
