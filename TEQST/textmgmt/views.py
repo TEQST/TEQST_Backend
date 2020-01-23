@@ -59,6 +59,9 @@ class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mix
 
 
 class SharedFolderByPublisherView(generics.ListAPIView):
+    """
+    use: list shared_folders shared with the current user by a specified publisher
+    """
     queryset = SharedFolder.objects.all()
     serializer_class = SharedFolderListSerializer
 
@@ -73,7 +76,7 @@ class SharedFolderByPublisherView(generics.ListAPIView):
         return shared_folders
 
 
-class SharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
+class SharedFolderDetailView(generics.RetrieveUpdateAPIView):
     """
     use: retrieve and update the speakers of a shared folder
     """
