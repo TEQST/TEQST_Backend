@@ -17,10 +17,10 @@ class UserFullSerializer(serializers.ModelSerializer):
 #        try:
 #            if self.context['request'].method in ['PUT']:
 #                self.fields['languages'] = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True)
-#            #else:
-#                #self.fields['languages'] = LanguageSerializer(many = True, read_only = False)
+#            else:
+#                self.fields['languages'] = LanguageSerializer(many = True, read_only = False)
 #        except KeyError:
-#            print('No context')
+#            self.fields['languages'] = LanguageSerializer(many = True, read_only = False)
 #        
     #languages = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True)
     languages = LanguageSerializer(many = True, read_only = True)
