@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderListSerializer, SharedFolderSpeakerSerializer
+from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderListSerializer, SharedFolderDetailSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
@@ -81,7 +81,7 @@ class SharedFolderDetailView(generics.RetrieveUpdateAPIView):
     use: retrieve and update the speakers of a shared folder
     """
     queryset = SharedFolder.objects.all()
-    serializer_class = SharedFolderSpeakerSerializer
+    serializer_class = SharedFolderDetailSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
