@@ -11,6 +11,9 @@ def text_rec_upload_path(instance, filename):
 class TextRecording(models.Model):
     speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     text = models.ForeignKey(Text, on_delete=models.CASCADE)
+
+    TTS_permission = models.BooleanField(default=True)
+    SR_permission = models.BooleanField(default=True)
     # is the audiofile really needed?
     audiofile = models.FileField(upload_to=text_rec_upload_path, null=True, blank=True)
 

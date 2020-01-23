@@ -17,7 +17,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TextRecording
-        fields = ['id', 'speaker', 'text', 'active_sentence']
+        fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence']
         read_only_fields = ['active_sentence']
 
 class RecordingPKField(serializers.PrimaryKeyRelatedField):
