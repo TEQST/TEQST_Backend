@@ -67,6 +67,7 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = SharedFolder
         fields = ['id', 'name', 'speaker']
+        read_only_fields = ['name']
         depth = 1
 
 

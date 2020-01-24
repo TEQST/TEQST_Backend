@@ -33,7 +33,8 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         try:
             if self.context['request'].method == 'PUT':
-                self.read_only_fields.append('recording').append('index')
+                #self.read_only_fields.append('recording').append('index')
+                self.read_only_fields = ['recording', 'index']
         except KeyError:
             pass
 
