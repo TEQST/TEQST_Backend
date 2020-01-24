@@ -16,6 +16,9 @@ class TextRecordingView(generics.ListCreateAPIView):
         if 'text' in self.request.query_params:
             return TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
         return TextRecording.objects.none()
+    
+    def perform_create(self, serializer):
+        serializer.save(speaker=self.request.user)
 
 class SenctenceRecordingCreateView(generics.CreateAPIView):
     queryset = SenctenceRecording.objects.all()
