@@ -1,6 +1,6 @@
 from rest_framework import generics, mixins
 from django.db import models
-from .serializers import TextRecordingSerializer, SenctenceRecordingSerializer
+from .serializers import TextRecordingSerializer, SenctenceRecordingSerializer, SenctenceRecordingUpdateSerializer
 from .models import TextRecording, SenctenceRecording
 
 from django.http import HttpResponse
@@ -33,6 +33,11 @@ class SenctenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         if 'index' in self.request.query_params:
             return SenctenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
         return models.return_None()
+    
+    def get_serializer_class(self):
+        if self.request.method == 'PUT':
+            return SenctenceRecordingUpdateSerializer
+        return SenctenceRecordingSerializer
 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
