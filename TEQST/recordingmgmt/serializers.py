@@ -37,16 +37,13 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField()
 
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     try:
-    #         if self.context['request'].method == 'PUT':
-    #             #self.read_only_fields.append('recording').append('index')
-    #             self.read_only_fields = ['recording', 'index']
-    #     except KeyError:
-    #         pass
-
-    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        try:
+            if self.context['request'].method == 'PUT':
+                self.read_only_fields = ['recording', 'index']
+        except KeyError:
+            pass
 
     def validate(self, data):
         if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
