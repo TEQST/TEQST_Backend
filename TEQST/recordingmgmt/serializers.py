@@ -29,13 +29,13 @@ class RecordingPKField(serializers.PrimaryKeyRelatedField):
 #Former Create serializer
 class SenctenceRecordingSerializer(serializers.ModelSerializer):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        try:
-            if self.context['request'].method == 'PUT':
-                self.read_only_fields.append('recording').append('index')
-        except KeyError:
-            pass
+    #def __init__(self, *args, **kwargs):
+    #    super().__init__(*args, **kwargs)
+    #    try:
+    #        if self.context['request'].method == 'PUT':
+    #            self.read_only_fields.append('recording').append('index')
+    #    except KeyError:
+    #        pass
 
     recording = RecordingPKField()
 

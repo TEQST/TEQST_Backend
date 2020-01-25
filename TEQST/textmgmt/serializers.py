@@ -30,8 +30,11 @@ class FolderFullSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
         read_only_fields = ['owner', 'subfolder', 'is_sharedfolder']
     
-    # TODO add a validate(self, data) method, to check if the name is already taken.
-    # see DRF->Serializers->Validation->Object level validation
+    def validate(self, data):
+        if Folder.objects.filter(owner=self.context['request'].user, name=data['name'], parent=data['parent']).exists():
+            raise serializers.ValidationError('A folder with the given name in the given place already exists')
+        return super().validate(data)
+
 
 
 class FolderBasicSerializer(serializers.ModelSerializer):
@@ -90,6 +93,11 @@ class TextFullSerializer(serializers.ModelSerializer):
         # TODO maybe make the textfile write only
         fields = ['id', 'title', 'shared_folder', 'content', 'textfile']
         read_only_fields = ['content']
+
+    def validate(self, data):
+        if Text.objects.filter(shared_folder=data['shared_folder'], title=data['title']).exists():
+            raise serializers.ValidationError("A text with the given title in the given folder already exists")
+        return super().validate(data)
 
 
 class TextBasicSerializer(serializers.ModelSerializer):
