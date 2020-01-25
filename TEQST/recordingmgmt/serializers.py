@@ -15,6 +15,11 @@ class TextRecordingSerializer(serializers.ModelSerializer):
     active_sentence = serializers.IntegerField(read_only=True)
     text = TextPKField()
 
+    def validate(self, data):
+        if TextRecording.objects.filter(speaker=self.required.user, text=data['text']).exists():
+            raise ValidationError("A recording for the given text by the given user already exists")
+
+
     class Meta:
         model = TextRecording
         fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence']
