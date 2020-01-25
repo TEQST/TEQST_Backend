@@ -30,7 +30,7 @@ class UserFullSerializer(serializers.ModelSerializer):
 
     class Meta():
         model = CustomUser
-        fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages', 'language_ids', 'country', 'is_publisher']
+        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'country', 'is_publisher']
         read_only_fields = ['id', 'username', 'is_publisher']
 
     # def update(self, instance, validated_data):
@@ -48,7 +48,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
     class Meta():
         model = CustomUser
         depth = 1
-        fields = ['id', 'username', 'education', 'gender', 'date_of_birth', 'languages', 'country']
+        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'country']
         read_only_fields = fields
 
 
@@ -75,7 +75,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         # languages still need to be added
-        fields = ['username', 'password', 'education', 'gender', 'date_of_birth', 'language_ids', 'languages', 'country']
+        fields = ['username', 'password', 'education', 'gender', 'birth_year', 'language_ids', 'languages', 'country']
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
     
     def create(self, validated_data):

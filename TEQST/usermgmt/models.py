@@ -19,7 +19,7 @@ class Tag(models.Model):
 
 class CustomUser(AbstractUser):
     gender = models.CharField(max_length=20, null=True, blank=True)
-    date_of_birth = models.DateField(blank=True, null=True)
+    birth_year = models.IntegerField(default=2000)
     education = models.CharField(max_length=50, blank=True, null=True, choices=EDU_CHOICES)
     languages = models.ManyToManyField(Language, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
