@@ -29,19 +29,15 @@ class RecordingPKField(serializers.PrimaryKeyRelatedField):
 #Former Create serializer
 class SenctenceRecordingSerializer(serializers.ModelSerializer):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        try:
-            if self.context['request'].method == 'PUT':
-                self.read_only_fields.append('recording').append('index')
-        except KeyError:
-            pass
+    #def __init__(self, *args, **kwargs):
+    #    super().__init__(*args, **kwargs)
+    #    try:
+    #        if self.context['request'].method == 'PUT':
+    #            self.read_only_fields.append('recording').append('index')
+    #    except KeyError:
+    #        pass
 
     recording = RecordingPKField()
-
-    def validate(self, data):
-        if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
-            raise ValidationError("A recording for the given senctence in the given text already exists")
 
     class Meta:
         model = SenctenceRecording
