@@ -1,6 +1,7 @@
 from django.db import models
 from usermgmt.models import CustomUser
 from textmgmt.models import Text
+from .storages import OverwriteStorage
 
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
@@ -29,4 +30,4 @@ def sentence_rec_upload_path(instance, filename):
 class SenctenceRecording(models.Model):
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
-    audiofile = models.FileField(upload_to=sentence_rec_upload_path)
+    audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=OverwriteStorage())
