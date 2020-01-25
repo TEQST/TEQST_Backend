@@ -16,8 +16,9 @@ class TextRecordingSerializer(serializers.ModelSerializer):
     text = TextPKField()
 
     def validate(self, data):
-        if TextRecording.objects.filter(speaker=self.required.user, text=data['text']).exists():
-            raise ValidationError("A recording for the given text by the given user already exists")
+        if TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
+            raise serializers.ValidationError("A recording for the given text by the given user already exists")
+        return super().validate(data)
 
 
     class Meta:
@@ -47,9 +48,10 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
 
     
 
-    #def validate(self, data):
-    #    if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
-    #        raise ValidationError("A recording for the given senctence in the given text already exists")
+    def validate(self, data):
+        if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
+            raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
+        return super().validate(data)
 
     class Meta:
         model = SenctenceRecording
