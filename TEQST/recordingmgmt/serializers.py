@@ -23,7 +23,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
     class Meta:
         model = TextRecording
         fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence']
-        read_only_fields = ['active_sentence']
+        read_only_fields = ['speaker', 'active_sentence']
 
 class RecordingPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
@@ -34,19 +34,22 @@ class RecordingPKField(serializers.PrimaryKeyRelatedField):
 #Former Create serializer
 class SenctenceRecordingSerializer(serializers.ModelSerializer):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        try:
-            if self.context['request'].method == 'PUT':
-                self.read_only_fields.append('recording').append('index')
-        except KeyError:
-            pass
-
     recording = RecordingPKField()
 
-    def validate(self, data):
-        if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
-            raise ValidationError("A recording for the given senctence in the given text already exists")
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     try:
+    #         if self.context['request'].method == 'PUT':
+    #             #self.read_only_fields.append('recording').append('index')
+    #             self.read_only_fields = ['recording', 'index']
+    #     except KeyError:
+    #         pass
+
+    
+
+    #def validate(self, data):
+    #    if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
+    #        raise ValidationError("A recording for the given senctence in the given text already exists")
 
     class Meta:
         model = SenctenceRecording
@@ -55,7 +58,7 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
 #deprecated
 class SenctenceRecordingUpdateSerializer(serializers.ModelSerializer):
 
-    recording = RecordingPKField()
+    recording = RecordingPKField(read_only=True)
 
     class Meta:
         model = SenctenceRecording
