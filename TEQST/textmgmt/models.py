@@ -121,6 +121,7 @@ class Text(models.Model):
         self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
     
+    '''
     def get_content(self):
         content = []
         count = -1
@@ -132,3 +133,23 @@ class Text(models.Model):
             content.append(line[:-1])
         self.textfile.close()
         return content
+    '''
+
+    def get_content(self):
+        f = self.textfile.open('r')
+        str = ""
+        content = []
+        for line in f:
+            if line == "\n":
+                if str != "":
+                    content.append(str)
+                    str = ""
+            else:
+                str += line.strip('\n')
+        if str != "":
+            content.append(str)
+        f.close()
+        return content
+    
+    def sentence_count(self):
+        return len(self.get_content())
