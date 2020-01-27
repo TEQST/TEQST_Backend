@@ -50,6 +50,8 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
         if data['index'] > TextRecording.objects.get(pk=data['recording'].pk).active_sentence(): 
             raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
+        if data['index'] < 1:
+            raise serializers.ValidationError("Invalid index.")
         return super().validate(data)
 
     class Meta:
