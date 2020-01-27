@@ -21,7 +21,8 @@ class CustomUser(AbstractUser):
     gender = models.CharField(max_length=20, null=True, blank=True)
     birth_year = models.IntegerField(default=2000)
     education = models.CharField(max_length=50, blank=True, null=True, choices=EDU_CHOICES)
-    languages = models.ManyToManyField(Language, blank=True)
+    languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
+    menu_language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True)
     country = models.CharField(max_length=50, null=True, blank=True)
 
     #Below is not core funcionality
