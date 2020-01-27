@@ -35,12 +35,12 @@ class SenctenceRecording(models.Model):
     def save(self, *args, **kwargs):
         # This should work, but I'm not 100% sure. 
         # Alternative: self.recording.active_sentence() == self.recording.text.sentence_count()
-        is_update = self.pk
+        # is_update = self.pk
         super().save(*args, **kwargs)
         # check is this is the last sentence recording in a text or if this sentence recording is being updated
-        if self.index == self.recording.text.sentence_count() or is_update:
-            # trigger stm creation
-            create_textrecording_stm(self.recording.pk)
+        # if self.index == self.recording.text.sentence_count() or is_update:
+        #     # trigger stm creation
+        #     create_textrecording_stm(self.recording.pk)
 
 
 def create_textrecording_stm(trec_pk):
