@@ -19,7 +19,9 @@ class TextRecording(models.Model):
     audiofile = models.FileField(upload_to=text_rec_upload_path, null=True, blank=True)
 
     def active_sentence(self):
-        return SenctenceRecording.objects.filter(recording=self).count()
+        sentence_num = SenctenceRecording.objects.filter(recording=self).count() + 1
+        # if a speaker is finished with a text this number is one higher than the number of sentences in the text
+        return sentence_num
 
 
 def sentence_rec_upload_path(instance, filename):
@@ -51,6 +53,8 @@ def create_textrecording_stm(trec_pk):
     """
     trec = TextRecording.objects.get(pk=tr_pk)
     srecs = SenctenceRecording.objects.filter(recording=trec)
+
+    print("#####################\nCreating STM\n##################")
 
     # create .stm file and open in write mode
 
