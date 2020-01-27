@@ -32,7 +32,7 @@ class RecordingPKField(serializers.PrimaryKeyRelatedField):
         queryset = TextRecording.objects.filter(speaker__id=user.id)
         return queryset
 
-#Former Create serializer
+#Normal serializer
 class SenctenceRecordingSerializer(serializers.ModelSerializer):
 
     #def __init__(self, *args, **kwargs):
@@ -48,13 +48,15 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
             raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
+        if data['index'] > TextRecording.text.sentence_count():
+            raise serializers.ValidationError("Index to high. There aren't this many sentences in the text.")
         return super().validate(data)
 
     class Meta:
         model = SenctenceRecording
         fields = ['recording', 'audiofile', 'index']
 
-#deprecated
+
 class SenctenceRecordingUpdateSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField(read_only=True)
