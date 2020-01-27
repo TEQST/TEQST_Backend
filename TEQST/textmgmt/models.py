@@ -150,3 +150,6 @@ class Text(models.Model):
             content.append(str)
         f.close()
         return content
+    
+    def sentence_count(self):
+        return len(self.get_content())
