@@ -2,6 +2,7 @@ from django.db import models
 from usermgmt.models import CustomUser
 from textmgmt.models import Text
 from .storages import OverwriteStorage
+import wave
 
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
@@ -44,6 +45,11 @@ class SentenceRecording(models.Model):
         #     # trigger stm creation
         #     create_textrecording_stm(self.recording.pk)
 
+        #shouldn't this work fine in all cases
+        if self.recording.active_sentence() > self.recording.text.sentence_count():
+            #print('create stm')
+            create_textrecording_stm(self.recording.id)
+
 
 def create_textrecording_stm(trec_pk):
     """
@@ -51,12 +57,44 @@ def create_textrecording_stm(trec_pk):
     and again recreated every time the user rerecords a sentence. The stm does not contain the stm header.
     trec_pk: string = TextRecording pk
     """
-    trec = TextRecording.objects.get(pk=tr_pk)
+    trec = TextRecording.objects.get(pk=trec_pk)
     srecs = SentenceRecording.objects.filter(recording=trec)
 
-    print("#####################\nCreating STM\n##################")
+    print("#####################\nCreating STM\n#####################")
+
+    #create string with encoded userdata
+    user_str = '<' + trec.speaker.gender + ',' + trec.speaker.education + '>'
+    username = trec.speaker.username
+    current_timestamp = 0
 
     # create .stm file and open in write mode
+    path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '.stm'
+    file = open(path, 'w+')
+    #adds some dummy content
+    #file.write(str(current_timestamp) + ' ' + user_str + ' ' + username)
+    
+    wav_path_rel = 'AudioData/' + trec.text.title
+    wav_path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/' + wav_path_rel + '.wav'
+    wav_full = wave.open(wav_path, 'wb')
+
+    for srec in srecs:
+        wav = wave.open(srec.audiofile, 'rb')
+        if current_timestamp == 0:
+            wav_full.setparams(wav.getparams())
+        duration = wav.getnframes()/wav.getframerate()
+        file.write(wav_path_rel + ' ')
+        file.write(str(wav.getnchannels()) + ' ')
+        file.write(username + ' ')
+        file.write("{0:.2f}".format(current_timestamp) + ' ')
+        current_timestamp += duration
+        file.write("{0:.2f}".format(current_timestamp) + ' ')
+        file.write(user_str + '\n')
+        print(wav.getparams())
+        wav_full.writeframesraw(wav.readframes(wav.getnframes()))
+        print(duration)
+        wav.close()
+
+    file.close()
 
     # create .wav file for concatenated recordings and open in write mode; set metadata
 
