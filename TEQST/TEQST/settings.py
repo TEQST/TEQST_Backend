@@ -31,6 +31,9 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    #this is for CORS requests
+    'corsheaders',
+
     'textmgmt.apps.TextmgmtConfig',
     'recordingmgmt.apps.RecordingmgmtConfig',
     'usermgmt.apps.UsermgmtConfig',
@@ -45,6 +48,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    #This is for CORS requests
+    'corsheaders.middleware.CorsMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
