@@ -2,10 +2,11 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from .utils import EDU_CHOICES, GENDER_CHOICES
 
+
 class Language(models.Model):
     native_name = models.CharField(max_length=50)
     english_name = models.CharField(max_length=50)
-    short = models.CharField(max_length=5)
+    short = models.CharField(max_length=5, unique=True)
 
     def __str__(self):
         return self.english_name + ' (' + self.native_name + ')'
@@ -22,7 +23,7 @@ class CustomUser(AbstractUser):
     birth_year = models.IntegerField(default=2000)
     education = models.CharField(max_length=50, blank=True, choices=EDU_CHOICES, default='N')
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
-    menu_language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True)
+    menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=Language.objects.get_or_create(native_name='English', english_name='English', short='en')[0].pk)
     country = models.CharField(max_length=50, null=True, blank=True)
 
     #Below is not core funcionality
