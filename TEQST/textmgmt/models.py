@@ -50,6 +50,12 @@ class Folder(models.Model):
         # does not work if the folder is not there
         super().delete(*args, **kwargs)
     '''
+
+    def get_parent_name(self):
+        if self.parent == None:
+            return None
+        return self.parent.name
+
     def is_shared_folder(self):
         return hasattr(self, 'sharedfolder')
 

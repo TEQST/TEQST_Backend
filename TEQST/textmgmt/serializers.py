@@ -24,12 +24,13 @@ class FolderFullSerializer(serializers.ModelSerializer):
     """
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
+    parent_name = serializers.CharField(read_only=True, source='get_parent_name')
     # is_sharedfolder in the sense that there exists a Sharedfolder object 
     # with the same pk as this Folder 
     class Meta:
         model = Folder
-        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
-        read_only_fields = ['owner', 'subfolder', 'is_sharedfolder']
+        fields = ['id', 'name', 'owner', 'parent', 'parent_name', 'subfolder', 'is_sharedfolder']
+        read_only_fields = ['owner', 'parent_name', 'subfolder', 'is_sharedfolder']
     
     def validate_name(self, value):
         if '__' in value:
