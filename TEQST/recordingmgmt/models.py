@@ -2,6 +2,7 @@ from django.db import models
 from usermgmt.models import CustomUser
 from textmgmt.models import Text
 from .storages import OverwriteStorage
+import wave
 
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
@@ -70,7 +71,29 @@ def create_textrecording_stm(trec_pk):
     path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '.stm'
     file = open(path, 'w+')
     #adds some dummy content
-    file.write(str(current_timestamp) + ' ' + user_str + ' ' + username)
+    #file.write(str(current_timestamp) + ' ' + user_str + ' ' + username)
+    
+    wav_path_rel = 'AudioData/' + trec.text.title
+    wav_path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/' + wav_path_rel + '.wav'
+    wav_full = wave.open(wav_path, 'wb')
+
+    for srec in srecs:
+        wav = wave.open(srec.audiofile, 'rb')
+        if current_timestamp == 0:
+            wav_full.setparams(wav.getparams())
+        duration = wav.getnframes()/wav.getframerate()
+        file.write(wav_path_rel + ' ')
+        file.write(str(wav.getnchannels()) + ' ')
+        file.write(username + ' ')
+        file.write("{0:.2f}".format(current_timestamp) + ' ')
+        current_timestamp += duration
+        file.write("{0:.2f}".format(current_timestamp) + ' ')
+        file.write(user_str + '\n')
+        print(wav.getparams())
+        wav_full.writeframesraw(wav.readframes(wav.getnframes()))
+        print(duration)
+        wav.close()
+
     file.close()
 
     # create .wav file for concatenated recordings and open in write mode; set metadata
