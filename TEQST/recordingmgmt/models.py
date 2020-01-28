@@ -44,6 +44,11 @@ class SentenceRecording(models.Model):
         #     # trigger stm creation
         #     create_textrecording_stm(self.recording.pk)
 
+        #shouldn't this work fine in all cases
+        if self.recording.active_sentence() > self.recording.text.sentence_count():
+            #print('create stm')
+            create_textrecording_stm(self.recording.id)
+
 
 def create_textrecording_stm(trec_pk):
     """
@@ -51,12 +56,22 @@ def create_textrecording_stm(trec_pk):
     and again recreated every time the user rerecords a sentence. The stm does not contain the stm header.
     trec_pk: string = TextRecording pk
     """
-    trec = TextRecording.objects.get(pk=tr_pk)
+    trec = TextRecording.objects.get(pk=trec_pk)
     srecs = SentenceRecording.objects.filter(recording=trec)
 
-    print("#####################\nCreating STM\n##################")
+    print("#####################\nCreating STM\n#####################")
+
+    #create string with encoded userdata
+    user_str = '<' + trec.speaker.gender + ',' + trec.speaker.education + '>'
+    username = trec.speaker.username
+    current_timestamp = 0
 
     # create .stm file and open in write mode
+    path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '.stm'
+    file = open(path, 'w+')
+    #adds some dummy content
+    file.write(str(current_timestamp) + ' ' + user_str + ' ' + username)
+    file.close()
 
     # create .wav file for concatenated recordings and open in write mode; set metadata
 
