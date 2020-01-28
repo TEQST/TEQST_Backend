@@ -2,7 +2,6 @@ from rest_framework import generics, mixins, status
 from django.db import models
 from .serializers import TextRecordingSerializer, SenctenceRecordingSerializer, SenctenceRecordingUpdateSerializer
 from .models import TextRecording, SenctenceRecording
-from .exceptions import EmptyQueryset
 
 from django.http import HttpResponse
 import os
