@@ -54,7 +54,7 @@ class SharedFolderListSerializer(serializers.ModelSerializer):
     to be used by view: SharedFolderListView
     for: SharedFolder list retrieval in speaker view
     """
-    path = serializers.CharField(read_only=True, source='get_path')
+    path = serializers.CharField(read_only=True, source='get_readable_path')
     class Meta:
         model = SharedFolder
         fields = ['id', 'name', 'owner', 'path']

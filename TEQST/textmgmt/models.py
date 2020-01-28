@@ -94,6 +94,10 @@ class SharedFolder(Folder):
         path = super().get_path()
         return path + '__' + str(self.id)
 
+    def get_readable_path(self):
+        path = super().get_path()
+        return path
+
     # Idea: override delete method and rename actual folder to ..._deleted
     # or sth similar to let people know that is has been deleted.
 
