@@ -19,7 +19,7 @@ class TextRecording(models.Model):
     audiofile = models.FileField(upload_to=text_rec_upload_path, null=True, blank=True)
 
     def active_sentence(self):
-        sentence_num = SenctenceRecording.objects.filter(recording=self).count() + 1
+        sentence_num = SentenceRecording.objects.filter(recording=self).count() + 1
         # if a speaker is finished with a text this number is one higher than the number of sentences in the text
         return sentence_num
 
@@ -29,7 +29,7 @@ def sentence_rec_upload_path(instance, filename):
     return sf_path + '/TempAudio/' + str(instance.recording.id) + '_' + str(instance.index) + '.wav'
 
 
-class SenctenceRecording(models.Model):
+class SentenceRecording(models.Model):
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=OverwriteStorage())
@@ -52,7 +52,7 @@ def create_textrecording_stm(trec_pk):
     trec_pk: string = TextRecording pk
     """
     trec = TextRecording.objects.get(pk=tr_pk)
-    srecs = SenctenceRecording.objects.filter(recording=trec)
+    srecs = SentenceRecording.objects.filter(recording=trec)
 
     print("#####################\nCreating STM\n##################")
 

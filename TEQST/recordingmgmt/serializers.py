@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import TextRecording, SenctenceRecording
+from .models import TextRecording, SentenceRecording
 from textmgmt.models import Text
 
 
@@ -33,7 +33,7 @@ class RecordingPKField(serializers.PrimaryKeyRelatedField):
         return queryset
 
 #Normal serializer
-class SenctenceRecordingSerializer(serializers.ModelSerializer):
+class SentenceRecordingSerializer(serializers.ModelSerializer):
 
     #def __init__(self, *args, **kwargs):
     #    super().__init__(*args, **kwargs)
@@ -46,7 +46,7 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
     recording = RecordingPKField()
 
     def validate(self, data):
-        if SenctenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
+        if SentenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
             raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
         if data['index'] > TextRecording.objects.get(pk=data['recording'].pk).active_sentence(): 
             raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
@@ -55,15 +55,15 @@ class SenctenceRecordingSerializer(serializers.ModelSerializer):
         return super().validate(data)
 
     class Meta:
-        model = SenctenceRecording
+        model = SentenceRecording
         fields = ['recording', 'audiofile', 'index']
 
 
-class SenctenceRecordingUpdateSerializer(serializers.ModelSerializer):
+class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField(read_only=True)
 
     class Meta:
-        model = SenctenceRecording
+        model = SentenceRecording
         fields = ['recording', 'audiofile', 'index']
         read_only_fields = ['recording', 'index']

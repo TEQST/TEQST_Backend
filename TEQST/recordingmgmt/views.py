@@ -1,7 +1,7 @@
 from rest_framework import generics, mixins, status
 from django.db import models
-from .serializers import TextRecordingSerializer, SenctenceRecordingSerializer, SenctenceRecordingUpdateSerializer
-from .models import TextRecording, SenctenceRecording
+from .serializers import TextRecordingSerializer, SentenceRecordingSerializer, SentenceRecordingUpdateSerializer
+from .models import TextRecording, SentenceRecording
 
 from django.http import HttpResponse
 import os
@@ -27,24 +27,24 @@ class TextRecordingView(generics.ListCreateAPIView):
             response.status_code = status.HTTP_204_NO_CONTENT
         return response
 
-class SenctenceRecordingCreateView(generics.CreateAPIView):
-    queryset = SenctenceRecording.objects.all()
-    serializer_class = SenctenceRecordingSerializer
+class SentenceRecordingCreateView(generics.CreateAPIView):
+    queryset = SentenceRecording.objects.all()
+    serializer_class = SentenceRecordingSerializer
 
-class SenctenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
-    queryset = SenctenceRecording.objects.all()
-    serializer_class = SenctenceRecordingSerializer
+class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = SentenceRecording.objects.all()
+    serializer_class = SentenceRecordingSerializer
 
     def get_object(self):
         rec = self.kwargs['rec']
         if 'index' in self.request.query_params:
-            return SenctenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
+            return SentenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
         return models.return_None()
     
     def get_serializer_class(self):
         if self.request.method == 'PUT':
-            return SenctenceRecordingUpdateSerializer
-        return SenctenceRecordingSerializer
+            return SentenceRecordingUpdateSerializer
+        return SentenceRecordingSerializer
 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
