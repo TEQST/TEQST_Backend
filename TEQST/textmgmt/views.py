@@ -23,6 +23,10 @@ class FolderListView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if 'parent' in self.request.query_params:
+            if not Folder.objects.filter(pk=self.request.query_params['parent']).exists():
+                raise NotFound("parent not found")
+            if Folder.objects.get(pk=self.request.query_params['parent']).is_shared_folder():
+                raise NotFound("parent not found")
             #if parent is a sharedfolder: error message
             return Folder.objects.filter(parent=self.request.query_params['parent'], owner=user.pk)
         return Folder.objects.filter(parent=None, owner=user.pk)
@@ -99,12 +103,15 @@ class PublisherTextListView(generics.ListCreateAPIView):
         # TODO IMPORTANT: Rethink this
         user = self.request.user
         if 'sharedfolder' in self.request.query_params:
+            if not SharedFolder.objects.filter(pk=self.request.query_params['sharedfolder']).exists():
+                raise NotFound("Invalid Sharedfolder id.")
             if SharedFolder.objects.get(pk=self.request.query_params['sharedfolder']).owner == user:
                 return Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
 
         # TODO The 'sharedfolder' query param must be required.
         # better solution would maybe be bad response or error
-        return Text.objects.none()
+        # return Text.objects.none()
+        raise NotFound("No sharedfolder specified.")
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
