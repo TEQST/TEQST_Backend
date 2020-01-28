@@ -18,9 +18,9 @@ class Tag(models.Model):
         return self.identifier
 
 class CustomUser(AbstractUser):
-    gender = models.CharField(max_length=20, blank=True, choices=GENDER_CHOICES, default='N')
+    gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='N')
     birth_year = models.IntegerField(default=2000)
-    education = models.CharField(max_length=50, blank=True, choices=EDU_CHOICES, default='N')
+    education = models.CharField(max_length=50, choices=EDU_CHOICES, default='N')
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     menu_language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True)
     country = models.CharField(max_length=50, null=True, blank=True)
