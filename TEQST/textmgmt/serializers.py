@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Folder, SharedFolder, Text
 from usermgmt.models import CustomUser
+from usermgmt.serializers import UserBasicSerializer
 
 ################################
 # important todos:
@@ -71,11 +72,13 @@ class SharedFolderDetailSerializer(serializers.ModelSerializer):
     to be used by view: 
     for: sharedfolder speaker retrieval and update
     """
-    speaker = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), many=True, allow_null=True)
+    speaker_ids = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
+    speakers = UserBasicSerializer(many=True, read_only=True, source='speaker')
     class Meta:
         model = SharedFolder
-        fields = ['id', 'name', 'speaker']
-        read_only_fields = ['name']
+        fields = ['id', 'name', 'speakers', 'speaker_ids']
+        read_only_fields = ['name', 'speakers']
+        write_only_fields = ['speaker_ids']
         depth = 1
 
 
