@@ -46,6 +46,10 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
     recording = RecordingPKField()
 
     def validate(self, data):
+        try:
+            data['index']
+        except KeyError:
+            raise serializers.ValidationError("No index provided")
         if SentenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
             raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
         if data['index'] > TextRecording.objects.get(pk=data['recording'].pk).active_sentence(): 
@@ -53,6 +57,11 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
         if data['index'] < 1:
             raise serializers.ValidationError("Invalid index.")
         return super().validate(data)
+    
+    # def validate_index(self, value):
+    #     if value is None:
+    #         raise serializers.ValidationError("Must provide sentence index")
+    #     return value
 
     class Meta:
         model = SentenceRecording

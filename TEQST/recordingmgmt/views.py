@@ -1,7 +1,9 @@
 from rest_framework import generics, mixins, status
+from rest_framework.exceptions import NotFound
 from django.db import models
 from .serializers import TextRecordingSerializer, SentenceRecordingSerializer, SentenceRecordingUpdateSerializer
 from .models import TextRecording, SentenceRecording
+from textmgmt.models import Text
 
 from django.http import HttpResponse
 import os
@@ -14,8 +16,12 @@ class TextRecordingView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if 'text' in self.request.query_params:
+            if not Text.objects.filter(pk=self.request.query_params['text']).exists():
+                raise NotFound("Invalid text id")
             return TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
-        return TextRecording.objects.none()
+        # return TextRecording.objects.none()
+        raise NotFound("No text specified")
+
     
     def perform_create(self, serializer):
         serializer.save(speaker=self.request.user)
@@ -37,9 +43,14 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         rec = self.kwargs['rec']
+        if not TextRecording.objects.filter(pk=rec).exists():
+            raise NotFound("Invalid Textrecording id.")
         if 'index' in self.request.query_params:
+            if not SentenceRecording.objects.filter(recording__id=rec, index=self.request.query_params['index']).exists():
+                raise NotFound("Invalid index.")
             return SentenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
-        return models.return_None()
+        #return models.return_None()
+        raise NotFound("No index specified.")
     
     def get_serializer_class(self):
         if self.request.method == 'PUT':
