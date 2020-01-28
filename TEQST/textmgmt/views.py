@@ -5,6 +5,7 @@ from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, mixins
+from rest_framework.exceptions import NotFound
 
 ################################
 # important todos:
@@ -118,11 +119,14 @@ class SpeakerTextListView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         if 'sharedfolder' in self.request.query_params:
+            if not SharedFolder.objects.filter(pk=self.request.query_params['sharedfolder']).exists():
+                raise NotFound("SharedFolder not found")
             if user in SharedFolder.objects.get(pk=self.request.query_params['sharedfolder']).speaker.all():
                 return Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
         
         # TODO maybe theres a better alternative 
-        return Text.objects.none()
+        # return Text.objects.none()
+        raise NotFound("No SharedFolder specified")
 
 
 class PublisherTextDetailedView(generics.RetrieveUpdateDestroyAPIView):
