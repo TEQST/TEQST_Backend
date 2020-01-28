@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import CustomUser, Language
 
+from datetime import date
+
 class LanguageSerializer(serializers.ModelSerializer):
 
     id = serializers.IntegerField(read_only = False)
@@ -41,6 +43,11 @@ class UserFullSerializer(serializers.ModelSerializer):
     #         language = Language.objects.get(**language_data)
     #         instance.languages.add(language)
     #     return instance
+
+    def validate_birth_year(self, value):
+        if value < 1900 or value > date.today().year:
+            raise serializers.ValidationError("Invalid birth_year.")
+        return value
         
 
 class UserBasicSerializer(serializers.ModelSerializer):
@@ -84,3 +91,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         user.languages.set(language_ids)
         user.save()
         return user
+    
+    def validate_birth_year(self, value):
+        if value < 1900 or value > date.today().year:
+            raise serializers.ValidationError("Invalid birth_year.")
+        return value
