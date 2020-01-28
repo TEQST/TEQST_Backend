@@ -30,6 +30,11 @@ class FolderFullSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
         read_only_fields = ['owner', 'subfolder', 'is_sharedfolder']
     
+    def validate_name(self, value):
+        if '__' in value:
+            raise serializers.ValidationError('The folder name contains invalid characters \"__\"')
+        return value
+
     def validate(self, data):
         if Folder.objects.filter(owner=self.context['request'].user, name=data['name'], parent=data['parent']).exists():
             raise serializers.ValidationError('A folder with the given name in the given place already exists')
