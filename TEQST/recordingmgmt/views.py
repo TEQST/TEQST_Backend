@@ -1,7 +1,8 @@
-from rest_framework import generics, mixins
+from rest_framework import generics, mixins, status
 from django.db import models
 from .serializers import TextRecordingSerializer, SenctenceRecordingSerializer, SenctenceRecordingUpdateSerializer
 from .models import TextRecording, SenctenceRecording
+from .exceptions import EmptyQueryset
 
 from django.http import HttpResponse
 import os
@@ -19,6 +20,13 @@ class TextRecordingView(generics.ListCreateAPIView):
     
     def perform_create(self, serializer):
         serializer.save(speaker=self.request.user)
+
+    def get(self, *args, **kwargs):
+        response = super().get(*args, **kwargs)
+        if not self.get_queryset().exists():
+            print('empty')
+            response.status_code = status.HTTP_204_NO_CONTENT
+        return response
 
 class SenctenceRecordingCreateView(generics.CreateAPIView):
     queryset = SenctenceRecording.objects.all()
