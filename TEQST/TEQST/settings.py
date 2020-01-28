@@ -150,3 +150,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ]
 }
+
+#CORS once again
+CORS_ORIGIN_ALLOW_ALL = True
