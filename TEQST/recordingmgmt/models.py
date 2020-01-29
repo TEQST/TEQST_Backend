@@ -1,8 +1,10 @@
 from django.db import models
+from django.conf import settings
 from usermgmt.models import CustomUser
 from textmgmt.models import Text
 from .storages import OverwriteStorage
 import wave
+import os
 
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
@@ -99,6 +101,8 @@ def create_textrecording_stm(trec_pk):
 
     stm_file.close()
 
+    concat_stms(trec.text.shared_folder.sharedfolder)
+
     # create .wav file for concatenated recordings and open in write mode; set metadata
 
     # declare and set audioduration variable
@@ -126,7 +130,19 @@ def create_textrecording_stm(trec_pk):
     # call the concat_stms()
 
 
-def concat_stms():
+def concat_stms(sharedfolder):
     # this needs some argument. maybe the sharedfolder id or the recording id from which it can get the sharedfolder id
-    pass
+    sf_path = sharedfolder.get_path()
+    stm_path = sf_path + '/STM'
+    temp_stm_names = os.listdir(settings.MEDIA_ROOT + '/' + stm_path)  # this lists directories as well, but there shouldnt be any in this directory
+
+    stm_file = open('media/' + sf_path + '/' + sharedfolder.name + '.stm', 'w')
+    stm_file.write("#####################\nHeader\n####################\n")
+
+    for temp_stm_name in temp_stm_names:
+        temp_stm_file = open('media/' + stm_path + '/' + temp_stm_name, 'r')
+        stm_file.write(temp_stm_file.read())
+        temp_stm_file.close()
+    
+    stm_file.close()
 
