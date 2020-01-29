@@ -4,7 +4,7 @@ from .serializers import TextBasicSerializer, TextFullSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import generics, mixins
+from rest_framework import generics, mixins, response, status
 from rest_framework.exceptions import NotFound
 
 ################################
@@ -30,6 +30,12 @@ class FolderListView(generics.ListCreateAPIView):
             #if parent is a sharedfolder: error message
             return Folder.objects.filter(parent=self.request.query_params['parent'], owner=user.pk)
         return Folder.objects.filter(parent=None, owner=user.pk)
+    
+    def get(self, request, *args, **kwargs):
+        if not self.get_queryset() and 'parent' in self.request.query_params:
+            parent_folder = Folder.objects.get(pk=self.request.query_params['parent'])
+            return response.Response({"parent_name" : parent_folder.name}, status=status.HTTP_204_NO_CONTENT)
+        return super().get(request, *args, **kwargs)
     
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
