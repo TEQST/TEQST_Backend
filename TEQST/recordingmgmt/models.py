@@ -65,7 +65,12 @@ def create_textrecording_stm(trec_pk):
     print("#####################\nCreating STM\n#####################")
 
     #create string with encoded userdata
-    user_str = '<' + trec.speaker.gender + ',' + trec.speaker.education + '>'
+    user_str = '<' + trec.speaker.gender + ',' + trec.speaker.education + ','
+    if trec.SR_permission:
+        user_str += 'SR'
+    if trec.TTS_permission:
+        user_str += 'TTS'
+    user_str += '>'
     username = trec.speaker.username
     current_timestamp = 0
     sentences = trec.text.get_content()
@@ -100,6 +105,8 @@ def create_textrecording_stm(trec_pk):
         wav.close()
 
     stm_file.close()
+
+    wav_full.close()
 
     concat_stms(trec.text.shared_folder.sharedfolder)
 
@@ -137,7 +144,11 @@ def concat_stms(sharedfolder):
     temp_stm_names = os.listdir(settings.MEDIA_ROOT + '/' + stm_path)  # this lists directories as well, but there shouldnt be any in this directory
 
     stm_file = open('media/' + sf_path + '/' + sharedfolder.name + '.stm', 'w')
-    stm_file.write("#####################\nHeader\n####################\n")
+    #stm_file.write("#####################\nHeader\n####################\n")
+
+    header_file = open('header.stm', 'r')
+    stm_file.write(header_file.read())
+    header_file.close()
 
     for temp_stm_name in temp_stm_names:
         temp_stm_file = open('media/' + stm_path + '/' + temp_stm_name, 'r')
