@@ -20,17 +20,16 @@ class FolderPKField(serializers.PrimaryKeyRelatedField):
 class FolderFullSerializer(serializers.ModelSerializer):
     """
     to be used by view: FolderListView
-    for: Folder creation, subfolder list retrieval
+    for: Folder creation, top-level-folder list retrieval
     """
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
-    parent_name = serializers.CharField(read_only=True, source='get_parent_name')
     # is_sharedfolder in the sense that there exists a Sharedfolder object 
     # with the same pk as this Folder 
     class Meta:
         model = Folder
-        fields = ['id', 'name', 'owner', 'parent', 'parent_name', 'subfolder', 'is_sharedfolder']
-        read_only_fields = ['owner', 'parent_name', 'subfolder', 'is_sharedfolder']
+        fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder']
+        read_only_fields = ['owner', 'is_sharedfolder']
     
     def validate_name(self, value):
         if '__' in value:
@@ -42,18 +41,35 @@ class FolderFullSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('A folder with the given name in the given place already exists')
         return super().validate(data)
 
-
-
 class FolderBasicSerializer(serializers.ModelSerializer):
     """
     to be used by view: FolderDetailedView
-    for: Folder update
+    for: Folder update and nested serializers in retrieve
     """
+    is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
+    # is_sharedfolder in the sense that there exists a Sharedfolder object 
+    # with the same pk as this Folder
     class Meta:
         model = Folder
-        fields = ['id', 'name']
-        read_only_fields = ['name']  # remove 'name' for folder name change
+        fields = ['id', 'name', 'is_sharedfolder']
+        read_only_fields = ['name', 'is_sharedfolder']  # remove 'name' for folder name change
 
+class FolderDetailedSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: FolderDetailView
+    for: Folder retrieval
+    """
+    parent = FolderPKField(allow_null=True)
+    is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
+    subfolder = FolderBasicSerializer(many = True, read_only=True)
+    # is_sharedfolder in the sense that there exists a Sharedfolder object 
+    # with the same pk as this Folder 
+    class Meta:
+        model = Folder
+        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
+        #read_only_fields = ['owner', 'subfolder', 'is_sharedfolder']
+        #should not be necessary
+        read_only_fields = fields
 
 class SharedFolderListSerializer(serializers.ModelSerializer):
     # TODO add read only field of path (callable)

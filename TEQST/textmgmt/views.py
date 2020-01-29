@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderListSerializer, SharedFolderDetailSerializer
-from .serializers import TextBasicSerializer, TextFullSerializer
+from .serializers import TextBasicSerializer, TextFullSerializer, FolderDetailedSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
 from rest_framework.permissions import IsAuthenticated
@@ -22,6 +22,7 @@ class FolderListView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        #the use of the parent param is deprecated. you should get this info with folderDetailView
         if 'parent' in self.request.query_params:
             if not Folder.objects.filter(pk=self.request.query_params['parent']).exists():
                 raise NotFound("parent not found")
@@ -43,11 +44,12 @@ class FolderListView(generics.ListCreateAPIView):
 
 class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin):
     """
+    Retrieve Mixin: Folder full information
     Update Mixin: Folder name change
     Delete Mixin: Folder deletion
     """
     queryset = Folder.objects.all()
-    serializer_class = FolderBasicSerializer
+    serializer_class = FolderDetailedSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
 
     # not sure if this is really necessary
@@ -94,6 +96,11 @@ class SharedFolderDetailView(generics.RetrieveUpdateAPIView):
     queryset = SharedFolder.objects.all()
     serializer_class = SharedFolderDetailSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return FolderBasicSerializer()
+        return FolderBasicSerializer()
 
     def get_queryset(self):
         user = self.request.user
