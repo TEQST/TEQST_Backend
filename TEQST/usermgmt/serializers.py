@@ -28,11 +28,14 @@ class UserFullSerializer(serializers.ModelSerializer):
     languages = LanguageSerializer(many = True, read_only = True)
     language_ids = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, source='languages', write_only=True)
     
+    menu_language = LanguageSerializer(read_only=True)
+    menu_language_id = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), source='menu_language', write_only=True)
+
     is_publisher = serializers.BooleanField(read_only=True)  # source kwarg not needed, because name is same
 
     class Meta():
         model = CustomUser
-        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'country', 'is_publisher']
+        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'country', 'is_publisher']
         read_only_fields = ['id', 'username', 'is_publisher']
 
     # def update(self, instance, validated_data):
