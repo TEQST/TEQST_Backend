@@ -2,6 +2,15 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from .utils import EDU_CHOICES, GENDER_CHOICES
 
+def get_english():
+    try:
+        if Language.objects.filter(short='en').exists():
+            return Language.objects.get(short='en').id
+        lang = Language(native_name='english', english_name='english', short='en')
+        lang.save()
+        return lang.id
+    except:
+        return
 
 class Language(models.Model):
     native_name = models.CharField(max_length=50)
@@ -23,7 +32,7 @@ class CustomUser(AbstractUser):
     birth_year = models.IntegerField(default=2000)
     education = models.CharField(max_length=50, choices=EDU_CHOICES, default='N')
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
-    menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=Language.objects.get_or_create(native_name='English', english_name='English', short='en')[0].pk)
+    menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english)
     country = models.CharField(max_length=50, null=True, blank=True)
 
     #Below is not core funcionality
