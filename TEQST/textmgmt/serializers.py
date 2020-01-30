@@ -118,6 +118,7 @@ class TextFullSerializer(serializers.ModelSerializer):
         # TODO maybe make the textfile write only
         fields = ['id', 'title', 'shared_folder', 'content', 'textfile']
         read_only_fields = ['content']
+        extra_kwargs = {'textfile': {'write_only': True}}
 
     def validate(self, data):
         if Text.objects.filter(shared_folder=data['shared_folder'], title=data['title']).exists():
