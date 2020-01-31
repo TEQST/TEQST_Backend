@@ -66,6 +66,7 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
     class Meta:
         model = SentenceRecording
         fields = ['recording', 'audiofile', 'index']
+        extra_kwargs = {'audiofile': {'write_only': True}}
 
 
 class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
@@ -76,3 +77,4 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
         model = SentenceRecording
         fields = ['recording', 'audiofile', 'index']
         read_only_fields = ['recording', 'index']
+        extra_kwargs = {'audiofile': {'write_only': True}}
