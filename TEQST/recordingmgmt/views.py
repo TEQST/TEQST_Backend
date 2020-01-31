@@ -16,10 +16,12 @@ class TextRecordingView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if 'text' in self.request.query_params:
-            if not Text.objects.filter(pk=self.request.query_params['text']).exists():
+            try:
+                if not Text.objects.filter(pk=self.request.query_params['text']).exists():
+                    raise NotFound("Invalid text id")
+                return TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
+            except ValueError:
                 raise NotFound("Invalid text id")
-            return TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
-        # return TextRecording.objects.none()
         raise NotFound("No text specified")
 
     
@@ -29,7 +31,6 @@ class TextRecordingView(generics.ListCreateAPIView):
     def get(self, *args, **kwargs):
         response = super().get(*args, **kwargs)
         if not self.get_queryset().exists():
-            print('empty')
             response.status_code = status.HTTP_204_NO_CONTENT
         return response
 
@@ -44,13 +45,15 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         rec = self.kwargs['rec']
         if not TextRecording.objects.filter(pk=rec).exists():
-            raise NotFound("Invalid Textrecording id.")
+            raise NotFound("Invalid Textrecording id")
         if 'index' in self.request.query_params:
-            if not SentenceRecording.objects.filter(recording__id=rec, index=self.request.query_params['index']).exists():
-                raise NotFound("Invalid index.")
-            return SentenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
-        #return models.return_None()
-        raise NotFound("No index specified.")
+            try:
+                if not SentenceRecording.objects.filter(recording__id=rec, index=self.request.query_params['index']).exists():
+                    raise NotFound("Invalid index")
+                return SentenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
+            except ValueError:
+                raise NotFound("Invalid index")
+        raise NotFound("No index specified")
     
     def get_serializer_class(self):
         if self.request.method == 'PUT':

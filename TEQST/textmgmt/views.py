@@ -87,11 +87,11 @@ class SharedFolderByPublisherView(generics.ListAPIView):
         if 'publisher' in self.request.query_params:
             try:
                 if not CustomUser.objects.filter(id=self.request.query_params['publisher']).exists():
-                    raise NotFound("Invalid publisher id.")
+                    raise NotFound("Invalid publisher id")
                 return shared_folders.filter(owner=self.request.query_params['publisher'])
             except ValueError:
                 raise NotFound("Invalid publisher id")
-        raise NotFound("No publisher specified.")
+        raise NotFound("No publisher specified")
 
 
 class SharedFolderDetailView(generics.RetrieveUpdateAPIView):
@@ -118,7 +118,7 @@ class PublisherTextListView(generics.ListCreateAPIView):
         if 'sharedfolder' in self.request.query_params:
             try:
                 if not SharedFolder.objects.filter(pk=self.request.query_params['sharedfolder'], owner=user).exists():
-                    raise NotFound("Invalid Sharedfolder id.")
+                    raise NotFound("Invalid Sharedfolder id")
                 #if SharedFolder.objects.get(pk=self.request.query_params['sharedfolder']).owner == user:
                 return Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
             except ValueError:
@@ -126,7 +126,7 @@ class PublisherTextListView(generics.ListCreateAPIView):
         # TODO The 'sharedfolder' query param must be required.
         # better solution would maybe be bad response or error
         # return Text.objects.none()
-        raise NotFound("No sharedfolder specified.")
+        raise NotFound("No sharedfolder specified")
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
