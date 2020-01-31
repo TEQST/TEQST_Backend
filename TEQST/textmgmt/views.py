@@ -34,6 +34,7 @@ class FolderListView(generics.ListCreateAPIView):
         return Folder.objects.filter(parent=None, owner=user.pk)
     
     def get(self, request, *args, **kwargs):
+        #TODO why is this code necessary?
         if not self.get_queryset() and 'parent' in self.request.query_params:
             parent_folder = Folder.objects.get(pk=self.request.query_params['parent'])
             return response.Response({"parent_name" : parent_folder.name}, status=status.HTTP_204_NO_CONTENT)
