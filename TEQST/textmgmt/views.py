@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderListSerializer, SharedFolderDetailSerializer
+from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderContentSerializer, SharedFolderDetailSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer, FolderDetailedSerializer, PublisherSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
@@ -72,13 +72,13 @@ class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mix
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
-
+#deprecated / never used
 class SharedFolderByPublisherView(generics.ListAPIView):
     """
     use: list shared_folders shared with the current user by a specified publisher
     """
     queryset = SharedFolder.objects.all()
-    serializer_class = SharedFolderListSerializer
+    serializer_class = SharedFolderContentSerializer
 
     def get_queryset(self):
         # TODO test if this works
@@ -135,7 +135,7 @@ class PublisherTextListView(generics.ListCreateAPIView):
         return TextBasicSerializer
 
 
-class SpeakerTextListView(generics.ListAPIView):
+class OldSpeakerTextListView(generics.ListAPIView):
     queryset = Text.objects.all()
     serializer_class = TextBasicSerializer
 
@@ -151,6 +151,11 @@ class SpeakerTextListView(generics.ListAPIView):
         # TODO maybe theres a better alternative 
         # return Text.objects.none()
         raise NotFound("No SharedFolder specified")
+
+
+class SpeakerTextListView(generics.RetrieveAPIView):
+    queryset = SharedFolder.objects.all()
+    serializer_class = SharedFolderContentSerializer
 
 
 class PublisherTextDetailedView(generics.RetrieveUpdateDestroyAPIView):

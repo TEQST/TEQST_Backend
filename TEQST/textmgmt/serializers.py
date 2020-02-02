@@ -71,17 +71,30 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
         #should not be necessary
         read_only_fields = fields
 
-class SharedFolderListSerializer(serializers.ModelSerializer):
+
+class TextBasicSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: TextListView, TextDetailedView
+    for: retrieving a list of texts, updating the title of a text
+    """
+    class Meta:
+        model = Text
+        # TODO adjust fields
+        fields = ['id', 'title']
+
+
+class SharedFolderContentSerializer(serializers.ModelSerializer):
     # TODO add read only field of path (callable)
     """
     to be used by view: SharedFolderListView
     for: SharedFolder list retrieval in speaker view
     """
+    texts = TextBasicSerializer(read_only=True, many=True, source='text')
     path = serializers.CharField(read_only=True, source='get_readable_path')
     class Meta:
         model = SharedFolder
-        fields = ['id', 'name', 'owner', 'path']
-        read_only_fields = ['name', 'owner', 'path']  # is path neede in read_only_fields?
+        fields = ['id', 'name', 'owner', 'path', 'texts']
+        read_only_fields = ['name', 'owner', 'path', 'texts']  # is path neede in read_only_fields?
 
 
 class SharedFolderDetailSerializer(serializers.ModelSerializer):
@@ -126,26 +139,6 @@ class TextFullSerializer(serializers.ModelSerializer):
         return super().validate(data)
 
 
-class TextBasicSerializer(serializers.ModelSerializer):
-    """
-    to be used by view: TextListView, TextDetailedView
-    for: retrieving a list of texts, updating the title of a text
-    """
-    class Meta:
-        model = Text
-        # TODO adjust fields
-        fields = ['id', 'title']
-
-
-class SharedFolderBySpeakerPKField(serializers.PrimaryKeyRelatedField):
-    def get_queryset(self):
-        print('here..............')
-        user = self.context['request'].user
-        pub = self.context['request'].kwargs['pk']
-        queryset = SharedFolder.objects.filter(owner=pub, speaker=user)
-        return queryset
-
-
 class PublisherSerializer(serializers.ModelSerializer):
     """
     to be used by view: PublisherListView
@@ -164,7 +157,7 @@ class PublisherSerializer(serializers.ModelSerializer):
         spk = self.context['request'].user
         info = []
         for sf in SharedFolder.objects.filter(owner=pub, speaker=spk):
-            info.append({"id": sf.pk, "name": sf.name})
+            info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
         return info
 
 

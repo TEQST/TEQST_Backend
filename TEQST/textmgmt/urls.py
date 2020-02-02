@@ -12,7 +12,10 @@ urlpatterns = [
     path('publishers/<int:pk>/', PublisherDetailedView.as_view()),
 
     path('pub/texts/', PublisherTextListView.as_view()),
-    path('spk/texts/', SpeakerTextListView.as_view()),  # shows the texts in a sharedfolder
+
+    # path('spk/texts/', SpeakerTextListView.as_view()),  # shows the texts in a sharedfolder
+    path('spk/sharedfolders/<int:pk>/', SpeakerTextListView.as_view()),  # this is the correct one
+
     path('sharedfolders/<int:pk>/', SharedFolderDetailView.as_view()),  # retrieve and update the speakers of a sf
     path('pub/texts/<int:pk>/', PublisherTextDetailedView.as_view()),
     path('spk/texts/<int:pk>/', SpeakerTextDetailedView.as_view())
