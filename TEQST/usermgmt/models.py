@@ -50,10 +50,10 @@ class CustomUser(AbstractUser):
             return tag.default_color
         return customization_set[0].custom_color
     
-    #This is core functionality again
     def is_publisher(self):
         p = Group.objects.get(name='Publisher')
         return p in self.groups.all()
+
 
 class Usage(models.Model):
     #TODO maybe limit_choices_to publisher if it works properly

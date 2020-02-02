@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderListSerializer, SharedFolderDetailSerializer
-from .serializers import TextBasicSerializer, TextFullSerializer, FolderDetailedSerializer
+from .serializers import TextBasicSerializer, TextFullSerializer, FolderDetailedSerializer, PublisherSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
 from usermgmt.models import CustomUser
@@ -176,3 +176,27 @@ class SpeakerTextDetailedView(generics.RetrieveAPIView):
     def get_queryset(self):
         user = self.request.user
         return Text.objects.filter(shared_folder__sharedfolder__speaker__id=user.id)
+
+
+class PublisherListView(generics.ListAPIView):
+    """
+    use: get list of publishers who own sharedfolders shared with request.user
+    """
+    queryset = CustomUser.objects.all()
+    serializer_class = PublisherSerializer
+
+    def get_queryset(self):
+        """
+        does not check for is_publisher. this should not be necessary
+        """
+        # CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
+        pub_pks = []
+        user = self.request.user
+        for shf in user.sharedfolder.all():
+            pub_pks.append(shf.owner.pk)
+        return CustomUser.objects.filter(pk__in = pub_pks)
+
+
+class PublisherDetailedView(generics.RetrieveAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = PublisherSerializer

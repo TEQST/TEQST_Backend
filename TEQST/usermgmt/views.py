@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .serializers import UserFullSerializer, UserBasicSerializer, PublisherSerializer, LanguageSerializer, UserRegisterSerializer
+from .serializers import UserFullSerializer, UserBasicSerializer, LanguageSerializer, UserRegisterSerializer
 from .models import CustomUser, Language
 from .permissions import IsPublisher
 from rest_framework.permissions import IsAuthenticated
@@ -24,23 +24,23 @@ class UserListView(generics.ListAPIView):
             return CustomUser.objects.all()
 
 
-class PublisherListView(generics.ListAPIView):
-    """
-    use: get list of publishers who own sharedfolders shared with request.user
-    """
-    queryset = CustomUser.objects.all()
-    serializer_class = PublisherSerializer
+# class PublisherListView(generics.ListAPIView):
+#     """
+#     use: get list of publishers who own sharedfolders shared with request.user
+#     """
+#     queryset = CustomUser.objects.all()
+#     serializer_class = PublisherSerializer
 
-    def get_queryset(self):
-        """
-        does not check for is_publisher. this should not be necessary
-        """
-        # CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
-        pub_pks = []
-        user = self.request.user
-        for shf in user.sharedfolder.all():
-            pub_pks.append(shf.owner.pk)
-        return CustomUser.objects.filter(pk__in = pub_pks)
+#     def get_queryset(self):
+#         """
+#         does not check for is_publisher. this should not be necessary
+#         """
+#         # CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
+#         pub_pks = []
+#         user = self.request.user
+#         for shf in user.sharedfolder.all():
+#             pub_pks.append(shf.owner.pk)
+#         return CustomUser.objects.filter(pk__in = pub_pks)
 
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
     #queryset = CustomUser.objects.all()

@@ -135,4 +135,38 @@ class TextBasicSerializer(serializers.ModelSerializer):
         model = Text
         # TODO adjust fields
         fields = ['id', 'title']
+
+
+class SharedFolderBySpeakerPKField(serializers.PrimaryKeyRelatedField):
+    def get_queryset(self):
+        print('here..............')
+        user = self.context['request'].user
+        pub = self.context['request'].kwargs['pk']
+        queryset = SharedFolder.objects.filter(owner=pub, speaker=user)
+        return queryset
+
+
+class PublisherSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PublisherListView
+    for: retrieval of list of publishers, who own sharedfolders shared with request.user
+    """
+    freedfolders = serializers.SerializerMethodField(read_only=True, method_name='get_freed_folders')
+
+    class Meta:
+        model = CustomUser
+        # remove id for production
+        fields = ['id', 'username', 'freedfolders']
+        read_only_fields = ['username']
+    
+    def get_freed_folders(self, obj):
+        pub = obj
+        spk = self.context['request'].user
+        info = []
+        for sf in SharedFolder.objects.filter(owner=pub, speaker=spk):
+            info.append({"id": sf.pk, "name": sf.name})
+        return info
+
+
+
         

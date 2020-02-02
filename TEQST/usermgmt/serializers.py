@@ -62,15 +62,15 @@ class UserBasicSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class PublisherSerializer(serializers.ModelSerializer):
-    """
-    to be used by view: PublisherListView
-    for: retrieval of list of publishers, who own sharedfolders shared with request.user
-    """
-    class Meta:
-        model = CustomUser
-        # remove id for production
-        fields = ['id', 'username']
+# class PublisherSerializer(serializers.ModelSerializer):
+#     """
+#     to be used by view: PublisherListView
+#     for: retrieval of list of publishers, who own sharedfolders shared with request.user
+#     """
+#     class Meta:
+#         model = CustomUser
+#         # remove id for production
+#         fields = ['id', 'username']
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
