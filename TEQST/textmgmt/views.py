@@ -1,5 +1,4 @@
-from django.shortcuts import render
-from .serializers import FolderFullSerializer, FolderBasicSerializer, SharedFolderContentSerializer, SharedFolderDetailSerializer
+from .serializers import FolderFullSerializer, SharedFolderContentSerializer, SharedFolderDetailSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer, FolderDetailedSerializer, PublisherSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
@@ -8,15 +7,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, mixins, response, status
 from rest_framework.exceptions import NotFound
 
-################################
-# important todos:
-# - the get_queryset method from textlistview
-# - test if sharedfolderbypublisherview works
-# - implement view for 'api/publishers/'
-################################
-
 
 class FolderListView(generics.ListCreateAPIView):
+    """
+    url: api/folders/
+    use: list the topmost layer of folders for a publisher, folder creation
+    """
     queryset = Folder.objects.all()
     serializer_class = FolderFullSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
@@ -31,72 +27,30 @@ class FolderListView(generics.ListCreateAPIView):
                 raise NotFound("parent not found")
             #if parent is a sharedfolder: error message
             return Folder.objects.filter(parent=self.request.query_params['parent'], owner=user.pk)
-        return Folder.objects.filter(parent=None, owner=user.pk)
-    
-    def get(self, request, *args, **kwargs):
-        #TODO why is this code necessary?
-        if not self.get_queryset() and 'parent' in self.request.query_params:
-            parent_folder = Folder.objects.get(pk=self.request.query_params['parent'])
-            return response.Response({"parent_name" : parent_folder.name}, status=status.HTTP_204_NO_CONTENT)
-        return super().get(request, *args, **kwargs)
+
+        return Folder.objects.filter(parent=None, owner=user.pk)  # parent=None means the folder is in the topmost layer
     
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
 
-class FolderDetailedView(generics.GenericAPIView, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin):
+class FolderDetailedView(generics.RetrieveDestroyAPIView):
     """
-    Retrieve Mixin: Folder full information
-    Update Mixin: Folder name change
-    Delete Mixin: Folder deletion
+    url: api/folders/:id/
+    use: retrieve a Folder with its subfolders, Folder deletion
     """
     queryset = Folder.objects.all()
     serializer_class = FolderDetailedSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
 
-    # not sure if this is really necessary
     def get_queryset(self):
         user = self.request.user
         return Folder.objects.filter(owner=user.pk)
 
-    # the get method and the retreivemodelmixin are only here for debug reasons
-    def get(self, request, *args, **kwargs):
-        return self.retrieve(request, *args, **kwargs)
-
-    def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
-
-    def patch(self, request, *args, **kwargs):
-        return self.partial_update(request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        return self.destroy(request, *args, **kwargs)
-
-#deprecated / never used
-class SharedFolderByPublisherView(generics.ListAPIView):
-    """
-    use: list shared_folders shared with the current user by a specified publisher
-    """
-    queryset = SharedFolder.objects.all()
-    serializer_class = SharedFolderContentSerializer
-
-    def get_queryset(self):
-        # TODO test if this works
-        # publisher query param should be mandatory
-        user = self.request.user
-        shared_folders = SharedFolder.objects.filter(speaker=user.pk)
-        if 'publisher' in self.request.query_params:
-            try:
-                if not CustomUser.objects.filter(id=self.request.query_params['publisher']).exists():
-                    raise NotFound("Invalid publisher id")
-                return shared_folders.filter(owner=self.request.query_params['publisher'])
-            except ValueError:
-                raise NotFound("Invalid publisher id")
-        raise NotFound("No publisher specified")
-
 
 class SharedFolderDetailView(generics.RetrieveUpdateAPIView):
     """
+    url: api/sharedfolders/:id/
     use: retrieve and update the speakers of a shared folder
     """
     queryset = SharedFolder.objects.all()
@@ -109,24 +63,23 @@ class SharedFolderDetailView(generics.RetrieveUpdateAPIView):
 
 
 class PublisherTextListView(generics.ListCreateAPIView):
+    """
+    url: api/pub/texts/?sharedfolder=123
+    use: in the publish tab: retrieve a list of texts contained in a sharedfolder, text upload
+    """
     queryset = Text.objects.all()
     serializer_class = TextBasicSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
-        # TODO IMPORTANT: Rethink this
         user = self.request.user
         if 'sharedfolder' in self.request.query_params:
             try:
                 if not SharedFolder.objects.filter(pk=self.request.query_params['sharedfolder'], owner=user).exists():
                     raise NotFound("Invalid Sharedfolder id")
-                #if SharedFolder.objects.get(pk=self.request.query_params['sharedfolder']).owner == user:
                 return Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
             except ValueError:
                 raise NotFound("Invalid sharedfolder id")
-        # TODO The 'sharedfolder' query param must be required.
-        # better solution would maybe be bad response or error
-        # return Text.objects.none()
         raise NotFound("No sharedfolder specified")
     
     def get_serializer_class(self):
@@ -135,30 +88,20 @@ class PublisherTextListView(generics.ListCreateAPIView):
         return TextBasicSerializer
 
 
-class OldSpeakerTextListView(generics.ListAPIView):
-    queryset = Text.objects.all()
-    serializer_class = TextBasicSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        if 'sharedfolder' in self.request.query_params:
-            try:
-                if not SharedFolder.objects.filter(pk=self.request.query_params['sharedfolder'], speaker=user).exists():
-                    raise NotFound("SharedFolder not found")
-                return Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
-            except ValueError:
-                raise NotFound("Invalid sharedfolder id")
-        # TODO maybe theres a better alternative 
-        # return Text.objects.none()
-        raise NotFound("No SharedFolder specified")
-
-
 class SpeakerTextListView(generics.RetrieveAPIView):
+    """
+    url: api/spk/sharedfolders/:id/
+    use: in speak tab: retrieve a sharedfolder with the texts it contains
+    """
     queryset = SharedFolder.objects.all()
     serializer_class = SharedFolderContentSerializer
 
 
-class PublisherTextDetailedView(generics.RetrieveUpdateDestroyAPIView):
+class PublisherTextDetailedView(generics.RetrieveDestroyAPIView):
+    """
+    url: api/pub/texts/:id/
+    use: in publish tab: retrieve a text, text deletion
+    """
     queryset = Text.objects.all()
     serializer_class = TextFullSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
@@ -167,14 +110,18 @@ class PublisherTextDetailedView(generics.RetrieveUpdateDestroyAPIView):
         user = self.request.user
         return Text.objects.filter(shared_folder__owner=user.pk)
 
+    # TODO maybe this method is not needed
     def get_serializer_class(self):
-        # TODO using BasicSerializer should not be necessary
         if self.request.method == 'GET':
             return TextFullSerializer
         return TextBasicSerializer
 
 
 class SpeakerTextDetailedView(generics.RetrieveAPIView):
+    """
+    url: api/spk/texts/:id/
+    use: in speak tab: retrieve a text
+    """
     queryset = Text.objects.all()
     serializer_class = TextFullSerializer
 
@@ -185,16 +132,18 @@ class SpeakerTextDetailedView(generics.RetrieveAPIView):
 
 class PublisherListView(generics.ListAPIView):
     """
+    url: api/publishers/
     use: get list of publishers who own sharedfolders shared with request.user
     """
     queryset = CustomUser.objects.all()
     serializer_class = PublisherSerializer
 
     def get_queryset(self):
-        """
-        does not check for is_publisher. this should not be necessary
-        """
-        # CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
+        # does not check for is_publisher. This is not necessary
+        
+        # possible alternative solution
+        # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
+        # current code
         pub_pks = []
         user = self.request.user
         for shf in user.sharedfolder.all():
@@ -203,5 +152,9 @@ class PublisherListView(generics.ListAPIView):
 
 
 class PublisherDetailedView(generics.RetrieveAPIView):
+    """
+    url: api/publishers/:id/
+    use: in speak tab: retrieve a publisher with their folders which they shared with request.user
+    """
     queryset = CustomUser.objects.all()
     serializer_class = PublisherSerializer

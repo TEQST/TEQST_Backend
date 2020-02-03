@@ -3,15 +3,9 @@ from .models import Folder, SharedFolder, Text
 from usermgmt.models import CustomUser
 from usermgmt.serializers import UserBasicSerializer
 
-################################
-# important todos:
-# - add folder name change functionality
-################################
-
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
-        # TODO sharedfolders should not be allowed to be parent folders for other folders
         user = self.context['request'].user
         queryset = Folder.objects.filter(owner=user, sharedfolder=None)
         return queryset
@@ -24,83 +18,84 @@ class FolderFullSerializer(serializers.ModelSerializer):
     """
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
-    # is_sharedfolder in the sense that there exists a Sharedfolder object 
-    # with the same pk as this Folder 
+    # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
+ 
     class Meta:
         model = Folder
         fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder']
         read_only_fields = ['owner', 'is_sharedfolder']
     
     def validate_name(self, value):
+        """
+        validates the name field
+        """
         if '__' in value:
             raise serializers.ValidationError('The folder name contains invalid characters \"__\"')
         return value
 
     def validate(self, data):
+        """
+        validation that has to do with multiple fields of the serializer
+        """
         if Folder.objects.filter(owner=self.context['request'].user, name=data['name'], parent=data['parent']).exists():
             raise serializers.ValidationError('A folder with the given name in the given place already exists')
         return super().validate(data)
 
 class FolderBasicSerializer(serializers.ModelSerializer):
     """
-    to be used by view: FolderDetailedView
-    for: Folder update and nested serializers in retrieve
+    to be used by: FolderDetailedSerializer
     """
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
-    # is_sharedfolder in the sense that there exists a Sharedfolder object 
-    # with the same pk as this Folder
+    # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
+    
     class Meta:
         model = Folder
         fields = ['id', 'name', 'is_sharedfolder']
-        read_only_fields = ['name', 'is_sharedfolder']  # remove 'name' for folder name change
+        read_only_fields = ['name', 'is_sharedfolder']
 
 class FolderDetailedSerializer(serializers.ModelSerializer):
     """
     to be used by view: FolderDetailView
-    for: Folder retrieval
+    for: retrieval of a Folder with its subfolders
     """
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
-    subfolder = FolderBasicSerializer(many = True, read_only=True)
-    # is_sharedfolder in the sense that there exists a Sharedfolder object 
-    # with the same pk as this Folder 
+    subfolder = FolderBasicSerializer(many=True, read_only=True)
+    # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
+    
     class Meta:
         model = Folder
         fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
-        #read_only_fields = ['owner', 'subfolder', 'is_sharedfolder']
-        #should not be necessary
         read_only_fields = fields
 
 
 class TextBasicSerializer(serializers.ModelSerializer):
     """
-    to be used by view: TextListView, TextDetailedView
-    for: retrieving a list of texts, updating the title of a text
+    to be used by view: PublisherTextListView
+    for: retrieval of a list of texts contained in a sharedfolder
     """
     class Meta:
         model = Text
-        # TODO adjust fields
         fields = ['id', 'title']
 
 
 class SharedFolderContentSerializer(serializers.ModelSerializer):
-    # TODO add read only field of path (callable)
     """
-    to be used by view: SharedFolderListView
-    for: SharedFolder list retrieval in speaker view
+    to be used by view: SpeakerTextListView
+    for: retrieval of a sharedfolder with the texts it contains
     """
     texts = TextBasicSerializer(read_only=True, many=True, source='text')
     path = serializers.CharField(read_only=True, source='get_readable_path')
     class Meta:
         model = SharedFolder
         fields = ['id', 'name', 'owner', 'path', 'texts']
-        read_only_fields = ['name', 'owner', 'path', 'texts']  # is path neede in read_only_fields?
+        read_only_fields = ['name', 'owner']
 
 
 class SharedFolderDetailSerializer(serializers.ModelSerializer):
     """
-    to be used by view: 
-    for: sharedfolder speaker retrieval and update
+    to be used by view: SharedFolderDetailView
+    for: retrieval and update of the speakers of a shared folder
     """
     speaker_ids = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
     speakers = UserBasicSerializer(many=True, read_only=True, source='speaker')
@@ -121,14 +116,14 @@ class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
 
 class TextFullSerializer(serializers.ModelSerializer):
     """
-    to be used by view: TextDetailedView, TextListView
-    for: opening a text, creation of a text
+    to be used by view: PublisherTextListView, PublisherTextDetailedView, SpeakerTextDetailedView
+    for: creation of a text, retrieval of a text
     """
     content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
     shared_folder = SharedFolderPKField()
+
     class Meta:
         model = Text
-        # TODO maybe make the textfile write only
         fields = ['id', 'title', 'shared_folder', 'content', 'textfile']
         read_only_fields = ['content']
         extra_kwargs = {'textfile': {'write_only': True}}
@@ -141,14 +136,13 @@ class TextFullSerializer(serializers.ModelSerializer):
 
 class PublisherSerializer(serializers.ModelSerializer):
     """
-    to be used by view: PublisherListView
-    for: retrieval of list of publishers, who own sharedfolders shared with request.user
+    to be used by view: PublisherListView, PublisherDetailedView
+    for: retrieval of single publisher or list of publishers, who own sharedfolders (freedfolders) shared with request.user
     """
     freedfolders = serializers.SerializerMethodField(read_only=True, method_name='get_freed_folders')
 
     class Meta:
         model = CustomUser
-        # remove id for production
         fields = ['id', 'username', 'freedfolders']
         read_only_fields = ['username']
     

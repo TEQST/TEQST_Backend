@@ -1,22 +1,14 @@
 from django.urls import path, include
-from .views import FolderListView, FolderDetailedView, SharedFolderByPublisherView, PublisherDetailedView, SharedFolderDetailView, PublisherTextListView, SpeakerTextListView, PublisherTextDetailedView, SpeakerTextDetailedView, PublisherListView
-
+from . import views
 
 urlpatterns = [
-    path('folders/', FolderListView.as_view()),
-    path('folders/<int:pk>/', FolderDetailedView.as_view()),
-
-    path('publishers/', PublisherListView.as_view()),
-
-    # path('sharedfolders/', SharedFolderByPublisherView.as_view()),  # shows the SFs owned by a publisher
-    path('publishers/<int:pk>/', PublisherDetailedView.as_view()),
-
-    path('pub/texts/', PublisherTextListView.as_view()),
-
-    # path('spk/texts/', SpeakerTextListView.as_view()),  # shows the texts in a sharedfolder
-    path('spk/sharedfolders/<int:pk>/', SpeakerTextListView.as_view()),  # this is the correct one
-
-    path('sharedfolders/<int:pk>/', SharedFolderDetailView.as_view()),  # retrieve and update the speakers of a sf
-    path('pub/texts/<int:pk>/', PublisherTextDetailedView.as_view()),
-    path('spk/texts/<int:pk>/', SpeakerTextDetailedView.as_view())
+    path('folders/', views.FolderListView.as_view()),
+    path('folders/<int:pk>/', views.FolderDetailedView.as_view()),
+    path('publishers/', views.PublisherListView.as_view()),
+    path('publishers/<int:pk>/', views.PublisherDetailedView.as_view()),
+    path('pub/texts/', views.PublisherTextListView.as_view()),
+    path('spk/sharedfolders/<int:pk>/', views.SpeakerTextListView.as_view()),
+    path('sharedfolders/<int:pk>/', views.SharedFolderDetailView.as_view()),
+    path('pub/texts/<int:pk>/', views.PublisherTextDetailedView.as_view()),
+    path('spk/texts/<int:pk>/', views.SpeakerTextDetailedView.as_view())
 ]
