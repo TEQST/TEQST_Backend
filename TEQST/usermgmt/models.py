@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from .utils import EDU_CHOICES, GENDER_CHOICES
 
+
 def get_english():
     try:
         if Language.objects.filter(short='en').exists():
@@ -12,6 +13,7 @@ def get_english():
     except:
         return
 
+
 class Language(models.Model):
     native_name = models.CharField(max_length=50)
     english_name = models.CharField(max_length=50)
@@ -20,12 +22,14 @@ class Language(models.Model):
     def __str__(self):
         return self.english_name + ' (' + self.native_name + ')'
 
+
 class Tag(models.Model):
     identifier = models.CharField(max_length=10)
     default_color = models.CharField(max_length=10)
 
     def __str__(self):
         return self.identifier
+
 
 class CustomUser(AbstractUser):
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='N')
@@ -34,6 +38,10 @@ class CustomUser(AbstractUser):
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english)
     country = models.CharField(max_length=50, null=True, blank=True)
+
+    def is_publisher(self):
+        p = Group.objects.get(name='Publisher')
+        return p in self.groups.all()
 
     #Below is not core funcionality
     #TODO maybe move tag_usage to Tag class to allow limit_choices_to publisher
@@ -49,10 +57,6 @@ class CustomUser(AbstractUser):
         if len(customization_set) == 0:
             return tag.default_color
         return customization_set[0].custom_color
-    
-    def is_publisher(self):
-        p = Group.objects.get(name='Publisher')
-        return p in self.groups.all()
 
 
 class Usage(models.Model):
@@ -64,6 +68,7 @@ class Usage(models.Model):
 
     def __str__(self):
         return "by " + self.publisher.__str__() + " for " + self.tag.__str__() + " in " + self.language.__str__()
+
 
 class Customization(models.Model):
     speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
