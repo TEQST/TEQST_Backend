@@ -26,7 +26,7 @@ class UserFullSerializer(serializers.ModelSerializer):
     
     #'menu_language' and 'menu_language_id' work the same as 'languages' and 'language_ids' but with a single object
     menu_language = LanguageSerializer(read_only=True)
-    menu_language_id = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), source='menu_language', write_only=True)
+    menu_language_id = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), source='menu_language', write_only=True, required=False)
 
     #'is_publisher' calculates it's value by executing the 'is_publisher' method in the CustomUser model
     is_publisher = serializers.BooleanField(read_only=True)
