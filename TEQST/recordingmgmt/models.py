@@ -6,6 +6,7 @@ from .storages import OverwriteStorage
 import wave
 import os
 
+
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
     sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
@@ -13,6 +14,9 @@ def text_rec_upload_path(instance, filename):
 
 
 class TextRecording(models.Model):
+    '''
+    Acts as a relation between a user and a text and saves all information that are specific to that recording. 
+    '''
     speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     text = models.ForeignKey(Text, on_delete=models.CASCADE)
 
@@ -27,29 +31,23 @@ class TextRecording(models.Model):
         return sentence_num
 
 
+#Delivers the location in the filesystem where the recordings should be stored 
 def sentence_rec_upload_path(instance, filename):
     sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
     return sf_path + '/TempAudio/' + str(instance.recording.id) + '_' + str(instance.index) + '.wav'
 
 
 class SentenceRecording(models.Model):
+    '''
+    Acts as a 'component' of a TextRecording, that saves audio and information for each sentence in the text
+    '''
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=OverwriteStorage())
 
     def save(self, *args, **kwargs):
-        # This should work, but I'm not 100% sure. 
-        # Alternative: self.recording.active_sentence() == self.recording.text.sentence_count()
-        # is_update = self.pk
         super().save(*args, **kwargs)
-        # check is this is the last sentence recording in a text or if this sentence recording is being updated
-        # if self.index == self.recording.text.sentence_count() or is_update:
-        #     # trigger stm creation
-        #     create_textrecording_stm(self.recording.pk)
-
-        #shouldn't this work fine in all cases
         if self.recording.active_sentence() > self.recording.text.sentence_count():
-            #print('create stm')
             create_textrecording_stm(self.recording.id)
 
 
@@ -61,8 +59,6 @@ def create_textrecording_stm(trec_pk):
     """
     trec = TextRecording.objects.get(pk=trec_pk)
     srecs = SentenceRecording.objects.filter(recording=trec)
-
-    print("#####################\nCreating STM\n#####################")
 
     #create string with encoded userdata
     user_str = '<' + trec.speaker.gender + ',' + trec.speaker.education + ','
@@ -76,20 +72,19 @@ def create_textrecording_stm(trec_pk):
     sentences = trec.text.get_content()
 
     # create .stm file and open in write mode
-    # path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '.stm'
     path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '-' + username + '.stm'
     stm_file = open(path, 'w+')
-    #adds some dummy content
-    #file.write(str(current_timestamp) + ' ' + user_str + ' ' + username)
-    
-    #wav_path_rel = 'AudioData/' + trec.text.title + '-' + username
-    wav_path_rel = trec.text.title + '-' + username
 
+    # create concatenated wav file and open in write mode (uses 'wave' library)
+    wav_path_rel = trec.text.title + '-' + username
     wav_path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/AudioData/' + wav_path_rel + '.wav'
     wav_full = wave.open(wav_path, 'wb')
 
+    #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
     for srec in srecs:
         wav = wave.open(srec.audiofile, 'rb')
+
+        #On concatenating the first file: also copy all settings
         if current_timestamp == 0:
             wav_full.setparams(wav.getparams())
         duration = wav.getnframes()/wav.getframerate()
@@ -100,6 +95,7 @@ def create_textrecording_stm(trec_pk):
         stm_file.write(format_timestamp(current_timestamp) + '_')
         stm_file.write(format_timestamp(current_timestamp + duration) + ' ')
 
+        #write .stm file entry
         stm_file.write(wav_path_rel + ' ')
         stm_file.write(str(wav.getnchannels()) + ' ')
         stm_file.write(username + ' ')
@@ -108,57 +104,38 @@ def create_textrecording_stm(trec_pk):
         stm_file.write("{0:.2f}".format(current_timestamp) + ' ')
         stm_file.write(user_str + ' ')
         stm_file.write(sentences[srec.index - 1] + '\n')
-        print(wav.getparams())
+
+        #copy audio
         wav_full.writeframesraw(wav.readframes(wav.getnframes()))
-        print(duration)
+
+        #close sentence-recording file
         wav.close()
 
+    #close files
     stm_file.close()
-
     wav_full.close()
 
+    #concatenate all .stm files to include the last changes
     concat_stms(trec.text.shared_folder.sharedfolder)
-
-    # create .wav file for concatenated recordings and open in write mode; set metadata
-
-    # declare and set audioduration variable
-
-    # for every sentencerecording:
-
-        # open sentencerecording file
-
-        # get: filename, mono/stereo info, speaker username, calculate beginning and end of recording (audioduration += end),
-        # gather user info to go inside < > (country, edu, gender), utterance
-        # userful methods on the text Model would be get_num_of_sentences() and get_sentence_content(index)
-
-        # Question: where do we put the TTS and SR permissions???
-
-        # append gathered info to .stm file
-
-        # append sentencerecording audio data to concatenated file
-
-        # close sentencerecording file
-
-    # close .stm file
-
-    # close concatenated .wav file
-
-    # call the concat_stms()
 
 
 def concat_stms(sharedfolder):
-    # this needs some argument. maybe the sharedfolder id or the recording id from which it can get the sharedfolder id
+    '''
+    Concatenate all .stm files in the given sharedfolder to include all changes
+    '''
+
+    #Build paths and open the 'large' stm in read-mode
     sf_path = sharedfolder.get_path()
     stm_path = sf_path + '/STM'
     temp_stm_names = os.listdir(settings.MEDIA_ROOT + '/' + stm_path)  # this lists directories as well, but there shouldnt be any in this directory
-
     stm_file = open('media/' + sf_path + '/' + sharedfolder.name + '.stm', 'w')
-    #stm_file.write("#####################\nHeader\n####################\n")
 
+    #Open, concatenate and close the header file
     header_file = open('header.stm', 'r')
     stm_file.write(header_file.read())
     header_file.close()
 
+    #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
         temp_stm_file = open('media/' + stm_path + '/' + temp_stm_name, 'r')
         stm_file.write(temp_stm_file.read())

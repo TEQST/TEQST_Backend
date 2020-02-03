@@ -10,8 +10,11 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 
-# Create your views here.
+
 class UserListView(generics.ListAPIView):
+    '''
+    Is used to get a list of users, publishers should use this to assign speakers to their texts(sharedFolders)
+    '''
     queryset = CustomUser.objects.all()
     serializer_class = UserBasicSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
@@ -24,37 +27,29 @@ class UserListView(generics.ListAPIView):
             return CustomUser.objects.all()
 
 
-# class PublisherListView(generics.ListAPIView):
-#     """
-#     use: get list of publishers who own sharedfolders shared with request.user
-#     """
-#     queryset = CustomUser.objects.all()
-#     serializer_class = PublisherSerializer
-
-#     def get_queryset(self):
-#         """
-#         does not check for is_publisher. this should not be necessary
-#         """
-#         # CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
-#         pub_pks = []
-#         user = self.request.user
-#         for shf in user.sharedfolder.all():
-#             pub_pks.append(shf.owner.pk)
-#         return CustomUser.objects.filter(pk__in = pub_pks)
-
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
-    #queryset = CustomUser.objects.all()
+    '''
+    Is used by all users to retrieve and update their data
+    '''
     serializer_class = UserFullSerializer
 
     def get_object(self):
         return self.request.user
 
 class LanguageView(generics.ListAPIView):
+    '''
+    Is used to retrieve a list of all languages
+    This view has no permission requirements because this information is relevant when registering a new user
+    '''
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
     permission_classes = []
 
 class UserRegisterView(generics.CreateAPIView):
+    '''
+    Is used to register a new user to the system
+    Obviously no permission requirements
+    '''
     queryset = CustomUser.objects.all()
     serializer_class = UserRegisterSerializer
     permission_classes = []
@@ -62,7 +57,7 @@ class UserRegisterView(generics.CreateAPIView):
 
 class GetAuthToken(ObtainAuthToken):
     """
-    This is the view used to get the Authentication Token
+    This is the view used to log in a user (get his Authentication Token)
     """
     permission_classes = []
 
@@ -75,7 +70,9 @@ class GetAuthToken(ObtainAuthToken):
 
 
 class LogoutView(APIView):
-
+    '''
+    Is used to log out a user (make his Authentication Token invalid)
+    '''
     def post(self, request, *args, **kwargs):
         token = request.auth 
         token.delete()
