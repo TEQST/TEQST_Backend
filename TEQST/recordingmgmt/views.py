@@ -22,6 +22,10 @@ class TextRecordingView(generics.ListCreateAPIView):
                 return TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
             except ValueError:
                 raise NotFound("Invalid text id")
+            # if not user in Text.objects.get(pk=self.request.query_params['text']).shared_folder.sharedfolder.speaker.all():
+            #     raise NotFound("Invalid text id")
+            # return TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
+        # return TextRecording.objects.none()
         raise NotFound("No text specified")
 
     

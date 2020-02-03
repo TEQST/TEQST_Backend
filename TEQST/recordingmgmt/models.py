@@ -77,13 +77,15 @@ def create_textrecording_stm(trec_pk):
 
     # create .stm file and open in write mode
     # path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '.stm'
-    path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '__' + username + '.stm'
+    path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '-' + username + '.stm'
     stm_file = open(path, 'w+')
     #adds some dummy content
     #file.write(str(current_timestamp) + ' ' + user_str + ' ' + username)
     
-    wav_path_rel = 'AudioData/' + trec.text.title + '__' + username
-    wav_path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/' + wav_path_rel + '.wav'
+    #wav_path_rel = 'AudioData/' + trec.text.title + '-' + username
+    wav_path_rel = trec.text.title + '-' + username
+
+    wav_path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/AudioData/' + wav_path_rel + '.wav'
     wav_full = wave.open(wav_path, 'wb')
 
     for srec in srecs:
@@ -91,6 +93,13 @@ def create_textrecording_stm(trec_pk):
         if current_timestamp == 0:
             wav_full.setparams(wav.getparams())
         duration = wav.getnframes()/wav.getframerate()
+
+        #utterance id
+        stm_file.write(wav_path_rel + '_')
+        stm_file.write(username + '_')
+        stm_file.write(format_timestamp(current_timestamp) + '_')
+        stm_file.write(format_timestamp(current_timestamp + duration) + ' ')
+
         stm_file.write(wav_path_rel + ' ')
         stm_file.write(str(wav.getnchannels()) + ' ')
         stm_file.write(username + ' ')
@@ -157,3 +166,6 @@ def concat_stms(sharedfolder):
     
     stm_file.close()
 
+
+def format_timestamp(t):
+    return "{0:0>7}".format(int(round(t*100, 0)))
