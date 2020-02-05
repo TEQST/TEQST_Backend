@@ -132,6 +132,11 @@ class TextFullSerializer(serializers.ModelSerializer):
         if Text.objects.filter(shared_folder=data['shared_folder'], title=data['title']).exists():
             raise serializers.ValidationError("A text with the given title in the given folder already exists")
         return super().validate(data)
+    
+    def validate_title(self, value):
+        if '_' in value or ' ' in value:
+            raise serializers.ValidationError("Text title can't contain an underscore or a space character.")
+        return value
 
 
 class PublisherSerializer(serializers.ModelSerializer):
