@@ -11,20 +11,24 @@ class TextPKField(serializers.PrimaryKeyRelatedField):
 
 
 class TextRecordingSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: TextRecordingView
+    for: retrieval and creation of textrecordings
+    """
 
     active_sentence = serializers.IntegerField(read_only=True)
     text = TextPKField()
-
-    def validate(self, data):
-        if TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
-            raise serializers.ValidationError("A recording for the given text by the given user already exists")
-        return super().validate(data)
-
 
     class Meta:
         model = TextRecording
         fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence']
         read_only_fields = ['speaker', 'active_sentence']
+    
+    def validate(self, data):
+        if TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
+            raise serializers.ValidationError("A recording for the given text by the given user already exists")
+        return super().validate(data)
+
 
 class RecordingPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
@@ -32,16 +36,12 @@ class RecordingPKField(serializers.PrimaryKeyRelatedField):
         queryset = TextRecording.objects.filter(speaker__id=user.id)
         return queryset
 
-#Normal serializer
-class SentenceRecordingSerializer(serializers.ModelSerializer):
 
-    #def __init__(self, *args, **kwargs):
-    #    super().__init__(*args, **kwargs)
-    #    try:
-    #        if self.context['request'].method == 'PUT':
-    #            self.read_only_fields.append('recording').append('index')
-    #    except KeyError:
-    #        pass
+class SentenceRecordingSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: SentenceRecordingCreateView
+    for: Sentencerecording creation
+    """
 
     recording = RecordingPKField()
 
@@ -70,6 +70,10 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
 
 
 class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: SentenceRecordingUpdateView
+    for: SentenceRecording update
+    """
 
     recording = RecordingPKField(read_only=True)
 

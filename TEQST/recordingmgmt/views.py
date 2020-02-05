@@ -10,6 +10,10 @@ import os
 
 
 class TextRecordingView(generics.ListCreateAPIView):
+    """
+    url: api/textrecordings/
+    use: retrieval and creation of textrecordings for a given text and request.user
+    """
     queryset = TextRecording.objects.all()
     serializer_class = TextRecordingSerializer
 
@@ -24,32 +28,45 @@ class TextRecordingView(generics.ListCreateAPIView):
                 raise NotFound("Invalid text id")
             # if not user in Text.objects.get(pk=self.request.query_params['text']).shared_folder.sharedfolder.speaker.all():
             #     raise NotFound("Invalid text id")
-            # return TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
-        # return TextRecording.objects.none()
         raise NotFound("No text specified")
 
     
     def perform_create(self, serializer):
+        # specify request.user as the speaker of a textrecording upon creation
         serializer.save(speaker=self.request.user)
 
     def get(self, *args, **kwargs):
+        """
+        handles the get request
+        """
         response = super().get(*args, **kwargs)
         if not self.get_queryset().exists():
             response.status_code = status.HTTP_204_NO_CONTENT
         return response
 
 class SentenceRecordingCreateView(generics.CreateAPIView):
+    """
+    url: api/sentencerecordings/
+    use: sentencerecodring creation
+    """
     queryset = SentenceRecording.objects.all()
     serializer_class = SentenceRecordingSerializer
 
 class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
+    """
+    url: api/sentencerecordings/:id/
+    use: retrieval and update of a single recording of a sentence
+    """
     queryset = SentenceRecording.objects.all()
     serializer_class = SentenceRecordingSerializer
 
     def get_object(self):
+        # the sentencerecording is uniquely defined by a textrecording id (rec) and the index of the sentence within that textrecording (index)
+        # rec is part of the core url string
         rec = self.kwargs['rec']
         if not TextRecording.objects.filter(pk=rec).exists():
             raise NotFound("Invalid Textrecording id")
+        # index is a query parameter
         if 'index' in self.request.query_params:
             try:
                 if not SentenceRecording.objects.filter(recording__id=rec, index=self.request.query_params['index']).exists():
@@ -60,15 +77,19 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         raise NotFound("No index specified")
     
     def get_serializer_class(self):
+        # serialize different fields (i.e. use different serializers) of the sentencerecording depending on the request method
         if self.request.method == 'PUT':
             return SentenceRecordingUpdateSerializer
         return SentenceRecordingSerializer
 
     def get(self, request, *args, **kwargs):
+        """
+        handles the get request
+        """
         instance = self.get_object()
         f = instance.audiofile.open("rb") 
         response = HttpResponse()
         response.write(f.read())
-        response['Content-Type'] ='audio/wav'
-        response['Content-Length'] =os.path.getsize(instance.audiofile.path)
+        response['Content-Type'] = 'audio/wav'
+        response['Content-Length'] = os.path.getsize(instance.audiofile.path)
         return response

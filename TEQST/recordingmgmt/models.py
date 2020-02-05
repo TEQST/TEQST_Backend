@@ -15,9 +15,9 @@ def text_rec_upload_path(instance, filename):
 
 
 class TextRecording(models.Model):
-    '''
+    """
     Acts as a relation between a user and a text and saves all information that are specific to that recording. 
-    '''
+    """
     speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     text = models.ForeignKey(Text, on_delete=models.CASCADE)
 
@@ -32,16 +32,18 @@ class TextRecording(models.Model):
         return sentence_num
 
 
-#Delivers the location in the filesystem where the recordings should be stored 
 def sentence_rec_upload_path(instance, filename):
+    """
+    Delivers the location in the filesystem where the recordings should be stored.
+    """
     sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
     return sf_path + '/TempAudio/' + str(instance.recording.id) + '_' + str(instance.index) + '.wav'
 
 
 class SentenceRecording(models.Model):
-    '''
+    """
     Acts as a 'component' of a TextRecording, that saves audio and information for each sentence in the text
-    '''
+    """
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=OverwriteStorage())
@@ -54,7 +56,7 @@ class SentenceRecording(models.Model):
 
 def create_textrecording_stm(trec_pk):
     """
-    create stm and concatenated audio for one recording. These are created upon first completion of a text by a user, 
+    create stm and concatenated audio for one textrecording. These are created upon first completion of a text by a user, 
     and again recreated every time the user rerecords a sentence. The stm does not contain the stm header.
     trec_pk: string = TextRecording pk
     """
@@ -121,9 +123,9 @@ def create_textrecording_stm(trec_pk):
 
 
 def concat_stms(sharedfolder):
-    '''
+    """
     Concatenate all .stm files in the given sharedfolder to include all changes
-    '''
+    """
 
     #Build paths and open the 'large' stm in read-mode
     sf_path = sharedfolder.get_path()
