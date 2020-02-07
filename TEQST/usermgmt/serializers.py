@@ -75,9 +75,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
     
     def create(self, validated_data):
-        # language_ids = validated_data.pop('languages')
+        language_ids = validated_data.pop('languages')
         user = CustomUser.objects.create_user(**validated_data)
-        # user.languages.set(language_ids)
+        user.languages.set(language_ids)
         user.save()
         return user
 
