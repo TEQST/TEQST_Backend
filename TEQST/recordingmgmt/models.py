@@ -75,12 +75,12 @@ def create_textrecording_stm(trec_pk):
     sentences = trec.text.get_content()
 
     # create .stm file and open in write mode
-    path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '-' + username + '.stm'
+    path = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '-' + username + '.stm'
     stm_file = io.open(path, 'w+', encoding='utf8')
 
     # create concatenated wav file and open in write mode (uses 'wave' library)
     wav_path_rel = trec.text.title + '-' + username
-    wav_path = 'media/' + trec.text.shared_folder.sharedfolder.get_path() + '/AudioData/' + wav_path_rel + '.wav'
+    wav_path = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.sharedfolder.get_path() + '/AudioData/' + wav_path_rel + '.wav'
     wav_full = wave.open(wav_path, 'wb')
 
     #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
@@ -131,7 +131,7 @@ def concat_stms(sharedfolder):
     sf_path = sharedfolder.get_path()
     stm_path = sf_path + '/STM'
     temp_stm_names = os.listdir(settings.MEDIA_ROOT + '/' + stm_path)  # this lists directories as well, but there shouldnt be any in this directory
-    stm_file = io.open('media/' + sf_path + '/' + sharedfolder.name + '.stm', 'w', encoding='utf8')
+    stm_file = io.open(settings.MEDIA_ROOT + '/' + sf_path + '/' + sharedfolder.name + '.stm', 'w', encoding='utf8')
 
     #Open, concatenate and close the header file
     header_file = io.open('header.stm', 'r', encoding='utf8')
@@ -140,7 +140,7 @@ def concat_stms(sharedfolder):
 
     #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
-        temp_stm_file = io.open('media/' + stm_path + '/' + temp_stm_name, 'r', encoding='utf8')
+        temp_stm_file = io.open(settings.MEDIA_ROOT + '/' + stm_path + '/' + temp_stm_name, 'r', encoding='utf8')
         stm_file.write(temp_stm_file.read())
         temp_stm_file.close()
     
