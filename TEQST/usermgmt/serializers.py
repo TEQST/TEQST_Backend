@@ -74,6 +74,13 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         fields = ['username', 'password', 'education', 'gender', 'birth_year', 'language_ids', 'languages', 'menu_language', 'menu_language_id', 'country']
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
     
+    def create(self, validated_data):
+        # language_ids = validated_data.pop('languages')
+        user = CustomUser.objects.create_user(**validated_data)
+        # user.languages.set(language_ids)
+        user.save()
+        return user
+
     #checks if the given birth_year is in a certain "valid" range, is called automatically by the drf
     def validate_birth_year(self, value):
         if value < 1900 or value > date.today().year:
