@@ -17,6 +17,10 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import urls
 
+admin.site.site_header = "TEQST Administration"
+admin.site.site_title = "TEQST Admin"
+admin.site.index_title = "App administration"
+
 version = 1
 version_str = 'v' + str(version) + '/'
 
