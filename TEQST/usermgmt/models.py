@@ -23,6 +23,7 @@ class Language(models.Model):
         return self.english_name + ' (' + self.native_name + ')'
 
 
+# classes Tag, Usage and Customization can be used to implement wunschkriterium Tags in Texts
 class Tag(models.Model):
     identifier = models.CharField(max_length=10)
     default_color = models.CharField(max_length=10)
@@ -32,6 +33,9 @@ class Tag(models.Model):
 
 
 class CustomUser(AbstractUser):
+    """
+    Custom User Model which represents a TEQST user
+    """
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='N')
     birth_year = models.IntegerField(default=2000)
     education = models.CharField(max_length=50, choices=EDU_CHOICES, default='N')
