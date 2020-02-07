@@ -42,7 +42,8 @@ class Folder(models.Model):
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
         # create actual folders and files:
-        sf_path = 'media/' + sf.get_path()
+        sf_path = settings.MEDIA_ROOT + '/' + sf.get_path()
+        print("creating stuff at", sf_path)
         os.makedirs(sf_path + '/STM')
         os.mkdir(sf_path + '/AudioData')
         open(sf_path + '/log.txt', 'w').close()
