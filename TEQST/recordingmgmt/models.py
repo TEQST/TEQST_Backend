@@ -134,7 +134,7 @@ def concat_stms(sharedfolder):
     stm_file = io.open(settings.MEDIA_ROOT + '/' + sf_path + '/' + sharedfolder.name + '.stm', 'w', encoding='utf8')
 
     #Open, concatenate and close the header file
-    header_file = io.open('header.stm', 'r', encoding='utf8')
+    header_file = io.open(settings.BASE_DIR + '/header.stm', 'r', encoding='utf8')
     stm_file.write(header_file.read())
     header_file.close()
 
