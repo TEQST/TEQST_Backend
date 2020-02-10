@@ -1,7 +1,8 @@
 from django.db import models
 from django.conf import settings
 from .utils import folder_path, folder_relative_path
-import os
+import os    
+from chardet import detect
 
 
 class Folder(models.Model):
@@ -74,6 +75,13 @@ def upload_path(instance, filename):
     return path
 
 
+# get file encoding type
+def get_encoding_type(file_path):
+    with open(file_path, 'rb') as f:
+        rawdata = f.read()
+    return detect(rawdata)['encoding']
+
+
 class Text(models.Model):
     title = models.CharField(max_length=30)
     shared_folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='text')
@@ -85,9 +93,21 @@ class Text(models.Model):
     def save(self, *args, **kwargs):
         self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
+        
+        # change encoding of uploaded file to utf-8
+        srcfile = self.textfile.path
+        trgfile = srcfile[:-4] + '_enc' + srcfile[-4:]
+        from_codec = get_encoding_type(srcfile)
+
+        with open(srcfile, 'r', encoding=from_codec) as f, open(trgfile, 'w', encoding='utf-8') as e:
+            text = f.read()
+            e.write(text)
+
+        os.remove(srcfile) # remove old encoding file
+        os.rename(trgfile, srcfile) # rename new encoding
 
     def get_content(self):
-        f = self.textfile.open('r')
+        f = open(self.textfile.path, 'r', encoding='utf-8-sig')
         sentence = ""
         content = []
         for line in f:
