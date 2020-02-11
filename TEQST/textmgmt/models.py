@@ -44,7 +44,6 @@ class Folder(models.Model):
         sf.save()
         # create actual folders and files:
         sf_path = settings.MEDIA_ROOT + '/' + sf.get_path()
-        print("creating stuff at", sf_path)
         os.makedirs(sf_path + '/STM')
         os.mkdir(sf_path + '/AudioData')
         open(sf_path + '/log.txt', 'w').close()
