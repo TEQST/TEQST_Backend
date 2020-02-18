@@ -1,7 +1,8 @@
 from django.db import models
 from django.conf import settings
 from .utils import folder_path, folder_relative_path
-import os    
+import os
+from zipfile import ZipFile
 from chardet import detect
 
 
@@ -63,6 +64,23 @@ class SharedFolder(Folder):
     def get_readable_path(self):
         path = super().get_path()
         return path
+    
+    def create_zip_for_download(self) -> str:
+        """
+        create zip file and return the path to the download.zip file
+        """
+        path = settings.MEDIA_ROOT + '/' + self.get_path()
+        zf = ZipFile(path + "/download.zip", 'w')
+        # arcname is the name/path which the file will have inside the zip file
+        zf.write(path + '/' + self.name + ".stm", arcname=self.name + ".stm")
+        zf.write(path + "/log.txt", arcname="log.txt")
+        # os.listdir also lists folders, but there should not be any folders in /AudioData
+        for file_to_zip in os.listdir(path + "/AudioData"):
+            arcpath = "AudioData/" + file_to_zip
+            zf.write(path + "/AudioData/" + file_to_zip, arcname=arcpath)
+        zf.close()
+        return path + "/download.zip"
+
 
 
 def upload_path(instance, filename):

@@ -4,8 +4,9 @@ from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
 from usermgmt.models import CustomUser
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import generics, mixins, response, status
+from rest_framework import generics, mixins, response, status, views
 from rest_framework.exceptions import NotFound
+from django.http import HttpResponse
 
 
 class FolderListView(generics.ListCreateAPIView):
@@ -158,3 +159,27 @@ class PublisherDetailedView(generics.RetrieveAPIView):
     """
     queryset = CustomUser.objects.all()
     serializer_class = PublisherSerializer
+
+
+class SpeechDataDownloadView(views.APIView):
+    """
+    url: api/download/:id/
+    use: Download of speechdata for a given SharedFolder as zip file
+    """
+    permission_classes = [IsAuthenticated, IsPublisher]
+
+    def get_object(self):
+        sf_id = self.kwargs['sf']
+        if not SharedFolder.objects.filter(pk=sf_id, owner=self.request.user.pk).exists():
+            raise NotFound("Invalid SharedFolder id")
+        return SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)
+
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        zip_path = instance.create_zip_for_download()
+        zipfile = open(zip_path, 'rb')
+        resp = HttpResponse()
+        resp.write(zipfile.read())
+        zipfile.close()
+        resp['Content-Type'] = "application/zip"
+        return resp
