@@ -19,7 +19,7 @@ class TextRecording(models.Model):
     Acts as a relation between a user and a text and saves all information that are specific to that recording. 
     """
     speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    text = models.ForeignKey(Text, on_delete=models.CASCADE)
+    text = models.ForeignKey(Text, on_delete=models.CASCADE, related_name='textrecording')
 
     TTS_permission = models.BooleanField(default=True)
     SR_permission = models.BooleanField(default=True)

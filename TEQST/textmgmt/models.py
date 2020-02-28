@@ -65,6 +65,12 @@ class SharedFolder(Folder):
         path = super().get_path()
         return path
     
+    def has_any_recordings(self):
+        for text in self.text.all():
+            if text.has_any_recordings():
+                return True
+        return False
+    
     def create_zip_for_download(self) -> str:
         """
         create zip file and return the path to the download.zip file
@@ -106,6 +112,9 @@ class Text(models.Model):
 
     def __str__(self):
         return self.title
+    
+    def has_any_recordings(self):
+        return self.textrecording.count() > 0
     
     def save(self, *args, **kwargs):
         self.shared_folder = self.shared_folder.make_shared_folder()

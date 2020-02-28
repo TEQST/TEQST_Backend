@@ -5,7 +5,7 @@ from usermgmt.permissions import IsPublisher
 from usermgmt.models import CustomUser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, mixins, response, status, views
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ParseError
 from django.http import HttpResponse
 
 
@@ -175,7 +175,12 @@ class SpeechDataDownloadView(views.APIView):
         return SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)
 
     def get(self, request, *args, **kwargs):
+        """
+        handles a HTTP GET request
+        """
         instance = self.get_object()
+        if not instance.has_any_recordings():
+            raise ParseError("Nothing to download yet.")
         zip_path = instance.create_zip_for_download()
         zipfile = open(zip_path, 'rb')
         resp = HttpResponse()
