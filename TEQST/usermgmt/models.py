@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
-from .utils import EDU_CHOICES, GENDER_CHOICES
+from .utils import EDU_CHOICES, GENDER_CHOICES, upload_path
 
 
 def get_english():
@@ -18,9 +18,13 @@ class Language(models.Model):
     native_name = models.CharField(max_length=50)
     english_name = models.CharField(max_length=50)
     short = models.CharField(max_length=5, unique=True, primary_key=True)
+    localization_file = models.FileField(upload_to=upload_path, null=True)
 
     def __str__(self):
         return self.english_name + ' (' + self.native_name + ')'
+
+    def is_menu_language(self):
+        return self.localization_file != None
 
 
 # classes Tag, Usage and Customization can be used to implement wunschkriterium Tags in Texts
