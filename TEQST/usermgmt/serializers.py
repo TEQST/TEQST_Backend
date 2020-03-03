@@ -20,7 +20,7 @@ class UserFullSerializer(serializers.ModelSerializer):
     '''
 
     #'languages' uses nested objects and is used for retrieving the languages. 
-    #'language_ids' is used for modifying the same attribute and works only with id's
+    #'language_ids' is used for modifying the same attribute and works only with abbreviations's
     languages = LanguageSerializer(many = True, read_only = True)
     language_ids = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), many=True, source='languages', write_only=True)
     
@@ -40,6 +40,12 @@ class UserFullSerializer(serializers.ModelSerializer):
     def validate_birth_year(self, value):
         if value < 1900 or value > date.today().year:
             raise serializers.ValidationError("Invalid birth_year.")
+        return value
+
+    #checks if the given menu_language_id belongs to a menu language
+    def validate_menu_language_id(self, value):
+        if not value.is_menu_language():
+            raise serializers.ValidationError("Invalid menu language.")
         return value
         
 
