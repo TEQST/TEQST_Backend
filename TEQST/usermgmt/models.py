@@ -18,6 +18,7 @@ class Language(models.Model):
     native_name = models.CharField(max_length=50)
     english_name = models.CharField(max_length=50)
     short = models.CharField(max_length=5, unique=True, primary_key=True)
+    right_to_left = models.BooleanField(default=False)
     localization_file = models.FileField(upload_to=upload_path, null=True)
 
     def __str__(self):
