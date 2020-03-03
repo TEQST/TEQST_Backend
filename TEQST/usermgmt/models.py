@@ -6,10 +6,10 @@ from .utils import EDU_CHOICES, GENDER_CHOICES
 def get_english():
     try:
         if Language.objects.filter(short='en').exists():
-            return Language.objects.get(short='en').id
+            return Language.objects.get(short='en').short
         lang = Language(native_name='english', english_name='english', short='en')
         lang.save()
-        return lang.id
+        return lang.short
     except:
         return
 
@@ -17,7 +17,7 @@ def get_english():
 class Language(models.Model):
     native_name = models.CharField(max_length=50)
     english_name = models.CharField(max_length=50)
-    short = models.CharField(max_length=5, unique=True)
+    short = models.CharField(max_length=5, unique=True, primary_key=True)
 
     def __str__(self):
         return self.english_name + ' (' + self.native_name + ')'
