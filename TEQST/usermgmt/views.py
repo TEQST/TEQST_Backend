@@ -72,7 +72,6 @@ class MenuLanguageView(generics.RetrieveAPIView):
         response = HttpResponse()
         response.write(f.read())
         response['Content-Type'] = 'application/octet-stream'
-        response['Content-Disposition'] = 'attachment; filename="' + instance.localization_file.name + '"'
         return response
 
     
