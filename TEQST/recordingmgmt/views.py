@@ -58,7 +58,7 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
     use: retrieval and update of a single recording of a sentence
     """
     queryset = SentenceRecording.objects.all()
-    serializer_class = SentenceRecordingSerializer
+    serializer_class = SentenceRecordingUpdateSerializer
 
     def get_object(self):
         # the sentencerecording is uniquely defined by a textrecording id (rec) and the index of the sentence within that textrecording (index)
@@ -75,12 +75,6 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
             except ValueError:
                 raise NotFound("Invalid index")
         raise NotFound("No index specified")
-    
-    def get_serializer_class(self):
-        # serialize different fields (i.e. use different serializers) of the sentencerecording depending on the request method
-        if self.request.method == 'PUT':
-            return SentenceRecordingUpdateSerializer
-        return SentenceRecordingSerializer
 
     def get(self, request, *args, **kwargs):
         """
