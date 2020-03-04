@@ -8,7 +8,8 @@ class CustomUserAdmin(UserAdmin):
     model = CustomUser
     list_display = ['username']
     fieldsets = UserAdmin.fieldsets
-    fieldsets[1][1]['fields'] = ('first_name', 'last_name', 'email', 'birth_year', 'education', 'gender', 'languages')
+    # omitting 'first_name', 'last_name', 'email'
+    fieldsets[1][1]['fields'] = ('birth_year', 'education', 'gender', 'languages', 'menu_language', 'country')
 
 admin.site.register(CustomUser, CustomUserAdmin)
 admin.site.register(Language)
