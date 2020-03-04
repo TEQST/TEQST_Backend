@@ -58,10 +58,14 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid index.")
         return super().validate(data)
     
-    # def validate_index(self, value):
-    #     if value is None:
-    #         raise serializers.ValidationError("Must provide sentence index")
-    #     return value
+    def validate_index(self, value):
+        if value is None:
+            raise serializers.ValidationError("Must provide sentence index")
+        if value > TextRecording.objects.get(pk=data['recording'].pk).active_sentence(): 
+            raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
+        if value < 1:
+            raise serializers.ValidationError("Invalid index.")
+        return value
 
     class Meta:
         model = SentenceRecording
