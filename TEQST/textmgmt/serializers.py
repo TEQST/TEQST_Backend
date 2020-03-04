@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Folder, SharedFolder, Text
+from .utils import NAME_ID_SPLITTER
 from usermgmt.models import CustomUser
 from usermgmt.serializers import UserBasicSerializer
 
@@ -29,8 +30,8 @@ class FolderFullSerializer(serializers.ModelSerializer):
         """
         validates the name field
         """
-        if '__' in value:
-            raise serializers.ValidationError('The folder name contains invalid characters \"__\"')
+        if NAME_ID_SPLITTER in value:
+            raise serializers.ValidationError('The folder name contains invalid characters "' + NAME_ID_SPLITTER + '"')
         return value
 
     def validate(self, data):

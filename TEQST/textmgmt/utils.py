@@ -1,6 +1,7 @@
 from django.conf import settings
 import os
 
+NAME_ID_SPLITTER = '__'
 
 def folder_relative_path(folder):
     dirs = []

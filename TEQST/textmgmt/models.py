@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from .utils import folder_path, folder_relative_path
+from .utils import folder_path, folder_relative_path, NAME_ID_SPLITTER
 import os
 from zipfile import ZipFile
 from chardet import detect
@@ -59,7 +59,7 @@ class SharedFolder(Folder):
     
     def get_path(self):
         path = super().get_path()
-        return path + '__' + str(self.id)
+        return path + NAME_ID_SPLITTER + str(self.id)
 
     def get_readable_path(self):
         path = super().get_path()
