@@ -10,6 +10,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 
+from django.http import HttpResponse
+
 
 class UserListView(generics.ListAPIView):
     '''
@@ -44,6 +46,25 @@ class LanguageView(generics.ListAPIView):
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
     permission_classes = []
+
+class MenuLanguageView(generics.RetrieveAPIView):
+
+    queryset = Language.objects.all()
+    serializer_class = LanguageSerializer
+    
+    def get_object(self):
+        return self.request.user.menu_language
+
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        f = instance.localization_file.open("rb") 
+        response = HttpResponse()
+        response.write(f.read())
+        response['Content-Type'] = 'application/octet-stream'
+        response['Content-Disposition'] = 'attachment; filename="' + instance.localization_file.name + '"'
+        return response
+
+    
 
 class UserRegisterView(generics.CreateAPIView):
     '''
