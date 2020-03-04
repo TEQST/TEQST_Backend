@@ -9,6 +9,8 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.exceptions import NotFound
+
 
 from django.http import HttpResponse
 
@@ -51,9 +53,18 @@ class MenuLanguageView(generics.RetrieveAPIView):
 
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
+    permission_classes = []
     
     def get_object(self):
-        return self.request.user.menu_language
+        filename = self.kwargs['lang']
+        data = filename.split('.')
+        if data[1] != 'po':
+            raise NotFound('Invalid file type')
+        lang = Language.objects.get(short=data[0])
+        if not lang.is_menu_language():
+            raise NotFound('Translations for this language are unavailable')
+        return lang
+
 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
