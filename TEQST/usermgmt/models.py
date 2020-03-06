@@ -44,7 +44,7 @@ class CustomUser(AbstractUser):
     Custom User Model which represents a TEQST user
     """
     gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='N')
-    birth_year = models.IntegerField(default=2000)
+    birth_year = models.IntegerField()
     education = models.CharField(max_length=50, choices=EDU_CHOICES, default='N')
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
