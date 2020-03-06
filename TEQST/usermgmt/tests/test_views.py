@@ -19,12 +19,12 @@ class TestRegistration(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        loc_en = File(open(settings.MEDIA_ROOT + '/locale/en.po', 'rb'))
         EN = Language.objects.get(short="en")
-        EN.localization_file = loc_en
+        EN.localization_file.name = 'locale/en.po'
         EN.save()
-        loc_de = File(open(settings.MEDIA_ROOT + '/locale/de.po', 'rb'))
-        Language.objects.create(native_name="Deutsch", english_name="German", short="de", localization_file=loc_de)
+        DE = Language.objects.create(native_name="Deutsch", english_name="German", short="de")
+        DE.localization_file.name = 'locale/de.po'
+        DE.save()
         Language.objects.create(native_name="Espagnol", english_name="Spanish", short="es")
         Language.objects.create(native_name="Francais", english_name="French", short="fr")
 
