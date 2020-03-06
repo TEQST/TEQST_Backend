@@ -1,14 +1,16 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from .utils import EDU_CHOICES, GENDER_CHOICES, upload_path
+from django.db import transaction
 
 
 def get_english():
     try:
-        if Language.objects.filter(short='en').exists():
-            return Language.objects.get(short='en').short
-        lang = Language(native_name='english', english_name='english', short='en')
-        lang.save()
+        with transaction.atomic():
+            if Language.objects.filter(short='en').exists():
+                return Language.objects.get(short='en').short
+            lang = Language(native_name='english', english_name='english', short='en')
+            lang.save()
         return lang.short
     except:
         return
