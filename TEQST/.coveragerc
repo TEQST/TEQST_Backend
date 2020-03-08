@@ -1,0 +1,15 @@
+# installation: pip install coverage
+# how to run tests:
+# normal way: python manage.py test
+# with coverage: coverage run --source='.' manage.py test
+# view coverage: coverage report
+
+
+# this specifies which files to exclude from the report
+[run]
+omit = 
+    */__init__.py
+    TEQST\asgi.py
+    TEQST\wsgi.py
+    */migrations/*
+    manage.py
