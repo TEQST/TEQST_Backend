@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from django.conf import settings
 from django.core.files import File
 from django.urls import reverse
+from django.contrib.auth.models import Group
 from usermgmt.models import Language, CustomUser
 
 from datetime import date
@@ -16,19 +17,31 @@ USER_DATA_CORRECT = {"username": "harry",
                      "country": "USA"}
 
 
+def setup_correct_user():
+    user_data = USER_DATA_CORRECT.copy()
+    languages = user_data.pop('language_ids')
+    user = CustomUser.objects.create_user(**user_data)
+    user.languages.set(languages)
+    user.save()
+
+
+def setup_languages():
+    EN = Language.objects.get(short="en")
+    EN.localization_file.name = 'locale/en.po'
+    EN.save()
+    DE = Language.objects.create(native_name="Deutsch", english_name="German", short="de")
+    DE.localization_file.name = 'locale/de.po'
+    DE.save()
+    Language.objects.create(native_name="Espagnol", english_name="Spanish", short="es")
+    Language.objects.create(native_name="Francais", english_name="French", short="fr")
+
+
 class TestRegistration(TestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        EN = Language.objects.get(short="en")
-        EN.localization_file.name = 'locale/en.po'
-        EN.save()
-        DE = Language.objects.create(native_name="Deutsch", english_name="German", short="de")
-        DE.localization_file.name = 'locale/de.po'
-        DE.save()
-        Language.objects.create(native_name="Espagnol", english_name="Spanish", short="es")
-        Language.objects.create(native_name="Francais", english_name="French", short="fr")
+        setup_languages()
 
     def setUp(self):
         self.client = Client()
@@ -193,3 +206,61 @@ class TestRegistration(TestCase):
         self.assertEqual(response.status_code, 201)
         user = CustomUser.objects.get(username=user_data['username'])
         self.assertEqual(user.country, None)
+
+
+class TestLogin(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_correct_user()
+        
+    def setUp(self):
+        self.client = Client()
+    
+    def test_setupclass_works(self):
+        user = CustomUser.objects.get(username=USER_DATA_CORRECT['username'])
+        self.assertEqual(CustomUser.objects.count(), 1)
+        self.assertEqual(user.username, USER_DATA_CORRECT['username'])
+
+    def test_login_all_correct(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT['username'],
+                      "password": USER_DATA_CORRECT['password']}
+        # test
+        response = self.client.post(reverse("login"), data=login_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue('token' in response.json().keys())
+        self.assertTrue('user' in response.json().keys())
+    
+    def test_login_no_username(self):
+        # setup
+        login_data = {"password": USER_DATA_CORRECT['password']}
+        # test
+        response = self.client.post(reverse("login"), data=login_data)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_login_username_does_not_exist(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT['username'] + 'f',
+                      "password": USER_DATA_CORRECT['password']}
+        # test
+        response = self.client.post(reverse("login"), data=login_data)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_login_no_password(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT['username']}
+        # test
+        response = self.client.post(reverse("login"), data=login_data)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_login_wrong_password(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT['username'],
+                      "password": USER_DATA_CORRECT['password'] + 'f'}
+        # test
+        response = self.client.post(reverse("login"), data=login_data)
+        self.assertEqual(response.status_code, 400)
