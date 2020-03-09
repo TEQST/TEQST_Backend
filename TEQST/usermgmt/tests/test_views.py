@@ -9,7 +9,7 @@ from rest_framework.authtoken.models import Token
 
 from datetime import date
 
-USER_DATA_CORRECT = {"username": "harry",
+USER_DATA_CORRECT_1 = {"username": "harry",
                      "password": "testing321",
                      "education": "M12",
                      "gender": "M",
@@ -18,14 +18,51 @@ USER_DATA_CORRECT = {"username": "harry",
                      "menu_language_id": "en",
                      "country": "USA"}
 
+USER_DATA_CORRECT_2 = {"username": "ron",
+                     "password": "testing321",
+                     "education": "M12",
+                     "gender": "M",
+                     "birth_year": 2000,
+                     "language_ids": ["en", "de"],
+                     "menu_language_id": "de",
+                     "country": "USA"}
 
-def setup_correct_user():
-    user_data = USER_DATA_CORRECT.copy()
+USER_DATA_CORRECT_3 = {"username": "hermione",
+                     "password": "testing321",
+                     "education": "6T12",
+                     "gender": "F",
+                     "birth_year": 1997,
+                     "language_ids": ["fr"],
+                     "menu_language_id": "en",
+                     "country": "USA"}
+
+USER_DATA_CORRECT_4 = {"username": "ginny",
+                     "password": "testing321",
+                     "education": "B6",
+                     "gender": "F",
+                     "birth_year": 1998,
+                     "language_ids": ["en", "fr", "es"],
+                     "menu_language_id": "en",
+                     "country": "USA"}
+
+USERS_DATA_CORRECT = [USER_DATA_CORRECT_1, USER_DATA_CORRECT_2, USER_DATA_CORRECT_3, USER_DATA_CORRECT_4]
+
+
+def setup_user(user_data, make_publisher=False):
     languages = user_data.pop('language_ids')
     user = CustomUser.objects.create_user(**user_data)
     user.languages.set(languages)
     user.save()
+    if make_publisher:
+        pub_group =Group.objects.get(name='Publisher')
+        user.groups.add(pub_group)
 
+def setup_users():
+    for user_data in USERS_DATA_CORRECT:
+        if user_data is USER_DATA_CORRECT_1 or user_data is USER_DATA_CORRECT_3:
+            setup_user(user_data.copy(), make_publisher=True)
+        else:
+            setup_user(user_data.copy())
 
 def setup_languages():
     EN = Language.objects.get(short="en")
@@ -49,30 +86,30 @@ class TestRegistration(TestCase):
         self.client = Client()
 
     def test_user_registration_all_correct(self):
-        response = self.client.post(reverse("register"), data=USER_DATA_CORRECT)
+        response = self.client.post(reverse("register"), data=USER_DATA_CORRECT_1)
         self.assertEqual(response.status_code, 201)
-        user = CustomUser.objects.get(username=USER_DATA_CORRECT['username'])
-        self.assertEqual(user.username, USER_DATA_CORRECT['username'])
-        self.assertEqual(user.education, USER_DATA_CORRECT['education'])
-        self.assertEqual(user.gender, USER_DATA_CORRECT['gender'])
-        self.assertEqual(user.birth_year, USER_DATA_CORRECT['birth_year'])
+        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        self.assertEqual(user.username, USER_DATA_CORRECT_1['username'])
+        self.assertEqual(user.education, USER_DATA_CORRECT_1['education'])
+        self.assertEqual(user.gender, USER_DATA_CORRECT_1['gender'])
+        self.assertEqual(user.birth_year, USER_DATA_CORRECT_1['birth_year'])
         self.assertTrue(Language.objects.get(short='en') in user.languages.all())
         self.assertTrue(Language.objects.get(short='fr') in user.languages.all())
         self.assertEqual(user.languages.count(), 2)
         self.assertEqual(user.menu_language, Language.objects.get(short='en'))
-        self.assertEqual(user.country, USER_DATA_CORRECT['country'])
+        self.assertEqual(user.country, USER_DATA_CORRECT_1['country'])
 
 
     def test_user_registration_all_correct_name_exists(self):
         # setup
-        self.client.post(reverse("register"), data=USER_DATA_CORRECT)
+        self.client.post(reverse("register"), data=USER_DATA_CORRECT_1)
         # test
-        response = self.client.post(reverse("register"), data=USER_DATA_CORRECT)
+        response = self.client.post(reverse("register"), data=USER_DATA_CORRECT_1)
         self.assertEqual(response.status_code, 400)
     
     def test_user_registration_without_username(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data.pop('username')
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -80,7 +117,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_invalid_username(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data['username'] = 'har ry'
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -88,7 +125,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_without_password(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data.pop('password')
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -96,7 +133,7 @@ class TestRegistration(TestCase):
 
     def test_user_registration_without_education(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data.pop('education')
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -106,7 +143,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_invalid_education(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data['education'] = 'ABC'
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -114,7 +151,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_without_gender(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data.pop('gender')
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -124,7 +161,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_invalid_gender(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data['gender'] = 'A'
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -132,7 +169,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_without_birth_year(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data.pop('birth_year')
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -140,7 +177,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_invalid_birth_year_small(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data['birth_year'] = 1899
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -148,7 +185,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_invalid_birth_year_big(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data['birth_year'] = date.today().year + 1
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -158,7 +195,7 @@ class TestRegistration(TestCase):
 
     def test_user_registration_without_language_ids(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data.pop('language_ids')
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -168,7 +205,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_without_menu_language_id(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data.pop('menu_language_id')
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -182,7 +219,7 @@ class TestRegistration(TestCase):
         registration should fail if given menu language is a language, but not a menu language (i.e. has no .po file)
         """
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data['menu_language_id'] = 'fr'
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -193,7 +230,7 @@ class TestRegistration(TestCase):
         registration should fail if given menu language is not a language
         """
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data['menu_language_id'] = 'ru'
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -201,7 +238,7 @@ class TestRegistration(TestCase):
     
     def test_user_registration_without_country(self):
         # setup
-        user_data = USER_DATA_CORRECT.copy()
+        user_data = USER_DATA_CORRECT_1.copy()
         user_data.pop('country')
         # test
         response = self.client.post(reverse("register"), data=user_data)
@@ -217,20 +254,20 @@ class TestAuthentication(TestCase):
         super().setUpClass()
         setup_languages()
         Group.objects.create(name='Publisher')
-        setup_correct_user()
+        setup_user(USER_DATA_CORRECT_1.copy())
         
     def setUp(self):
         self.client = Client()
     
     def test_setupclass_works(self):
-        user = CustomUser.objects.get(username=USER_DATA_CORRECT['username'])
+        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         self.assertEqual(CustomUser.objects.count(), 1)
-        self.assertEqual(user.username, USER_DATA_CORRECT['username'])
+        self.assertEqual(user.username, USER_DATA_CORRECT_1['username'])
 
     def test_login_all_correct(self):
         # setup
-        login_data = {"username": USER_DATA_CORRECT['username'],
-                      "password": USER_DATA_CORRECT['password']}
+        login_data = {"username": USER_DATA_CORRECT_1['username'],
+                      "password": USER_DATA_CORRECT_1['password']}
         # test
         response = self.client.post(reverse("login"), data=login_data)
         self.assertEqual(response.status_code, 200)
@@ -239,38 +276,38 @@ class TestAuthentication(TestCase):
     
     def test_login_no_username(self):
         # setup
-        login_data = {"password": USER_DATA_CORRECT['password']}
+        login_data = {"password": USER_DATA_CORRECT_1['password']}
         # test
         response = self.client.post(reverse("login"), data=login_data)
         self.assertEqual(response.status_code, 400)
     
     def test_login_username_does_not_exist(self):
         # setup
-        login_data = {"username": USER_DATA_CORRECT['username'] + 'f',
-                      "password": USER_DATA_CORRECT['password']}
+        login_data = {"username": USER_DATA_CORRECT_1['username'] + 'f',
+                      "password": USER_DATA_CORRECT_1['password']}
         # test
         response = self.client.post(reverse("login"), data=login_data)
         self.assertEqual(response.status_code, 400)
     
     def test_login_no_password(self):
         # setup
-        login_data = {"username": USER_DATA_CORRECT['username']}
+        login_data = {"username": USER_DATA_CORRECT_1['username']}
         # test
         response = self.client.post(reverse("login"), data=login_data)
         self.assertEqual(response.status_code, 400)
     
     def test_login_wrong_password(self):
         # setup
-        login_data = {"username": USER_DATA_CORRECT['username'],
-                      "password": USER_DATA_CORRECT['password'] + 'f'}
+        login_data = {"username": USER_DATA_CORRECT_1['username'],
+                      "password": USER_DATA_CORRECT_1['password'] + 'f'}
         # test
         response = self.client.post(reverse("login"), data=login_data)
         self.assertEqual(response.status_code, 400)
     
     def test_logout_correct(self):
         # setup
-        login_data = {"username": USER_DATA_CORRECT['username'],
-                      "password": USER_DATA_CORRECT['password']}
+        login_data = {"username": USER_DATA_CORRECT_1['username'],
+                      "password": USER_DATA_CORRECT_1['password']}
         login_response = self.client.post(reverse("login"), data=login_data)
         token = login_response.json()['token']
         # test
@@ -281,20 +318,10 @@ class TestAuthentication(TestCase):
         self.assertFalse(Token.objects.filter(key=token).exists())
     
     def test_logout_no_auth(self):
-        # setup
-        login_data = {"username": USER_DATA_CORRECT['username'],
-                      "password": USER_DATA_CORRECT['password']}
-        self.client.post(reverse("login"), data=login_data)
-        # test
         response = self.client.post(reverse("logout"))
         self.assertEqual(response.status_code, 401)
     
     def test_logout_wrong_token(self):
-        # setup
-        login_data = {"username": USER_DATA_CORRECT['username'],
-                      "password": USER_DATA_CORRECT['password']}
-        self.client.post(reverse("login"), data=login_data)
-        # test
         response = self.client.post(reverse("logout"), HTTP_AUTHORIZATION='Token abcdefgh12345678')
         self.assertEqual(response.status_code, 401)
 
@@ -339,3 +366,48 @@ class TestLanguageViews(TestCase):
         self.assertEqual(response.status_code, 404)
         response = self.client.get(reverse("locale", args=['enpo']))
         self.assertEqual(response.status_code, 404)
+
+
+class TestUserList(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()
+        
+    def setUp(self):
+        self.client = Client()
+    
+    def test_setupclass_works(self):
+        self.assertEqual(CustomUser.objects.count(), 4)
+        self.assertEqual(Group.objects.get(name='Publisher').user_set.count(), 2)
+    
+    def test_users_all_correct(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT_1['username'],
+                      "password": USER_DATA_CORRECT_1['password']}
+        login_response = self.client.post(reverse("login"), data=login_data)
+        token = login_response.json()['token']
+        # test
+        response = self.client.get(reverse("users"), HTTP_AUTHORIZATION='Token ' + token)
+        self.assertEqual(response.status_code, 200)
+    
+    def test_users_user_is_not_a_publisher(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT_2['username'],
+                      "password": USER_DATA_CORRECT_2['password']}
+        login_response = self.client.post(reverse("login"), data=login_data)
+        token = login_response.json()['token']
+        # test
+        response = self.client.get(reverse("users"), HTTP_AUTHORIZATION='Token ' + token)
+        self.assertEqual(response.status_code, 403)
+    
+    def test_uses_no_auth(self):
+        response = self.client.get(reverse("users"))
+        self.assertEqual(response.status_code, 401)
+    
+    def test_users_wrong_token(self):
+        response = self.client.post(reverse("users"), HTTP_AUTHORIZATION='Token abcdefgh12345678')
+        self.assertEqual(response.status_code, 401)
