@@ -47,6 +47,11 @@ class UserFullSerializer(serializers.ModelSerializer):
         if not value.is_menu_language():
             raise serializers.ValidationError("Invalid menu language.")
         return value
+    
+    def validate_username(self, value):
+        if value == 'locale':
+            raise serializers.ValidationError("Username not allowed.")
+        return value
         
 
 class UserBasicSerializer(serializers.ModelSerializer):
@@ -97,4 +102,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def validate_menu_language_id(self, value):
         if not value.is_menu_language():
             raise serializers.ValidationError("Invalid menu language.")
+        return value
+
+    def validate_username(self, value):
+        if value == 'locale':
+            raise serializers.ValidationError("Username not allowed.")
         return value
