@@ -10,6 +10,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import NotFound
+import re
 
 
 from django.http import HttpResponse
@@ -57,9 +58,11 @@ class MenuLanguageView(generics.RetrieveAPIView):
     
     def get_object(self):
         filename = self.kwargs['lang']
+        if re.match('[a-z]+\.po$', filename) is None:
+            raise NotFound('Invalid filename')
         data = filename.split('.')
-        if data[1] != 'po':
-            raise NotFound('Invalid file type')
+        if not Language.objects.filter(short=data[0]).exists():
+            raise NotFound('Not a supported Language')
         lang = Language.objects.get(short=data[0])
         if not lang.is_menu_language():
             raise NotFound('Translations for this language are unavailable')
