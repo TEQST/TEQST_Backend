@@ -297,3 +297,45 @@ class TestAuthentication(TestCase):
         # test
         response = self.client.post(reverse("logout"), HTTP_AUTHORIZATION='Token abcdefgh12345678')
         self.assertEqual(response.status_code, 401)
+
+
+class TestLanguageViews(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        
+    def setUp(self):
+        self.client = Client()
+    
+    def test_langs(self):
+        response = self.client.get(reverse("langs")).json()
+        self.assertEqual(len(response), 4)
+        for lang in response:
+            if lang['short'] == 'en' or lang['short'] == 'de':
+                self.assertTrue(lang['is_menu_language'])
+            else:
+                self.assertFalse(lang['is_menu_language'])
+    
+    def test_locale_correct(self):
+        response = self.client.get(reverse("locale", args=['en.po']))
+        self.assertEqual(response.status_code, 200)
+    
+    def test_locale_not_a_menu_language(self):
+        response = self.client.get(reverse("locale", args=['fr.po']))
+        self.assertEqual(response.status_code, 404)
+    
+    def test_locale_not_a_language(self):
+        response = self.client.get(reverse("locale", args=['ru.po']))
+        self.assertEqual(response.status_code, 404)
+    
+    def test_locale_wrong_file_format(self):
+        response = self.client.get(reverse("locale", args=['ab.cd.po']))
+        self.assertEqual(response.status_code, 404)
+        response = self.client.get(reverse("locale", args=['.po']))
+        self.assertEqual(response.status_code, 404)
+        response = self.client.get(reverse("locale", args=['en.pof']))
+        self.assertEqual(response.status_code, 404)
+        response = self.client.get(reverse("locale", args=['enpo']))
+        self.assertEqual(response.status_code, 404)
