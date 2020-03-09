@@ -5,6 +5,8 @@ from django.urls import reverse
 from django.contrib.auth.models import Group
 from usermgmt.models import Language, CustomUser
 
+from rest_framework.authtoken.models import Token
+
 from datetime import date
 
 USER_DATA_CORRECT = {"username": "harry",
@@ -208,7 +210,7 @@ class TestRegistration(TestCase):
         self.assertEqual(user.country, None)
 
 
-class TestLogin(TestCase):
+class TestAuthentication(TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -264,3 +266,34 @@ class TestLogin(TestCase):
         # test
         response = self.client.post(reverse("login"), data=login_data)
         self.assertEqual(response.status_code, 400)
+    
+    def test_logout_correct(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT['username'],
+                      "password": USER_DATA_CORRECT['password']}
+        login_response = self.client.post(reverse("login"), data=login_data)
+        token = login_response.json()['token']
+        # test
+        self.assertTrue(Token.objects.get(key=token))
+        # any header needs a prefix of 'HTTP_'
+        response = self.client.post(reverse("logout"), HTTP_AUTHORIZATION='Token ' + token)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Token.objects.filter(key=token).exists())
+    
+    def test_logout_no_auth(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT['username'],
+                      "password": USER_DATA_CORRECT['password']}
+        self.client.post(reverse("login"), data=login_data)
+        # test
+        response = self.client.post(reverse("logout"))
+        self.assertEqual(response.status_code, 401)
+    
+    def test_logout_wrong_token(self):
+        # setup
+        login_data = {"username": USER_DATA_CORRECT['username'],
+                      "password": USER_DATA_CORRECT['password']}
+        self.client.post(reverse("login"), data=login_data)
+        # test
+        response = self.client.post(reverse("logout"), HTTP_AUTHORIZATION='Token abcdefgh12345678')
+        self.assertEqual(response.status_code, 401)
