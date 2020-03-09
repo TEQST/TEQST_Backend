@@ -489,62 +489,28 @@ class TestUser(TestCase):
     def test_user_PUT_all_correct(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data['birth_year'] = 1970
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['birth_year'], 1970)
-    
-    # code is currently 200. maybe rethink this.
-    def test_user_PUT_username_exists(self):
-        # setup
-        setup_user(USER_DATA_CORRECT_2.copy())
-        put_data = USER_DATA_CORRECT_1.copy()
-        put_data['username'] = USER_DATA_CORRECT_2['username']
-        # test
-        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 400)
-    
-    def test_user_PUT_without_username(self):
-        # setup
-        put_data = USER_DATA_CORRECT_1.copy()
-        put_data.pop('username')
-        # test
-        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 200)
-    
-    # code is currently 200. maybe rethink this.
-    def test_user_PUT_invalid_username(self):
-        # setup
-        put_data = USER_DATA_CORRECT_1.copy()
-        put_data['username'] = 'har ry'
-        # test
-        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 400)
-        #self.assertTrue(CustomUser.objects.filter(username=USER_DATA_CORRECT_1['username']).exists())
-    
-    # code is currently 200. maybe rethink this.
-    def test_user_PUT_username_not_allowed(self):
-        # setup
-        put_data = USER_DATA_CORRECT_1.copy()
-        put_data['username'] = 'locale'
-        # test
-        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 400)
 
     def test_user_PUT_without_education(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data.pop('education')
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
         self.assertEqual(response.status_code, 200)
-        user = CustomUser.objects.get(username=put_data['username'])
+        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         self.assertEqual(user.education, USER_DATA_CORRECT_1['education'])
     
     def test_user_PUT_invalid_education(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data['education'] = 'ABC'
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
@@ -553,16 +519,18 @@ class TestUser(TestCase):
     def test_user_PUT_without_gender(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data.pop('gender')
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
         self.assertEqual(response.status_code, 200)
-        user = CustomUser.objects.get(username=put_data['username'])
+        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         self.assertEqual(user.gender, USER_DATA_CORRECT_1['gender'])
     
     def test_user_PUT_invalid_gender(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data['gender'] = 'A'
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
@@ -571,6 +539,7 @@ class TestUser(TestCase):
     def test_user_PUT_without_birth_year(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data.pop('birth_year')
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
@@ -579,6 +548,7 @@ class TestUser(TestCase):
     def test_user_PUT_invalid_birth_year_small(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data['birth_year'] = 1899
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
@@ -587,6 +557,7 @@ class TestUser(TestCase):
     def test_user_PUT_invalid_birth_year_big(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data['birth_year'] = date.today().year + 1
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
@@ -597,21 +568,23 @@ class TestUser(TestCase):
     def test_user_PUT_without_language_ids(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data.pop('language_ids')
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
         self.assertEqual(response.status_code, 400)
-        #user = CustomUser.objects.get(username=put_data['username'])
+        #user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         #self.assertEqual(user.languages.count(), 0)
     
     def test_user_PUT_without_menu_language_id(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data.pop('menu_language_id')
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
         self.assertEqual(response.status_code, 200)
-        user = CustomUser.objects.get(username=put_data['username'])
+        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         engl = Language.objects.get(short='en')
         self.assertEqual(user.menu_language, engl)
     
@@ -621,6 +594,7 @@ class TestUser(TestCase):
         """
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data['menu_language_id'] = 'fr'
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
@@ -632,6 +606,7 @@ class TestUser(TestCase):
         """
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data['menu_language_id'] = 'ru'
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
@@ -640,9 +615,10 @@ class TestUser(TestCase):
     def test_user_PUT_without_country(self):
         # setup
         put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
         put_data.pop('country')
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
         self.assertEqual(response.status_code, 200)
-        user = CustomUser.objects.get(username=put_data['username'])
+        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         self.assertEqual(user.country, USER_DATA_CORRECT_1['country'])
