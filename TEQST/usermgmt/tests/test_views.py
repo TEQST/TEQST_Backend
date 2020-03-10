@@ -12,6 +12,10 @@ from datetime import date
 
 
 class TestRegistration(TestCase):
+    """
+    urls tested:
+    /api/auth/register/
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -192,6 +196,11 @@ class TestRegistration(TestCase):
 
 
 class TestAuthentication(TestCase):
+    """
+    urls tested:
+    /api/auth/login/
+    /api/auth/logout/
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -294,6 +303,11 @@ class TestAuthentication(TestCase):
 
 
 class TestLanguageViews(TestCase):
+    """
+    urls tested:
+    /api/langs/
+    /api/locale/<lang>
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -336,6 +350,10 @@ class TestLanguageViews(TestCase):
 
 
 class TestUserList(TestCase):
+    """
+    urls tested:
+    /api/users/
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -381,6 +399,10 @@ class TestUserList(TestCase):
 
 
 class TestUser(TestCase):
+    """
+    urls tested:
+    /api/user/
+    """
 
     @classmethod
     def setUpClass(cls):

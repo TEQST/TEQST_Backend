@@ -47,7 +47,7 @@ def setup_user(user_data, make_publisher=False):
     user.languages.set(languages)
     user.save()
     if make_publisher:
-        pub_group =Group.objects.get(name='Publisher')
+        pub_group = Group.objects.get_or_create(name='Publisher')[0]
         user.groups.add(pub_group)
 
 def setup_users():
