@@ -71,3 +71,32 @@ class TestFolderStructure(TestCase):
         response = self.client.get(reverse("folders"), HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 0)
+
+class TestTextUpload(TestCase):
+    """
+    urls tested:
+    /api/texts/
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        owner = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        Folder.objects.create(name="Sharedfolder", owner=owner)
+
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+    
+    def test_correct_upload(self):
+        sf = Folder.objects.get(name="Sharedfolder")
+        with open('testtext.txt') as fp:
+            self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk, 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
+        sf = Folder.objects.get(name="Sharedfolder")
+        self.assertTrue(sf.is_shared_folder())
