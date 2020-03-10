@@ -7,6 +7,7 @@ from textmgmt.models import Folder, SharedFolder, Text
 from usermgmt.models import CustomUser
 
 import shutil
+import os
 
 
 class TestFolderStructure(TestCase):
@@ -100,7 +101,8 @@ class TestTextUpload(TestCase):
     @classmethod
     def tearDownClass(cls):
         path = settings.MEDIA_ROOT + '/harry/'
-        shutil.rmtree(path)
+        if (os.path.exists(path)):
+            shutil.rmtree(path)
         super().tearDownClass()
     
     def test_correct_upload(self):
@@ -113,6 +115,19 @@ class TestTextUpload(TestCase):
     def test_no_text(self):
         sf = Folder.objects.get(name="Sharedfolder")
         response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk}, HTTP_AUTHORIZATION=self.token_1)
-        print(response.status_code)
+        self.assertEqual(response.status_code, 400)
+
+    def test_no_shared_folder(self):
+        sf = Folder.objects.get(name="Sharedfolder")
+        with open('testtext.txt') as fp:
+            response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
+        sf = Folder.objects.get(name="Sharedfolder")
+        self.assertEqual(response.status_code, 400)
+
+    def test_correct_upload(self):
+        sf = Folder.objects.get(name="Sharedfolder")
+        with open('testtext.txt') as fp:
+            response = self.client.post(reverse("pub-texts"), data={'shared_folder': sf.pk, 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
+        sf = Folder.objects.get(name="Sharedfolder")
         self.assertEqual(response.status_code, 400)
         
