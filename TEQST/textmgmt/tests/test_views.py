@@ -1,9 +1,12 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.conf import settings
 from usermgmt.tests.utils import *
 from django.contrib.auth.models import Group
 from textmgmt.models import Folder, SharedFolder, Text
 from usermgmt.models import CustomUser
+
+import shutil
 
 
 class TestFolderStructure(TestCase):
@@ -93,6 +96,12 @@ class TestTextUpload(TestCase):
                         "password": USER_DATA_CORRECT_1['password']}
         login_response_1 = self.client.post(reverse("login"), data=login_data_1)
         self.token_1 = 'Token ' + login_response_1.json()['token']
+
+    @classmethod
+    def tearDownClass(cls):
+        path = settings.MEDIA_ROOT + '/harry/'
+        shutil.rmtree(path)
+        super().tearDownClass()
     
     def test_correct_upload(self):
         sf = Folder.objects.get(name="Sharedfolder")
@@ -100,3 +109,10 @@ class TestTextUpload(TestCase):
             self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk, 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
         sf = Folder.objects.get(name="Sharedfolder")
         self.assertTrue(sf.is_shared_folder())
+
+    def test_no_text(self):
+        sf = Folder.objects.get(name="Sharedfolder")
+        response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk}, HTTP_AUTHORIZATION=self.token_1)
+        print(response.status_code)
+        self.assertEqual(response.status_code, 400)
+        
