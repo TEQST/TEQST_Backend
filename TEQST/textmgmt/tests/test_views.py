@@ -185,6 +185,11 @@ class TestTextUpload(TestCase):
         if (os.path.exists(path)):
             shutil.rmtree(path)
         super().tearDownClass()
+
+    def tearDown(self):
+        sf = Folder.objects.get(name="Sharedfolder")
+        Text.objects.filter(shared_folder=sf).delete()
+        super().tearDown()
     
     def test_correct_upload(self):
         sf = Folder.objects.get(name="Sharedfolder")
@@ -202,13 +207,26 @@ class TestTextUpload(TestCase):
         sf = Folder.objects.get(name="Sharedfolder")
         with open('testtext.txt') as fp:
             response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
-        sf = Folder.objects.get(name="Sharedfolder")
         self.assertEqual(response.status_code, 400)
 
     def test_correct_upload(self):
         sf = Folder.objects.get(name="Sharedfolder")
         with open('testtext.txt') as fp:
             response = self.client.post(reverse("pub-texts"), data={'shared_folder': sf.pk, 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+
+    def test_double_upload(self):
         sf = Folder.objects.get(name="Sharedfolder")
+        with open('testtext.txt') as fp:
+            self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk, 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
+        sf = Folder.objects.get(name="Sharedfolder")
+        self.assertTrue(sf.is_shared_folder())
+        with open('testtext.txt') as fp:
+            response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk, 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 400)
         
+    def test_correct_upload(self):
+        sf = Folder.objects.get(name="Sharedfolder")
+        with open('testtext.txt') as fp:
+            response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk, 'textfile': fp})
+        self.assertEqual(response.status_code, 401)
