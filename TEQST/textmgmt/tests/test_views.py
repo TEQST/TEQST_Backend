@@ -39,7 +39,7 @@ class TestFolderStructure(TestCase):
         response = self.client.get(reverse("folders"))
         self.assertEqual(response.status_code, 401)
         owner = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username']).pk
-        response = self.client.post(reverse("folders"), data={'name': 'f1', 'owner': owner})
+        response = self.client.post(reverse("folders"), data={'name': 'f1'})
         self.assertEqual(response.status_code, 401)
     
     def test_folder_detail_no_auth(self):
@@ -57,7 +57,7 @@ class TestFolderStructure(TestCase):
         response = self.client.get(reverse("folders"), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 403)
         owner = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username']).pk
-        response = self.client.post(reverse("folders"), data={'name': 'f1', 'owner': owner}, HTTP_AUTHORIZATION=self.token_2)
+        response = self.client.post(reverse("folders"), data={'name': 'f1'}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 403)
     
     def test_folder_detail_user_is_not_a_publisher(self):
@@ -71,15 +71,96 @@ class TestFolderStructure(TestCase):
         response = self.client.delete(reverse("folder-detail", args=[1]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 403)
     
-    def test_folders_empty(self):
+    def test_folders_GET_empty(self):
         response = self.client.get(reverse("folders"), HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 0)
+    
+    def test_folders_GET_with_content(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        user3 = CustomUser.objects.get(username=USER_DATA_CORRECT_3['username'])
+        Folder.objects.create(name='3f1', owner=user3)
+        f1 = Folder.objects.create(name='1f1', owner=user1)
+        Folder.objects.create(name='1f2', owner=user1)
+        Folder.objects.create(name='1f1_1', parent=f1, owner=user1)
+        # test
+        response = self.client.get(reverse("folders"), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 2)
+        names = [response.json()[0]['name'], response.json()[1]['name']]
+        self.assertTrue('1f1' in names)
+        self.assertTrue('1f2' in names)
+    
+    def test_folders_POST_correct_without_parent(self):
+        response = self.client.post(reverse("folders"), data={'name': 'f1', 'parent': ''}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(Folder.objects.all()), 1)
+        self.assertTrue(Folder.objects.filter(name='f1').exists())
+    
+    def test_folders_POST_correct_with_parent(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        # test
+        response = self.client.post(reverse("folders"), data={'name': 'f1_1', 'parent': str(f1.pk)}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(Folder.objects.all()), 2)
+        self.assertTrue(Folder.objects.filter(name='f1_1').exists())
+    
+    def test_folders_POST_without_name(self):
+        response = self.client.post(reverse("folders"), data={'parent': ''}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_folders_POST_empty_name(self):
+        response = self.client.post(reverse("folders"), data={'name': '', 'parent': ''}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_folders_POST_name_exists(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        Folder.objects.create(name='f1', owner=user1)
+        # test
+        response = self.client.post(reverse("folders"), data={'name': 'f1', 'parent': ''}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_folders_POST_name_exists_with_parent(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Folder.objects.create(name='f1_1', parent=f1, owner=user1)
+        # test
+        response = self.client.post(reverse("folders"), data={'name': 'f1_1', 'parent': str(f1.pk)}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_folders_POST_invalid_name(self):
+        # the "__" (double underscore) is invalid
+        response = self.client.post(reverse("folders"), data={'name': 'f1__1', 'parent': ''}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_folders_POST_without_parent(self):
+        response = self.client.post(reverse("folders"), data={'name': 'f1'}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_folders_POST_invalid_parent(self):
+        # setup
+        user3 = CustomUser.objects.get(username=USER_DATA_CORRECT_3['username'])
+        f3_1 = Folder.objects.create(name='f3_1', owner=user3)
+        # test
+        response = self.client.post(reverse("folders"), data={'name': 'f1', 'parent': str(f3_1.pk)}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_folders_POST_parent_does_not_exist(self):
+        response = self.client.post(reverse("folders"), data={'name': 'f1', 'parent': '99'}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+
+
+
 
 class TestTextUpload(TestCase):
     """
     urls tested:
-    /api/texts/
+    /api/pub/texts/
     """
 
     @classmethod
