@@ -8,6 +8,7 @@ from usermgmt.models import CustomUser
 
 import shutil
 import os
+from django.core.files import File
 
 
 class TestFolderStructure(TestCase):
@@ -184,6 +185,7 @@ class TestTextUpload(TestCase):
         path = settings.MEDIA_ROOT + '/harry/'
         if (os.path.exists(path)):
             shutil.rmtree(path)
+        Folder.objects.filter(name="sharedfolder").delete()
         super().tearDownClass()
 
     def tearDown(self):
@@ -225,8 +227,11 @@ class TestTextUpload(TestCase):
             response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk, 'textfile': fp}, HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 400)
         
-    def test_correct_upload(self):
+    def test_no_auth(self):
         sf = Folder.objects.get(name="Sharedfolder")
         with open('testtext.txt') as fp:
             response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk, 'textfile': fp})
         self.assertEqual(response.status_code, 401)
+
+
+
