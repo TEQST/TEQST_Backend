@@ -1,5 +1,6 @@
 from rest_framework import generics, mixins, status
 from rest_framework.exceptions import NotFound
+from rest_framework.response import Response
 from django.db import models
 from .serializers import TextRecordingSerializer, SentenceRecordingSerializer, SentenceRecordingUpdateSerializer
 from .models import TextRecording, SentenceRecording
@@ -41,7 +42,8 @@ class TextRecordingView(generics.ListCreateAPIView):
         """
         response = super().get(*args, **kwargs)
         if not self.get_queryset().exists():
-            response.status_code = status.HTTP_204_NO_CONTENT
+            #response.status_code = status.HTTP_204_NO_CONTENT
+            response = Response(status=status.HTTP_204_NO_CONTENT)
         return response
 
 class SentenceRecordingCreateView(generics.CreateAPIView):
