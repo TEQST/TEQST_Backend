@@ -45,6 +45,7 @@ class FolderDetailedView(generics.RetrieveDestroyAPIView):
     permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
+        # This could exclude Folders which are SharedFolders. This view is only used with folders that aren't shared.
         user = self.request.user
         return Folder.objects.filter(owner=user.pk)
 

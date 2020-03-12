@@ -11,11 +11,10 @@ import os
 from django.core.files import File
 
 
-class TestFolderStructure(TestCase):
+class TestFolderListView(TestCase):
     """
     urls tested:
     /api/folders/
-    /api/folders/<int:pk>/
     """
 
     @classmethod
@@ -43,33 +42,11 @@ class TestFolderStructure(TestCase):
         response = self.client.post(reverse("folders"), data={'name': 'f1'})
         self.assertEqual(response.status_code, 401)
     
-    def test_folder_detail_no_auth(self):
-        # setup
-        Folder.objects.create(name='f1', owner=CustomUser.objects.get(username=USER_DATA_CORRECT_1['username']))
-        # test
-        response = self.client.get(reverse("folder-detail", args=[1]))
-        self.assertEqual(response.status_code, 401)
-        response = self.client.put(reverse("folder-detail", args=[1]))
-        self.assertEqual(response.status_code, 401)
-        response = self.client.delete(reverse("folder-detail", args=[1]))
-        self.assertEqual(response.status_code, 401)
-    
     def test_folders_user_is_not_a_publisher(self):
         response = self.client.get(reverse("folders"), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 403)
         owner = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username']).pk
         response = self.client.post(reverse("folders"), data={'name': 'f1'}, HTTP_AUTHORIZATION=self.token_2)
-        self.assertEqual(response.status_code, 403)
-    
-    def test_folder_detail_user_is_not_a_publisher(self):
-        # setup
-        Folder.objects.create(name='f1', owner=CustomUser.objects.get(username=USER_DATA_CORRECT_1['username']))
-        # test
-        response = self.client.get(reverse("folder-detail", args=[1]), HTTP_AUTHORIZATION=self.token_2)
-        self.assertEqual(response.status_code, 403)
-        response = self.client.put(reverse("folder-detail", args=[1]), HTTP_AUTHORIZATION=self.token_2)
-        self.assertEqual(response.status_code, 403)
-        response = self.client.delete(reverse("folder-detail", args=[1]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 403)
     
     def test_folders_GET_empty(self):
@@ -155,6 +132,79 @@ class TestFolderStructure(TestCase):
         response = self.client.post(reverse("folders"), data={'name': 'f1', 'parent': '99'}, HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 400)
 
+
+class TestFolderDetailedView(TestCase):
+    """
+    urls tested:
+    /api/folders/<int:pk>/
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def test_folder_detail_no_auth(self):
+        # setup
+        Folder.objects.create(name='f1', owner=CustomUser.objects.get(username=USER_DATA_CORRECT_1['username']))
+        # test
+        response = self.client.get(reverse("folder-detail", args=[1]))
+        self.assertEqual(response.status_code, 401)
+        response = self.client.delete(reverse("folder-detail", args=[1]))
+        self.assertEqual(response.status_code, 401)
+    
+    def test_folder_detail_user_is_not_a_publisher(self):
+        # setup
+        Folder.objects.create(name='f1', owner=CustomUser.objects.get(username=USER_DATA_CORRECT_1['username']))
+        # test
+        response = self.client.get(reverse("folder-detail", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+        response = self.client.delete(reverse("folder-detail", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+    
+    def test_folder_detail_DELETE_correct_normal_folder(self):
+        pass
+
+    def test_folder_detail_DELETE_correct_shared_folder(self):
+        pass
+
+    def test_folder_detail_DELETE_folder_does_not_exist(self):
+        pass
+
+    def test_folder_detail_DELETE_without_folder(self):
+        pass
+
+    def test_folder_detail_DELETE_invalid_folder(self):
+        pass
+
+    def test_folder_detail_GET_correct_normal_folder(self):
+        pass
+
+    # this request is never used with a sharedfolder. However it does not hurt to leave it possible.
+    def test_folder_detail_GET_correct_shared_folder(self):
+        pass
+
+    def test_folder_detail_GET_folder_does_not_exist(self):
+        pass
+
+    def test_folder_detail_GET_without_folder(self):
+        pass
+
+    def test_folder_detail_GET_invalid_folder(self):
+        pass
 
 
 
