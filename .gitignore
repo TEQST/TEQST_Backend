@@ -5,6 +5,5 @@
 db.sqlite3
 __pycache__/
 migrations/
-!media/test_resources/*
-media/*
+media/
 static/
