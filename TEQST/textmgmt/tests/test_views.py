@@ -176,16 +176,35 @@ class TestFolderDetailedView(TestCase):
         self.assertEqual(response.status_code, 403)
     
     def test_folder_detail_DELETE_correct_normal_folder(self):
-        pass
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Folder.objects.create(name='f1_1', parent=f1, owner=user1)
+        # test
+        response = self.client.delete(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(Folder.objects.count(), 0)
 
     def test_folder_detail_DELETE_correct_shared_folder(self):
-        pass
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        #testpath = os.path.join(settings.BASE_DIR, 'testtext.txt')
+        #Text.objects.create(title='test', shared_folder=f1, textfile=testpath)
+        # test
+        response = self.client.delete(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(Folder.objects.count(), 0)
+        self.assertEqual(SharedFolder.objects.count(), 0)
+        self.assertEqual(Text.objects.count(), 0)
+        # teardown
+        path = settings.MEDIA_ROOT + '/harry/'
+        if (os.path.exists(path)):
+            shutil.rmtree(path)
 
     def test_folder_detail_DELETE_folder_does_not_exist(self):
-        pass
-
-    def test_folder_detail_DELETE_without_folder(self):
-        pass
+        response = self.client.delete(reverse("folder-detail", args=[99]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
 
     def test_folder_detail_DELETE_invalid_folder(self):
         pass
@@ -198,9 +217,6 @@ class TestFolderDetailedView(TestCase):
         pass
 
     def test_folder_detail_GET_folder_does_not_exist(self):
-        pass
-
-    def test_folder_detail_GET_without_folder(self):
         pass
 
     def test_folder_detail_GET_invalid_folder(self):
