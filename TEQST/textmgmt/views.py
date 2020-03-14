@@ -161,6 +161,14 @@ class PublisherDetailedView(generics.RetrieveAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = PublisherSerializer
 
+    def get_object(self):
+        pub = super().get_object()
+        user = self.request.user
+        for shf in user.sharedfolder.all():
+            if pub == shf.owner:
+                return pub
+        raise NotFound('This publisher has not shared any folders with you.')
+
 
 class SpeechDataDownloadView(views.APIView):
     """
