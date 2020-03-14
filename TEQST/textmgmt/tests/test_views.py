@@ -376,3 +376,63 @@ class TestPublisherListView(TestCase):
         response = self.client.get(reverse("publishers"), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 2)
+
+
+class TestPublisherDetailedView(TestCase):
+    """
+    urls tested:
+    /api/publishers/<id>/
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_pub_detail_no_auth(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        # test
+        response = self.client.get(reverse("publisher-detail", args=[user1.pk]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_pub_detail_correct(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        user2 = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        f2 = Folder.objects.create(name='f2', owner=user1)
+        Text.objects.create(title='test2', shared_folder=f2, textfile='test_resources/testtext2.txt')
+        f2.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.get(reverse("publisher-detail", args=[user1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['freedfolders']), 2)
+
+    def test_pub_detail_pub_does_not_exist(self):
+        response = self.client.get(reverse("publisher-detail", args=[99]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_pub_detail_invalid_publisher(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        # test
+        response = self.client.get(reverse("publisher-detail", args=[user1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)

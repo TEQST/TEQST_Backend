@@ -1,0 +1,7 @@
+This file is for testing texts
+
+It contains multiple lines for testing recordings
+
+Don't gitignore this file, it is required to make some tests work
+
+This is a second testtext
