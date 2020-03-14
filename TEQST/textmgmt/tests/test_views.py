@@ -189,8 +189,7 @@ class TestFolderDetailedView(TestCase):
         # setup
         user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         f1 = Folder.objects.create(name='f1', owner=user1)
-        #testpath = os.path.join(settings.BASE_DIR, 'testtext.txt')
-        #Text.objects.create(title='test', shared_folder=f1, textfile=testpath)
+        Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.delete(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 204)
@@ -207,21 +206,52 @@ class TestFolderDetailedView(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_folder_detail_DELETE_invalid_folder(self):
-        pass
+        # setup
+        user3 = CustomUser.objects.get(username=USER_DATA_CORRECT_3['username'])
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        # test
+        response = self.client.delete(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(Folder.objects.count(), 1)
 
     def test_folder_detail_GET_correct_normal_folder(self):
-        pass
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Folder.objects.create(name='f1_1', parent=f1, owner=user1)
+        Folder.objects.create(name='f1_2', parent=f1, owner=user1)
+        Folder.objects.create(name='f1_3', parent=f1, owner=user1)
+        # test
+        response = self.client.get(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['subfolder']), 3)
 
     # this request is never used with a sharedfolder. However it does not hurt to leave it possible.
     def test_folder_detail_GET_correct_shared_folder(self):
-        pass
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.get(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['subfolder']), 0)
+        # teardown
+        path = settings.MEDIA_ROOT + '/harry/'
+        if (os.path.exists(path)):
+            shutil.rmtree(path)
 
     def test_folder_detail_GET_folder_does_not_exist(self):
-        pass
+        response = self.client.get(reverse("folder-detail", args=[99]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
 
     def test_folder_detail_GET_invalid_folder(self):
-        pass
-
+        # setup
+        user3 = CustomUser.objects.get(username=USER_DATA_CORRECT_3['username'])
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        # test
+        response = self.client.get(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
 
 
 class TestTextUpload(TestCase):
