@@ -157,6 +157,12 @@ class TestFolderDetailedView(TestCase):
         login_response_2 = self.client.post(reverse("login"), data=login_data_2)
         self.token_2 = 'Token ' + login_response_2.json()['token']
     
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
     def test_folder_detail_no_auth(self):
         # setup
         Folder.objects.create(name='f1', owner=CustomUser.objects.get(username=USER_DATA_CORRECT_1['username']))
@@ -196,10 +202,6 @@ class TestFolderDetailedView(TestCase):
         self.assertEqual(Folder.objects.count(), 0)
         self.assertEqual(SharedFolder.objects.count(), 0)
         self.assertEqual(Text.objects.count(), 0)
-        # teardown
-        path = settings.MEDIA_ROOT + '/harry/'
-        if (os.path.exists(path)):
-            shutil.rmtree(path)
 
     def test_folder_detail_DELETE_folder_does_not_exist(self):
         response = self.client.delete(reverse("folder-detail", args=[99]), HTTP_AUTHORIZATION=self.token_1)
@@ -236,10 +238,6 @@ class TestFolderDetailedView(TestCase):
         response = self.client.get(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['subfolder']), 0)
-        # teardown
-        path = settings.MEDIA_ROOT + '/harry/'
-        if (os.path.exists(path)):
-            shutil.rmtree(path)
 
     def test_folder_detail_GET_folder_does_not_exist(self):
         response = self.client.get(reverse("folder-detail", args=[99]), HTTP_AUTHORIZATION=self.token_1)
@@ -330,4 +328,51 @@ class TestTextUpload(TestCase):
         self.assertEqual(response.status_code, 401)
 
 
+class TestPublisherListView(TestCase):
+    """
+    urls tested:
+    /api/publishers/
+    """
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_pub_list_no_auth(self):
+        response = self.client.get(reverse("publishers"))
+        self.assertEqual(response.status_code, 401)
+    
+    def test_pub_list_empty(self):
+        response = self.client.get(reverse("publishers"), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 0)
+    
+    def test_pub_list_with_content(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        user3 = CustomUser.objects.get(username=USER_DATA_CORRECT_3['username'])
+        user2 = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username'])
+        for user in [user1, user3]:
+            f1 = Folder.objects.create(name='f1', owner=user)
+            Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
+            f1.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.get(reverse("publishers"), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 2)
