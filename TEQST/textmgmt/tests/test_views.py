@@ -522,3 +522,85 @@ class TestPublisherDetailedView(TestCase):
         # test
         response = self.client.get(reverse("publisher-detail", args=[user1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 404)
+
+
+class TestSpeakerTextListView(TestCase):
+    """
+    urls tested:
+    /api/spk/sharedfolders/<id>/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_spk_text_list_no_auth(self):
+        response = self.client.get(reverse("sharedfolder-detail", args=[1]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_spk_text_list_correct(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        user2 = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
+        Text.objects.create(title='test2', shared_folder=f1, textfile='test_resources/testtext2.txt')
+        f1.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.get(reverse("sharedfolder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['texts']), 2)
+    
+    def test_spk_text_list_correct_empty(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        user2 = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        t1.delete()
+        self.assertEqual(len(Text.objects.all()), 0)
+        # test
+        response = self.client.get(reverse("sharedfolder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['texts']), 0)
+
+    def test_spk_text_list_folder_does_not_exist(self):
+        response = self.client.get(reverse("sharedfolder-detail", args=[99]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_spk_text_list_invalid_folder(self):
+        # setup
+        user3 = CustomUser.objects.get(username=USER_DATA_CORRECT_3['username'])
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.get(reverse("sharedfolder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_spk_text_list_folder_is_not_shared(self):
+        # setup
+        user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        # test
+        response = self.client.get(reverse("sharedfolder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
