@@ -98,6 +98,13 @@ class SpeakerTextListView(generics.RetrieveAPIView):
     queryset = SharedFolder.objects.all()
     serializer_class = SharedFolderContentSerializer
 
+    def get_object(self):
+        sf = super().get_object()
+        user = self.request.user
+        if user not in sf.speaker.all():
+            raise NotFound("This sharedfolder is not shared with you.")
+        return sf
+
 
 class PublisherTextDetailedView(generics.RetrieveDestroyAPIView):
     """
