@@ -30,6 +30,9 @@ class TextRecording(models.Model):
         sentence_num = SentenceRecording.objects.filter(recording=self).count() + 1
         # if a speaker is finished with a text this number is one higher than the number of sentences in the text
         return sentence_num
+    
+    def is_finished(self):
+        return SentenceRecording.objects.filter(recording=self).count() == self.text.sentence_count()
 
 
 def sentence_rec_upload_path(instance, filename):

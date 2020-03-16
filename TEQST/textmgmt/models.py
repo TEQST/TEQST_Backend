@@ -67,7 +67,7 @@ class SharedFolder(Folder):
     
     def has_any_recordings(self):
         for text in self.text.all():
-            if text.has_any_recordings():
+            if text.has_any_finished_recordings():
                 return True
         return False
     
@@ -113,8 +113,11 @@ class Text(models.Model):
     def __str__(self):
         return self.title
     
-    def has_any_recordings(self):
-        return self.textrecording.count() > 0
+    def has_any_finished_recordings(self):
+        for tr in self.textrecording.all():
+            if tr.is_finished():
+                return True
+        return False
     
     def save(self, *args, **kwargs):
         self.shared_folder = self.shared_folder.make_shared_folder()
