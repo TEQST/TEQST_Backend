@@ -66,3 +66,7 @@ def setup_languages():
     DE.save()
     Language.objects.create(native_name="Espagnol", english_name="Spanish", short="es")
     Language.objects.create(native_name="Francais", english_name="French", short="fr")
+
+
+def get_user(index):
+    return CustomUser.objects.get(username=USERS_DATA_CORRECT[index - 1]['username'])

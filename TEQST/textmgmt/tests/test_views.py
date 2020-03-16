@@ -604,3 +604,163 @@ class TestSpeakerTextListView(TestCase):
         # test
         response = self.client.get(reverse("sharedfolder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 404)
+
+
+class TestSharedFolderDetailView(TestCase):
+    """
+    urls tested:
+    /api/sharedfolders/<id>/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_sf_speakers_no_auth(self):
+        response = self.client.get(reverse("sharedfolder-speakers", args=[1]))
+        self.assertEqual(response.status_code, 401)
+        response = self.client.put(reverse("sharedfolder-speakers", args=[1]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_sf_speakers_user_is_not_a_publisher(self):
+        response = self.client.get(reverse("sharedfolder-speakers", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+        response = self.client.put(reverse("sharedfolder-speakers", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+
+    def test_sf_speakers_GET_correct_empty(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.get(reverse("sharedfolder-speakers", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['speakers']), 0)
+
+    def test_sf_speakers_GET_correct_with_content(self):
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        user4 = get_user(4)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        f1.sharedfolder.speaker.add(user4)
+        # test
+        response = self.client.get(reverse("sharedfolder-speakers", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['speakers']), 2)
+
+    def test_sf_speakers_GET_invalid_sf(self):
+        # setup
+        user3 = get_user(3)
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.get(reverse("sharedfolder-speakers", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sf_speakers_GET_sf_does_not_exist(self):
+        response = self.client.get(reverse("sharedfolder-speakers", args=[99]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sf_speakers_GET_folder_is_not_shared(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        # test
+        response = self.client.get(reverse("sharedfolder-speakers", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sf_speakers_PUT_invalid_sf(self):
+        # setup
+        user3 = get_user(3)
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [1]}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sf_speakers_PUT_sf_does_not_exist(self):
+        response = self.client.put(reverse("sharedfolder-speakers", args=[99]), data={'speaker_ids': [1]}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sf_speakers_PUT_folder_is_not_shared(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        # test
+        response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [1]}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sf_speakers_PUT_with_speaker_ids_empty(self):
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': []}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['speakers']), 0)
+
+    def test_sf_speakers_PUT_with_speaker_ids(self):
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        user4 = get_user(4)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [user2.pk, user4.pk]}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['speakers']), 2)
+
+    def test_sf_speakers_PUT_without_speaker_ids(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        # test
+        response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sf_speakers_PUT_speaker_ids_user_does_not_exist(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [99]}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+
+    def test_sf_speakers_PUT_speaker_ids_same_user_twice(self):
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [user2.pk, user2.pk]}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()['speakers']), 1)
