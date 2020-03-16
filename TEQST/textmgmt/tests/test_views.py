@@ -764,3 +764,90 @@ class TestSharedFolderDetailView(TestCase):
         response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [user2.pk, user2.pk]}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()['speakers']), 1)
+
+
+class TestPublisherTextDetailedView(TestCase):
+    """
+    urls tested:
+    /api/pub/texts/<id>/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_pub_text_no_auth(self):
+        response = self.client.get(reverse("pub-text-detail", args=[1]))
+        self.assertEqual(response.status_code, 401)
+        response = self.client.delete(reverse("pub-text-detail", args=[1]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_pub_text_user_is_not_a_publisher(self):
+        response = self.client.get(reverse("pub-text-detail", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+        response = self.client.delete(reverse("pub-text-detail", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+
+    def test_pub_text_GET_correct(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.get(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.json()['content'], [])
+
+    def test_pub_text_GET_text_does_not_exist(self):
+        response = self.client.get(reverse("pub-text-detail", args=[99]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_pub_text_GET_invalid_text(self):
+        # setup
+        user3 = get_user(3)
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.get(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_pub_text_DEL_correct(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.delete(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 204)
+
+    def test_pub_text_DEL_text_does_not_exist(self):
+        response = self.client.delete(reverse("pub-text-detail", args=[99]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_pub_text_DEL_invalid_text(self):
+        # setup
+        user3 = get_user(3)
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.delete(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
