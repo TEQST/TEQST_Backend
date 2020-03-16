@@ -851,3 +851,58 @@ class TestPublisherTextDetailedView(TestCase):
         # test
         response = self.client.delete(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 404)
+
+
+class TestSpeakerTextDetailedView(TestCase):
+    """
+    urls tested:
+    /api/spk/texts/<id>/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_spk_text_no_auth(self):
+        response = self.client.get(reverse("spk-text-detail", args=[1]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_spk_text_GET_correct(self):
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.json()['content'], [])
+
+    def test_spk_text_GET_text_does_not_exist(self):
+        response = self.client.get(reverse("spk-text-detail", args=[99]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_spk_text_GET_invalid_text(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        # test
+        response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
