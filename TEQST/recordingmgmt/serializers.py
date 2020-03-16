@@ -27,6 +27,8 @@ class TextRecordingSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
             raise serializers.ValidationError("A recording for the given text by the given user already exists")
+        if data['TTS_permission'] is False and data['SR_permission'] is False:
+            raise serializers.ValidationError("Either TTS or SR permission must be True")
         return super().validate(data)
 
 
