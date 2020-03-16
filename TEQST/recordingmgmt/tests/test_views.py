@@ -26,10 +26,6 @@ class TestTextRecordingView(TestCase):
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
         login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
                         "password": USER_DATA_CORRECT_2['password']}
         login_response_2 = self.client.post(reverse("login"), data=login_data_2)
@@ -169,4 +165,97 @@ class TestTextRecordingView(TestCase):
         f1.sharedfolder.speaker.add(user2)
         # test
         response = self.client.post(reverse("textrecs"), data={'text': t1.pk, 'TTS_permission': False, 'SR_permission': False}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 400)
+
+
+class TestSentenceRecordingCreateView(TestCase):
+    """
+    urls tested:
+    /api/textrecordings/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.user1 = get_user(1)
+        self.user2 = get_user(2)
+        self.f1 = Folder.objects.create(name='f1', owner=self.user1)
+        self.t1 = Text.objects.create(title='test', shared_folder=self.f1, textfile='test_resources/testtext.txt')
+        self.f1.sharedfolder.speaker.add(self.user2)
+        self.tr1 = TextRecording.objects.create(speaker=self.user2, text=self.t1)
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_sentencerec_create_no_auth(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 1})
+        self.assertEqual(response.status_code, 401)
+
+    def test_sentencerec_create_correct(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 201)
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 2}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 201)
+
+    def test_sentencerec_create_without_recording(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 400)
+
+    def test_sentencerec_create_recording_does_not_exist(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': 99, 'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 400)
+
+    def test_sentencerec_create_invalid_recording(self):
+        # setup
+        user4 = get_user(4)
+        self.f1.sharedfolder.speaker.add(user4)
+        tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
+        # test
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': tr2.pk, 'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 400)
+
+    def test_sentencerec_create_without_audiofile(self):
+        response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 400)
+
+    def test_sentencerec_create_without_index(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 400)
+
+    def test_sentencerec_create_index_too_big(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 2}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 400)
+
+    def test_sentencerec_create_index_too_small(self):
+        # setup
+        user2 = get_user(2)
+        SentenceRecording.objects.create(recording=self.tr1, index=1, audiofile='test_resources/s1.wav')
+        # test
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 400)
+
+    def test_sentencerec_create_index_negative(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
+            response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': -1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
