@@ -66,7 +66,7 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         # the sentencerecording is uniquely defined by a textrecording id (rec) and the index of the sentence within that textrecording (index)
         # rec is part of the core url string
         rec = self.kwargs['rec']
-        if not TextRecording.objects.filter(pk=rec).exists():
+        if not TextRecording.objects.filter(pk=rec, speaker=self.request.user).exists():
             raise NotFound("Invalid Textrecording id")
         # index is a query parameter
         if 'index' in self.request.query_params:
