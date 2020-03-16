@@ -5,6 +5,7 @@ from usermgmt.tests.utils import *
 from django.contrib.auth.models import Group
 from textmgmt.models import Folder, SharedFolder, Text
 from usermgmt.models import CustomUser
+from recordingmgmt.models import TextRecording, SentenceRecording
 
 import shutil
 import os
@@ -906,3 +907,102 @@ class TestSpeakerTextDetailedView(TestCase):
         # test
         response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 404)
+
+
+class TestSpeechDataDownloadView(TestCase):
+    """
+    urls tested:
+    api/download/<sf_id>/
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_download_no_auth(self):
+        response = self.client.get(reverse("download", args=[1]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_download_user_is_not_a_publisher(self):
+        response = self.client.get(reverse("download", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+
+    def test_download_correct(self):
+        # !!! This test relies on the fact that test_resources/testtext.txt has exactly 3 sentences !!!
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        tr1 = TextRecording.objects.create(speaker=user2, text=t1)
+        SentenceRecording.objects.create(recording=tr1, index=1, audiofile='test_resources/s1.wav')
+        SentenceRecording.objects.create(recording=tr1, index=2, audiofile='test_resources/s2.wav')
+        SentenceRecording.objects.create(recording=tr1, index=3, audiofile='test_resources/s3.wav')
+        # test
+        response = self.client.get(reverse("download", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+
+    def test_download_folder_does_not_exist(self):
+        response = self.client.get(reverse("download", args=[99]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_download_invalid_sharedfolder(self):
+        # !!! This test relies on the fact that test_resources/testtext.txt has exactly 3 sentences !!!
+        # setup
+        user3 = get_user(3)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        tr1 = TextRecording.objects.create(speaker=user2, text=t1)
+        SentenceRecording.objects.create(recording=tr1, index=1, audiofile='test_resources/s1.wav')
+        SentenceRecording.objects.create(recording=tr1, index=2, audiofile='test_resources/s2.wav')
+        SentenceRecording.objects.create(recording=tr1, index=3, audiofile='test_resources/s3.wav')
+        # test
+        response = self.client.get(reverse("download", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_download_folder_is_not_shared(self):
+        # setup
+        user1 = get_user(1)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        # test
+        response = self.client.get(reverse("download", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    # TODO should this not better be a 404 Error?
+    def test_download_sharedfolder_has_no_recordings_yet(self):
+        # !!! This test relies on the fact that test_resources/testtext.txt has 3 or more sentences !!!
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        tr1 = TextRecording.objects.create(speaker=user2, text=t1)
+        SentenceRecording.objects.create(recording=tr1, index=1, audiofile='test_resources/s1.wav')
+        SentenceRecording.objects.create(recording=tr1, index=2, audiofile='test_resources/s2.wav')
+        # test
+        response = self.client.get(reverse("download", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
