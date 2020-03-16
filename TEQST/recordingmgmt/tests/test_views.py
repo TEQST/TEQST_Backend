@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from usermgmt.tests.utils import *
 from django.contrib.auth.models import Group
 from textmgmt.models import Folder, Text
@@ -171,7 +172,7 @@ class TestTextRecordingView(TestCase):
 class TestSentenceRecordingCreateView(TestCase):
     """
     urls tested:
-    /api/textrecordings/
+    /api/sentencerecordings/
     """
     @classmethod
     def setUpClass(cls):
@@ -259,3 +260,93 @@ class TestSentenceRecordingCreateView(TestCase):
         with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': -1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
+
+
+class TestSentenceRecordingUpdateView(TestCase):
+    """
+    urls tested:
+    /api/sentencerecordings/<trec_id>/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.user1 = get_user(1)
+        self.user2 = get_user(2)
+        self.f1 = Folder.objects.create(name='f1', owner=self.user1)
+        self.t1 = Text.objects.create(title='test', shared_folder=self.f1, textfile='test_resources/testtext.txt')
+        self.f1.sharedfolder.speaker.add(self.user2)
+        self.tr1 = TextRecording.objects.create(speaker=self.user2, text=self.t1)
+        self.sc1 = SentenceRecording.objects.create(recording=self.tr1, index=1, audiofile='test_resources/s1.wav')
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_sentencerec_detail_no_auth(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 1})
+        self.assertEqual(response.status_code, 401)
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            response = self.client.put(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'audiofile': fp, 'index': 1})
+        self.assertEqual(response.status_code, 401)
+
+    def test_sentencerec_detail_GET_correct(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+
+    def test_sentencerec_detail_GET_trec_does_not_exist(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[99]), data={'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_GET_invalid_trec(self):
+        # setup
+        user4 = get_user(4)
+        self.f1.sharedfolder.speaker.add(user4)
+        tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
+        sr2 = SentenceRecording.objects.create(recording=tr2, index=1, audiofile='test_resources/s1.wav')
+        # test
+        response = self.client.get(reverse("sentencerecs-detail", args=[tr2.pk]), data={'index': 1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_GET_without_index(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_GET_index_too_big(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 2}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_GET_index_negative(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 0}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+        response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': -1}, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_PUT_correct(self):
+        pass   
+
+    def test_sentencerec_detail_PUT_trec_does_not_exist(self):
+        pass
+
+    def test_sentencerec_detail_PUT_invalid_trec(self):
+        pass
+
+    def test_sentencerec_detail_PUT_without_index(self):
+        pass
+
+    def test_sentencerec_detail_PUT_index_too_big(self):
+        pass
+
+    def test_sentencerec_detail_PUT_index_negative(self):
+        pass
