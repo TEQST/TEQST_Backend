@@ -135,7 +135,7 @@ class TextFullSerializer(serializers.ModelSerializer):
         return super().validate(data)
     
     def validate_title(self, value):
-        if '_' in value or ' ' in value:
+        if ' ' in value:
             raise serializers.ValidationError("Text title can't contain an underscore or a space character.")
         return value
 
