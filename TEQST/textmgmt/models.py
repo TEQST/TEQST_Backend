@@ -7,7 +7,7 @@ from chardet import detect
 
 
 class Folder(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=250)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='folder')  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
 
@@ -106,7 +106,7 @@ def get_encoding_type(file_path):
 
 
 class Text(models.Model):
-    title = models.CharField(max_length=30)
+    title = models.CharField(max_length=100)
     shared_folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='text')
     textfile = models.FileField(upload_to=upload_path)
 
