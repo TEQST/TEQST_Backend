@@ -145,7 +145,7 @@ class Text(models.Model):
                     content.append(sentence)
                     sentence = ""
             else:
-                sentence += line.strip('\n')
+                sentence += line.replace('\n', ' ')
         if sentence != "":
             content.append(sentence)
         f.close()
