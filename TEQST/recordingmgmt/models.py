@@ -66,6 +66,10 @@ def create_textrecording_stm(trec_pk):
     trec = TextRecording.objects.get(pk=trec_pk)
     srecs = SentenceRecording.objects.filter(recording=trec)
 
+    # update logfile
+    logpath = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.sharedfolder.get_path() + '/log.txt'
+    add_user_to_log(logpath, trec.speaker)
+
     #create string with encoded userdata
     user_str = '<' + trec.speaker.gender + ',' + trec.speaker.education + ','
     if trec.SR_permission:
@@ -152,3 +156,26 @@ def concat_stms(sharedfolder):
 
 def format_timestamp(t):
     return "{0:0>7}".format(int(round(t*100, 0)))
+
+
+def log_contains_user(path, username):
+    logfile = open(path, 'r')
+    lines = logfile.readlines()
+    for i in range(len(lines)):
+        if lines[i][:8] == 'username':
+            if lines[i][10:] == username + '\n':
+                return True
+    logfile.close()
+    return False
+
+
+def add_user_to_log(path, user):
+    if log_contains_user(path, str(user.username)):
+        return
+    logfile = open(path, 'a')
+    logfile.write('username: ' + str(user.username) + '\n')
+    logfile.write('birth_year: ' + str(user.birth_year) + '\n')
+    logfile.write('gender: ' + str(user.gender) + '\n')
+    logfile.write('education: ' + str(user.education) + '\n')
+    logfile.write('#\n')
+    logfile.close()
