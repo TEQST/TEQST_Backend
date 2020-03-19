@@ -23,8 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '6be^vsjs(9+#g#l%abyq%f%@2&e0*dy4n1le5+^w)q1_amie#o'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
+DEBUG = False
 ALLOWED_HOSTS = []
 
 
@@ -32,7 +31,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     #this is for CORS requests
-    'corsheaders',
+    #'corsheaders',
 
     'textmgmt.apps.TextmgmtConfig',
     'recordingmgmt.apps.RecordingmgmtConfig',
@@ -49,7 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     #This is for CORS requests
-    'corsheaders.middleware.CorsMiddleware',
+    #'corsheaders.middleware.CorsMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -153,5 +152,5 @@ REST_FRAMEWORK = {
 }
 
 #CORS once again
-CORS_ORIGIN_ALLOW_ALL = True
+#CORS_ORIGIN_ALLOW_ALL = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
