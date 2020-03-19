@@ -8,3 +8,4 @@ migrations/
 #media/
 static/
 htmlcov/
+*.pyc
