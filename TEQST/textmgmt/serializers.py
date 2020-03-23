@@ -14,7 +14,7 @@ class FolderPKField(serializers.PrimaryKeyRelatedField):
 
 class FolderFullSerializer(serializers.ModelSerializer):
     """
-    to be used by view: FolderListView
+    to be used by view: PubFolderListView
     for: Folder creation, top-level-folder list retrieval
     """
     parent = FolderPKField(allow_null=True)
@@ -56,7 +56,7 @@ class FolderBasicSerializer(serializers.ModelSerializer):
 
 class FolderDetailedSerializer(serializers.ModelSerializer):
     """
-    to be used by view: FolderDetailView
+    to be used by view: PubFolderDetailView
     for: retrieval of a Folder with its subfolders
     """
     parent = FolderPKField(allow_null=True)
@@ -70,44 +70,6 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class TextBasicSerializer(serializers.ModelSerializer):
-    """
-    to be used by view: PublisherTextListView
-    for: retrieval of a list of texts contained in a sharedfolder
-    """
-    class Meta:
-        model = Text
-        fields = ['id', 'title']
-
-
-class SharedFolderContentSerializer(serializers.ModelSerializer):
-    """
-    to be used by view: SpeakerTextListView
-    for: retrieval of a sharedfolder with the texts it contains
-    """
-    texts = TextBasicSerializer(read_only=True, many=True, source='text')
-    path = serializers.CharField(read_only=True, source='get_readable_path')
-    class Meta:
-        model = SharedFolder
-        fields = ['id', 'name', 'owner', 'path', 'texts']
-        read_only_fields = ['name', 'owner']
-
-
-class SharedFolderDetailSerializer(serializers.ModelSerializer):
-    """
-    to be used by view: SharedFolderDetailView
-    for: retrieval and update of the speakers of a shared folder
-    """
-    speaker_ids = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
-    speakers = UserBasicSerializer(many=True, read_only=True, source='speaker')
-    class Meta:
-        model = SharedFolder
-        fields = ['id', 'name', 'speakers', 'speaker_ids']
-        read_only_fields = ['name', 'speakers']
-        write_only_fields = ['speaker_ids']
-        depth = 1
-
-
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
@@ -117,7 +79,7 @@ class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
 
 class TextFullSerializer(serializers.ModelSerializer):
     """
-    to be used by view: PublisherTextListView, PublisherTextDetailedView, SpeakerTextDetailedView
+    to be used by view: PubTextListView, PubTextDetailedView, SpkTextDetailedView
     for: creation of a text, retrieval of a text
     """
     content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
@@ -140,9 +102,47 @@ class TextFullSerializer(serializers.ModelSerializer):
         return value
 
 
+class TextBasicSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PubTextListView
+    for: retrieval of a list of texts contained in a sharedfolder
+    """
+    class Meta:
+        model = Text
+        fields = ['id', 'title']
+
+
+class SharedFolderTextSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: SpkTextListView
+    for: retrieval of a sharedfolder with the texts it contains
+    """
+    texts = TextBasicSerializer(read_only=True, many=True, source='text')
+    path = serializers.CharField(read_only=True, source='get_readable_path')
+    class Meta:
+        model = SharedFolder
+        fields = ['id', 'name', 'owner', 'path', 'texts']
+        read_only_fields = ['name', 'owner']
+
+
+class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PubSharedFolderSpeakerView
+    for: retrieval and update of the speakers of a shared folder
+    """
+    speaker_ids = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
+    speakers = UserBasicSerializer(many=True, read_only=True, source='speaker')
+    class Meta:
+        model = SharedFolder
+        fields = ['id', 'name', 'speakers', 'speaker_ids']
+        read_only_fields = ['name', 'speakers']
+        write_only_fields = ['speaker_ids']
+        depth = 1
+
+
 class PublisherSerializer(serializers.ModelSerializer):
     """
-    to be used by view: PublisherListView, PublisherDetailedView
+    to be used by view: SpkPublisherListView, SpkPublisherDetailedView
     for: retrieval of single publisher or list of publishers, who own sharedfolders (freedfolders) shared with request.user
     """
     freedfolders = serializers.SerializerMethodField(read_only=True, method_name='get_freed_folders')

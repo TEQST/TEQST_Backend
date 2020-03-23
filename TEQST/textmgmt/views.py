@@ -1,4 +1,4 @@
-from .serializers import FolderFullSerializer, SharedFolderContentSerializer, SharedFolderDetailSerializer
+from .serializers import FolderFullSerializer, SharedFolderTextSerializer, SharedFolderSpeakerSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer, FolderDetailedSerializer, PublisherSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
@@ -9,7 +9,7 @@ from rest_framework.exceptions import NotFound, ParseError
 from django.http import HttpResponse
 
 
-class FolderListView(generics.ListCreateAPIView):
+class PubFolderListView(generics.ListCreateAPIView):
     """
     url: api/folders/
     use: list the topmost layer of folders for a publisher, folder creation
@@ -35,7 +35,7 @@ class FolderListView(generics.ListCreateAPIView):
         serializer.save(owner=self.request.user)
 
 
-class FolderDetailedView(generics.RetrieveDestroyAPIView):
+class PubFolderDetailedView(generics.RetrieveDestroyAPIView):
     """
     url: api/folders/:id/
     use: retrieve a Folder with its subfolders, Folder deletion
@@ -50,13 +50,13 @@ class FolderDetailedView(generics.RetrieveDestroyAPIView):
         return Folder.objects.filter(owner=user.pk)
 
 
-class SharedFolderDetailView(generics.RetrieveUpdateAPIView):
+class PubSharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
     """
     url: api/sharedfolders/:id/
     use: retrieve and update the speakers of a shared folder
     """
     queryset = SharedFolder.objects.all()
-    serializer_class = SharedFolderDetailSerializer
+    serializer_class = SharedFolderSpeakerSerializer
     permission_classes = [IsAuthenticated, IsPublisher]
 
     def get_queryset(self):
@@ -64,7 +64,7 @@ class SharedFolderDetailView(generics.RetrieveUpdateAPIView):
         return SharedFolder.objects.filter(owner=user.pk)
 
 
-class PublisherTextListView(generics.ListCreateAPIView):
+class PubTextListView(generics.ListCreateAPIView):
     """
     url: api/pub/texts/?sharedfolder=123
     use: in the publish tab: retrieve a list of texts contained in a sharedfolder, text upload
@@ -90,13 +90,13 @@ class PublisherTextListView(generics.ListCreateAPIView):
         return TextBasicSerializer
 
 
-class SpeakerTextListView(generics.RetrieveAPIView):
+class SpkTextListView(generics.RetrieveAPIView):
     """
     url: api/spk/sharedfolders/:id/
     use: in speak tab: retrieve a sharedfolder with the texts it contains
     """
     queryset = SharedFolder.objects.all()
-    serializer_class = SharedFolderContentSerializer
+    serializer_class = SharedFolderTextSerializer
 
     def get_object(self):
         sf = super().get_object()
@@ -106,7 +106,7 @@ class SpeakerTextListView(generics.RetrieveAPIView):
         return sf
 
 
-class PublisherTextDetailedView(generics.RetrieveDestroyAPIView):
+class PubTextDetailedView(generics.RetrieveDestroyAPIView):
     """
     url: api/pub/texts/:id/
     use: in publish tab: retrieve a text, text deletion
@@ -126,7 +126,7 @@ class PublisherTextDetailedView(generics.RetrieveDestroyAPIView):
         return TextBasicSerializer
 
 
-class SpeakerTextDetailedView(generics.RetrieveAPIView):
+class SpkTextDetailedView(generics.RetrieveAPIView):
     """
     url: api/spk/texts/:id/
     use: in speak tab: retrieve a text
@@ -139,7 +139,7 @@ class SpeakerTextDetailedView(generics.RetrieveAPIView):
         return Text.objects.filter(shared_folder__sharedfolder__speaker__id=user.id)
 
 
-class PublisherListView(generics.ListAPIView):
+class SpkPublisherListView(generics.ListAPIView):
     """
     url: api/publishers/
     use: get list of publishers who own sharedfolders shared with request.user
@@ -160,7 +160,7 @@ class PublisherListView(generics.ListAPIView):
         return CustomUser.objects.filter(pk__in = pub_pks)
 
 
-class PublisherDetailedView(generics.RetrieveAPIView):
+class SpkPublisherDetailedView(generics.RetrieveAPIView):
     """
     url: api/publishers/:id/
     use: in speak tab: retrieve a publisher with their folders which they shared with request.user
