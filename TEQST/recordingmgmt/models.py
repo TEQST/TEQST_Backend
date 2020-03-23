@@ -33,6 +33,12 @@ class TextRecording(models.Model):
     
     def is_finished(self):
         return SentenceRecording.objects.filter(recording=self).count() == self.text.sentence_count()
+    
+    def get_progress(self):
+        """
+        returns a tuple of (# sentences completed, # sentences in the text)
+        """
+        return (self.active_sentence() - 1, self.text.sentence_count())
 
 
 def sentence_rec_upload_path(instance, filename):

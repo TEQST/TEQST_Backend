@@ -3,6 +3,7 @@ from .models import Folder, SharedFolder, Text
 from .utils import NAME_ID_SPLITTER
 from usermgmt.models import CustomUser
 from usermgmt.serializers import UserBasicSerializer
+from recordingmgmt.models import TextRecording
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
@@ -153,9 +154,36 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         read_only_fields = fields
     
     def get_speaker_stats(self, obj):
+        """
+        example return (multiple speakers are of course possible):
+        [
+            {
+                'name': 'John',
+                'texts':[
+                    {
+                        'title': 't1',
+                        'finished': 5,
+                        'total': 9
+                    },
+                    {
+                        'title': 't2',
+                        'finished': 0,
+                        'total': 4
+                    }
+                ]
+            }
+        ]
+        """
         sf = obj
         stats = []
-        #for speaker in sf.speaker.all():
+        for speaker in sf.speaker.all():
+            spk = {'name': speaker.username, 'texts': []}
+            for text in Text.objects.filter(shared_folder=sf.folder_ptr):
+                txt = {'title': text.title, 'finished': 0, 'total': text.sentence_count()}
+                if TextRecording.objects.filter(speaker=speaker, text=text).exists():
+                    txt['finished'] = TextRecording.objects.get(speaker=speaker, text=text).active_sentence() - 1
+                spk['texts'].append(txt)
+            stats.append(spk)
         return stats
 
 
