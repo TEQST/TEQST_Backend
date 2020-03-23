@@ -1,4 +1,4 @@
-from .serializers import FolderFullSerializer, SharedFolderTextSerializer, SharedFolderSpeakerSerializer
+from .serializers import FolderFullSerializer, SharedFolderTextSerializer, SharedFolderSpeakerSerializer, SharedFolderStatsSerializer
 from .serializers import TextBasicSerializer, TextFullSerializer, FolderDetailedSerializer, PublisherSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
@@ -204,3 +204,19 @@ class SpeechDataDownloadView(views.APIView):
         zipfile.close()
         resp['Content-Type'] = "application/zip"
         return resp
+
+
+class PubSharedFolderStatsView(generics.RetrieveAPIView):
+    """
+    url: api/pub/sharedfolders/:id/stats/
+    use: get statistics on how far the speakers of a publisher's shared folder are
+    """
+    queryset = SharedFolder.objects.all()
+    serializer_class = SharedFolderStatsSerializer
+    permission_classes = [IsAuthenticated, IsPublisher]
+
+    def get_object(self):
+        sf_id = self.kwargs['pk']
+        if not SharedFolder.objects.filter(pk=sf_id, owner=self.request.user.pk).exists():
+            raise NotFound("Invalid SharedFolder id")
+        return SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)

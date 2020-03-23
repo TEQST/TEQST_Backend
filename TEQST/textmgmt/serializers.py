@@ -140,6 +140,25 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
         depth = 1
 
 
+class SharedFolderStatsSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PubSharedFolderStatsView
+    for: retrieval of stats about speakers' progress of texts in a sharedfolder
+    """
+    speakers = serializers.SerializerMethodField(read_only=True, method_name='get_speaker_stats')
+
+    class Meta:
+        model = SharedFolder
+        fields = ['id', 'name', 'speakers']
+        read_only_fields = fields
+    
+    def get_speaker_stats(self, obj):
+        sf = obj
+        stats = []
+        #for speaker in sf.speaker.all():
+        return stats
+
+
 class PublisherSerializer(serializers.ModelSerializer):
     """
     to be used by view: SpkPublisherListView, SpkPublisherDetailedView
