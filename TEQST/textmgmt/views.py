@@ -1,5 +1,5 @@
 from .serializers import FolderFullSerializer, SharedFolderTextSerializer, SharedFolderSpeakerSerializer, SharedFolderStatsSerializer
-from .serializers import TextBasicSerializer, TextFullSerializer, FolderDetailedSerializer, PublisherSerializer
+from .serializers import TextBasicSerializer, TextFullSerializer, TextStatsSerializer, FolderDetailedSerializer, PublisherSerializer
 from .models import Folder, SharedFolder, Text
 from usermgmt.permissions import IsPublisher
 from usermgmt.models import CustomUser
@@ -220,3 +220,19 @@ class PubSharedFolderStatsView(generics.RetrieveAPIView):
         if not SharedFolder.objects.filter(pk=sf_id, owner=self.request.user.pk).exists():
             raise NotFound("Invalid SharedFolder id")
         return SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)
+
+
+class PubTextStatsView(generics.RetrieveAPIView):
+    """
+    url: api/pub/texts/:id/stats/
+    use: get statistics on how far the speakers are in a given text
+    """
+    queryset = Text.objects.all()
+    serializer_class = TextStatsSerializer
+    permission_classes = [IsAuthenticated, IsPublisher]
+
+    def get_object(self):
+        text_id = self.kwargs['pk']
+        if not Text.objects.filter(pk=text_id, shared_folder__owner=self.request.user.pk).exists():
+            raise NotFound('Invalid Text id')
+        return Text.objects.get(pk=text_id)

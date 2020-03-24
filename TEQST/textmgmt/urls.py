@@ -25,4 +25,6 @@ urlpatterns = [
     path('download/<int:sf>/', views.SpeechDataDownloadView.as_view(), name='download'),
 
     path('pub/sharedfolders/<int:pk>/stats/', views.PubSharedFolderStatsView.as_view(), name='sharedfolder-stats'),
+
+    path('pub/texts/<int:pk>/stats/', views.PubTextStatsView.as_view(), name='text-stats'),
 ]

@@ -113,6 +113,39 @@ class TextBasicSerializer(serializers.ModelSerializer):
         fields = ['id', 'title']
 
 
+class TextStatsSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PubTextStatsView
+    for: retrieval of stats about speakers' progress of a text
+    """
+    speakers = serializers.SerializerMethodField(read_only=True, method_name='get_speaker_stats')
+    total = serializers.IntegerField(read_only=True, source='sentence_count')
+
+    class Meta:
+        model = Text
+        fields = ['id', 'title', 'total', 'speakers']
+        read_only_fields = fields
+    
+    def get_speaker_stats(self, obj):
+        """
+        example return (multiple speakers are of course possible):
+        [
+            {
+                'name': 'John',
+                'finished': 5
+            },
+        ]
+        """
+        text = obj
+        stats = []
+        for speaker in text.shared_folder.sharedfolder.speaker.all():
+            spk = {'name': speaker.username, 'finished': 0}
+            if TextRecording.objects.filter(speaker=speaker, text=text).exists():
+                spk['finished'] = TextRecording.objects.get(speaker=speaker, text=text).active_sentence() - 1
+            stats.append(spk)
+        return stats
+
+
 class SharedFolderTextSerializer(serializers.ModelSerializer):
     """
     to be used by view: SpkTextListView
