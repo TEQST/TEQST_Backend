@@ -183,5 +183,7 @@ def add_user_to_log(path, user):
     logfile.write('birth_year: ' + str(user.birth_year) + '\n')
     logfile.write('gender: ' + str(user.gender) + '\n')
     logfile.write('education: ' + str(user.education) + '\n')
+    logfile.write('accent: ' + str(user.accent) + '\n')
+    logfile.write('country: ' + str(user.country) + '\n')
     logfile.write('#\n')
     logfile.close()
