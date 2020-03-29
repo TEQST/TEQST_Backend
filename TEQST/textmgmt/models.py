@@ -108,7 +108,7 @@ def get_encoding_type(file_path):
 
 class Text(models.Model):
     title = models.CharField(max_length=100)
-    language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True)
+    language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True, blank=True)
     shared_folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='text')
     textfile = models.FileField(upload_to=upload_path)
 
