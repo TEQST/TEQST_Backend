@@ -399,8 +399,8 @@ class TestTextCreation(TestCase):
         with open(self.textpath) as fp:
             data = {'title': 'text1', 'shared_folder': self.f1.pk, 'textfile': fp}
             response = self.client.post(reverse("pub-texts"), data=data, HTTP_AUTHORIZATION=self.token_1)
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(self.f1.is_shared_folder())
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(self.f1.is_shared_folder())
     
     def test_upload_language_does_not_exist(self):
         with open(self.textpath) as fp:

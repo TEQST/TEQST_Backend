@@ -85,7 +85,7 @@ class TextFullSerializer(serializers.ModelSerializer):
     """
     content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
     shared_folder = SharedFolderPKField()
-    language = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), required=True)
+    #language = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), required=True)
     #is_right_to_left = serializers.BooleanField(read_only=True, source='is_right_to_left')
 
     class Meta:
