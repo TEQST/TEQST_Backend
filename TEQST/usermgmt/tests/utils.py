@@ -7,6 +7,7 @@ USER_DATA_CORRECT_1 = {"username": "harry",
                      "gender": "M",
                      "birth_year": 1999,
                      "language_ids": ["en", "fr"],
+                     "accent": "Scotish",
                      "menu_language_id": "en",
                      "country": "USA"}
 
@@ -16,6 +17,7 @@ USER_DATA_CORRECT_2 = {"username": "ron",
                      "gender": "M",
                      "birth_year": 2000,
                      "language_ids": ["en", "de"],
+                     "accent": "German",
                      "menu_language_id": "de",
                      "country": "USA"}
 
@@ -25,6 +27,7 @@ USER_DATA_CORRECT_3 = {"username": "hermione",
                      "gender": "F",
                      "birth_year": 1997,
                      "language_ids": ["fr"],
+                     "accent": "African",
                      "menu_language_id": "en",
                      "country": "USA"}
 
@@ -34,6 +37,7 @@ USER_DATA_CORRECT_4 = {"username": "ginny",
                      "gender": "F",
                      "birth_year": 1998,
                      "language_ids": ["en", "fr", "es"],
+                     "accent": "British",
                      "menu_language_id": "en",
                      "country": "USA"}
 

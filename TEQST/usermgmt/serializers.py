@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import CustomUser, Language
+from . import utils
 
 from datetime import date
 
@@ -52,7 +53,7 @@ class UserFullSerializer(serializers.ModelSerializer):
         # this is so that the default will be set and we dont have some users accents be '' and some users accents 'Not specified'
         if 'accent' in data.keys():
             if data['accent'] == '':
-                data.pop('accent')
+                data['accent'] = utils.ACCENT_DEFAULT
         return data
         
 
@@ -115,5 +116,5 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         # this is so that the default will be set and we dont have some users accents be '' and some users accents 'Not specified'
         if 'accent' in data.keys():
             if data['accent'] == '':
-                data.pop('accent')
+                data['accent'] = utils.ACCENT_DEFAULT
         return data
