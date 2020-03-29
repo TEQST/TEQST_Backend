@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Folder, SharedFolder, Text
 from .utils import NAME_ID_SPLITTER
-from usermgmt.models import CustomUser
+from usermgmt.models import CustomUser, Language
 from usermgmt.serializers import UserBasicSerializer
 from recordingmgmt.models import TextRecording
 
@@ -85,11 +85,13 @@ class TextFullSerializer(serializers.ModelSerializer):
     """
     content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
     shared_folder = SharedFolderPKField()
+    language = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), required=True)
+    #is_right_to_left = serializers.BooleanField(read_only=True, source='is_right_to_left')
 
     class Meta:
         model = Text
-        fields = ['id', 'title', 'shared_folder', 'content', 'textfile']
-        read_only_fields = ['content']
+        fields = ['id', 'title', 'language', 'is_right_to_left', 'shared_folder', 'content', 'textfile']
+        read_only_fields = ['is_right_to_left', 'content']
         extra_kwargs = {'textfile': {'write_only': True}}
 
     def validate(self, data):

@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from .utils import folder_path, folder_relative_path, NAME_ID_SPLITTER
+from usermgmt.models import Language
 import os
 from zipfile import ZipFile
 from chardet import detect
@@ -107,11 +108,17 @@ def get_encoding_type(file_path):
 
 class Text(models.Model):
     title = models.CharField(max_length=100)
+    language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True)
     shared_folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='text')
     textfile = models.FileField(upload_to=upload_path)
 
     def __str__(self):
         return self.title
+    
+    def is_right_to_left(self):
+        if self.language:
+            return self.language.right_to_left
+        return False
     
     def has_any_finished_recordings(self):
         for tr in self.textrecording.all():
