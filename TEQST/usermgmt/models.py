@@ -48,7 +48,7 @@ class CustomUser(AbstractUser):
     education = models.CharField(max_length=50, choices=EDU_CHOICES, default='N')
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     # the accent field is for now just a charfield.
-    accent = models.CharField(max_length=100, default='Not specified')
+    accent = models.CharField(max_length=100, default='Not specified', blank=True)
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
 

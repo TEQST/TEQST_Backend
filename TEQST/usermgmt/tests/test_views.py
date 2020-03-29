@@ -598,6 +598,6 @@ class TestUser(TestCase):
         put_data['accent'] = ''
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
         user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         self.assertEqual(user.accent, 'Not specified')

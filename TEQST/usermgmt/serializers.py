@@ -47,6 +47,13 @@ class UserFullSerializer(serializers.ModelSerializer):
         if not value.is_menu_language():
             raise serializers.ValidationError("Invalid menu language.")
         return value
+    
+    def validate(self, data):
+        # this is so that the default will be set and we dont have some users accents be '' and some users accents 'Not specified'
+        if 'accent' in data.keys():
+            if data['accent'] == '':
+                data.pop('accent')
+        return data
         
 
 class UserBasicSerializer(serializers.ModelSerializer):
