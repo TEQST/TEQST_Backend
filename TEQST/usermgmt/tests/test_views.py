@@ -193,6 +193,16 @@ class TestRegistration(TestCase):
         self.assertEqual(response.status_code, 201)
         user = CustomUser.objects.get(username=user_data['username'])
         self.assertEqual(user.country, None)
+    
+    def test_user_registration_accent_is_empty_string(self):
+        # setup
+        user_data = USER_DATA_CORRECT_1.copy()
+        user_data['accent'] = ''
+        # test
+        response = self.client.post(reverse("register"), data=user_data)
+        self.assertEqual(response.status_code, 201)
+        user = CustomUser.objects.get(username=user_data['username'])
+        self.assertEqual(user.accent, 'Not specified')
 
 
 class TestAuthentication(TestCase):
@@ -319,7 +329,7 @@ class TestLanguageViews(TestCase):
     
     def test_langs(self):
         response = self.client.get(reverse("langs")).json()
-        self.assertEqual(len(response), 4)
+        self.assertEqual(len(response), 5)
         for lang in response:
             if lang['short'] == 'en' or lang['short'] == 'de':
                 self.assertTrue(lang['is_menu_language'])
@@ -580,3 +590,14 @@ class TestUser(TestCase):
         self.assertEqual(response.status_code, 200)
         user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         self.assertEqual(user.country, USER_DATA_CORRECT_1['country'])
+    
+    def test_user_PUT_accent_is_empty_string(self):
+        # setup
+        put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
+        put_data['accent'] = ''
+        # test
+        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
+        self.assertEqual(response.status_code, 400)
+        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
+        self.assertEqual(user.accent, 'Not specified')
