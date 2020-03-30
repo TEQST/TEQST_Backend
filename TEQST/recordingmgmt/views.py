@@ -67,7 +67,11 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         # rec is part of the core url string
         rec = self.kwargs['rec']
         if not TextRecording.objects.filter(pk=rec, speaker=self.request.user).exists():
-            raise NotFound("Invalid Textrecording id")
+            if self.request.method == 'GET':
+                if not TextRecording.objects.filter(pk=rec, text__sharedfolder__owner=self.request.user).exists():
+                    raise NotFound("Invalid Textrecording id")
+            else:
+                raise NotFound("Invalid Textrecording id")
         # index is a query parameter
         if 'index' in self.request.query_params:
             try:
