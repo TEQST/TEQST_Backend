@@ -68,7 +68,7 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         rec = self.kwargs['rec']
         if not TextRecording.objects.filter(pk=rec, speaker=self.request.user).exists():
             if self.request.method == 'GET':
-                if not TextRecording.objects.filter(pk=rec, text__sharedfolder__owner=self.request.user).exists():
+                if not TextRecording.objects.filter(pk=rec, text__shared_folder__owner=self.request.user).exists():
                     raise NotFound("Invalid Textrecording id")
             else:
                 raise NotFound("Invalid Textrecording id")
