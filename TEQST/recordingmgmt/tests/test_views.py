@@ -1,4 +1,5 @@
 from django.test import TestCase, Client
+from django.test.client import encode_multipart
 from django.urls import reverse
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -11,6 +12,7 @@ from recordingmgmt.models import TextRecording, SentenceRecording
 import shutil
 import os
 from django.core.files import File
+from io import BytesIO
 
 
 class TestTextRecordingView(TestCase):
@@ -376,3 +378,149 @@ class TestSentenceRecordingUpdateView(TestCase):
 
     def test_sentencerec_detail_PUT_index_negative(self):
         pass
+
+
+class TestSentenceRecordingRetrieveUpdateView(TestCase):
+    """
+    urls tested:
+    /api/sentencerecordings/<trec_id>/<index>/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+        login_data_3 = {"username": USER_DATA_CORRECT_3['username'],
+                        "password": USER_DATA_CORRECT_3['password']}
+        login_response_3 = self.client.post(reverse("login"), data=login_data_3)
+        self.token_3 = 'Token ' + login_response_3.json()['token']
+        self.user1 = get_user(1)
+        self.user2 = get_user(2)
+        self.f1 = Folder.objects.create(name='f1', owner=self.user1)
+        self.t1 = Text.objects.create(title='test', shared_folder=self.f1, textfile='test_resources/testtext.txt')
+        self.f1.sharedfolder.speaker.add(self.user2)
+        self.tr1 = TextRecording.objects.create(speaker=self.user2, text=self.t1)
+        self.sc1 = SentenceRecording.objects.create(recording=self.tr1, index=1, audiofile='test_resources/s1.wav')
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_sentencerec_detail_no_auth(self):
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]))
+        self.assertEqual(response.status_code, 401)
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            response = self.client.put(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]), data={'audiofile': fp})
+        self.assertEqual(response.status_code, 401)
+
+    # GET speaker related
+
+    def test_sentencerec_detail_GET_correct(self):
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+
+    def test_sentencerec_detail_GET_trec_does_not_exist(self):
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[99, 1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_GET_invalid_trec(self):
+        # setup
+        user4 = get_user(4)
+        self.f1.sharedfolder.speaker.add(user4)
+        tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
+        sr2 = SentenceRecording.objects.create(recording=tr2, index=1, audiofile='test_resources/s1.wav')
+        # test
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[tr2.pk, 1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_GET_index_too_big(self):
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 2]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_GET_index_is_zero(self):
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 0]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+    
+    # GET publisher related
+
+    def test_sentencerec_detail_pub_GET_correct(self):
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+    
+    def test_sentencerec_detail_pub_GET_invalid_trec(self):
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]), HTTP_AUTHORIZATION=self.token_3)
+        self.assertEqual(response.status_code, 404)
+    
+    def test_sentencerec_detail_pub_GET_trec_does_not_exist(self):
+        response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[99, 1]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    # PUT speaker related
+
+    def test_sentencerec_detail_PUT_correct(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            data = {'audiofile': fp}
+            content = encode_multipart('mybndry', data)
+            content_type = 'multipart/form-data; boundary=mybndry'
+            response = self.client.put(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]), data=content, content_type=content_type, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+    
+    def test_sentencerec_detail_PUT_user_is_publisher_of_text(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            data = {'audiofile': fp}
+            content = encode_multipart('mybndry', data)
+            content_type = 'multipart/form-data; boundary=mybndry'
+            response = self.client.put(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]), data=content, content_type=content_type, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_PUT_trec_does_not_exist(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            data = {'audiofile': fp}
+            content = encode_multipart('mybndry', data)
+            content_type = 'multipart/form-data; boundary=mybndry'
+            response = self.client.put(reverse("sentencerecs-retrieveupdate", args=[99, 1]), data=content, content_type=content_type, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_PUT_invalid_trec(self):
+        # setup
+        user4 = get_user(4)
+        self.f1.sharedfolder.speaker.add(user4)
+        tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
+        sr2 = SentenceRecording.objects.create(recording=tr2, index=1, audiofile='test_resources/s1.wav')
+        # test
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            data = {'audiofile': fp}
+            content = encode_multipart('mybndry', data)
+            content_type = 'multipart/form-data; boundary=mybndry'
+            response = self.client.put(reverse("sentencerecs-retrieveupdate", args=[tr2.pk, 1]), data=content, content_type=content_type, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_PUT_index_too_big(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            data = {'audiofile': fp}
+            content = encode_multipart('mybndry', data)
+            content_type = 'multipart/form-data; boundary=mybndry'
+            response = self.client.put(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 2]), data=content, content_type=content_type, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sentencerec_detail_PUT_index_is_zero(self):
+        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+            data = {'audiofile': fp}
+            content = encode_multipart('mybndry', data)
+            content_type = 'multipart/form-data; boundary=mybndry'
+            response = self.client.put(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 0]), data=content, content_type=content_type, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 404)
