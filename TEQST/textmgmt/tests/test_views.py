@@ -253,6 +253,7 @@ class TestFolderDetailedView(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+'''
 class TestTextUpload(TestCase):
     """
     urls tested:
@@ -327,6 +328,86 @@ class TestTextUpload(TestCase):
         with open('testtext.txt') as fp:
             response = self.client.post(reverse("pub-texts"), data={'title': "testtext", 'shared_folder': sf.pk, 'textfile': fp})
         self.assertEqual(response.status_code, 401)
+'''
+
+
+class TestTextCreation(TestCase):
+    """
+    urls tested:
+    /api/pub/texts/ POST
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.user1 = get_user(1)
+        self.f1 = Folder.objects.create(name='f1', owner=self.user1)
+        self.textpath = os.path.join(settings.MEDIA_ROOT, 'test_resources/testtext.txt')
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_upload_no_auth(self):
+        with open(self.textpath) as fp:
+            data = {'title': 'text1', 'shared_folder': self.f1.pk, 'language': 'en', 'textfile': fp}
+            response = self.client.post(reverse("pub-texts"), data=data)
+        self.assertEqual(response.status_code, 401)
+        self.assertFalse(self.f1.is_shared_folder())
+    
+    def test_upload_user_is_not_a_publisher(self):
+        with open(self.textpath) as fp:
+            data = {'title': 'text1', 'shared_folder': self.f1.pk, 'language': 'en', 'textfile': fp}
+            response = self.client.post(reverse("pub-texts"), data=data, HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(self.f1.is_shared_folder())
+
+    def test_upload_correct(self):
+        with open(self.textpath) as fp:
+            data = {'title': 'text1', 'shared_folder': self.f1.pk, 'language': 'en', 'textfile': fp}
+            response = self.client.post(reverse("pub-texts"), data=data, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(self.f1.is_shared_folder())
+    
+    def test_upload_twice_same_title(self):
+        with open(self.textpath) as fp:
+            data = {'title': 'text1', 'shared_folder': self.f1.pk, 'language': 'en', 'textfile': fp}
+            response = self.client.post(reverse("pub-texts"), data=data, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(self.f1.is_shared_folder())
+        with open(self.textpath) as fp:
+            data = {'title': 'text1', 'shared_folder': self.f1.pk, 'language': 'en', 'textfile': fp}
+            response = self.client.post(reverse("pub-texts"), data=data, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+    
+    def test_upload_without_language(self):
+        with open(self.textpath) as fp:
+            data = {'title': 'text1', 'shared_folder': self.f1.pk, 'textfile': fp}
+            response = self.client.post(reverse("pub-texts"), data=data, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(self.f1.is_shared_folder())
+    
+    def test_upload_language_does_not_exist(self):
+        with open(self.textpath) as fp:
+            data = {'title': 'text1', 'shared_folder': self.f1.pk, 'language': 'aa', 'textfile': fp}
+            response = self.client.post(reverse("pub-texts"), data=data, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(self.f1.is_shared_folder())
 
 
 class TestPublisherTextList(TestCase):
@@ -887,6 +968,36 @@ class TestSpeakerTextDetailedView(TestCase):
         # setup
         user1 = get_user(1)
         user2 = get_user(2)
+        engl = get_lang('en')
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text', language=engl, shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.json()['content'], [])
+        self.assertEqual(response.json()['language'], 'en')
+        self.assertEqual(response.json()['is_right_to_left'], False)
+    
+    def test_spk_text_GET_correct_rtl(self):
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        arab = get_lang('ar')
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text', language=arab, shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.json()['content'], [])
+        self.assertEqual(response.json()['language'], 'ar')
+        self.assertEqual(response.json()['is_right_to_left'], True)
+    
+    def test_spk_text_GET_correct_without_language(self):
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         f1.sharedfolder.speaker.add(user2)
@@ -894,6 +1005,8 @@ class TestSpeakerTextDetailedView(TestCase):
         response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 200)
         self.assertNotEqual(response.json()['content'], [])
+        self.assertEqual(response.json()['language'], None)
+        self.assertEqual(response.json()['is_right_to_left'], False)
 
     def test_spk_text_GET_text_does_not_exist(self):
         response = self.client.get(reverse("spk-text-detail", args=[99]), HTTP_AUTHORIZATION=self.token_2)
@@ -1006,3 +1119,200 @@ class TestSpeechDataDownloadView(TestCase):
         # test
         response = self.client.get(reverse("download", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 400)
+
+
+class TestSharedFolderStatsView(TestCase):
+    """
+    urls tested:
+    /api/pub/sharedfolders/<int:pk>/stats/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_sharedfolder_stats_no_auth(self):
+        response = self.client.get(reverse("sharedfolder-stats", args=[1]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_sharedfolder_stats_user_is_not_a_publisher(self):
+        response = self.client.get(reverse("sharedfolder-stats", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+
+    def test_sharedfolder_stats_correct(self):
+        # !!! This test relies on the fact that test_resources/testtext.txt has exactly 3 sentences !!!
+        # !!! This test relies on the fact that test_resources/testtext2.txt has exactly 4 sentences !!!
+        # !!! This test relies on the fact that test_resources/testtext3.txt has exactly 5 sentences !!!
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        user4 = get_user(4)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text1', shared_folder=f1, textfile='test_resources/testtext.txt')
+        t2 = Text.objects.create(title='text2', shared_folder=f1, textfile='test_resources/testtext2.txt')
+        t3 = Text.objects.create(title='text3', shared_folder=f1, textfile='test_resources/testtext3.txt')
+        f1.sharedfolder.speaker.add(user2)
+        f1.sharedfolder.speaker.add(user4)
+        tr2_1 = TextRecording.objects.create(speaker=user2, text=t1)
+        SentenceRecording.objects.create(recording=tr2_1, index=1, audiofile='test_resources/s1.wav')
+        SentenceRecording.objects.create(recording=tr2_1, index=2, audiofile='test_resources/s2.wav')
+        tr4_1 = TextRecording.objects.create(speaker=user4, text=t1)
+        SentenceRecording.objects.create(recording=tr4_1, index=1, audiofile='test_resources/s1.wav')
+        SentenceRecording.objects.create(recording=tr4_1, index=2, audiofile='test_resources/s2.wav')
+        SentenceRecording.objects.create(recording=tr4_1, index=3, audiofile='test_resources/s3.wav')
+        tr4_3 = TextRecording.objects.create(speaker=user4, text=t3)
+        SentenceRecording.objects.create(recording=tr4_3, index=1, audiofile='test_resources/s1.wav')
+        # test
+        response = self.client.get(reverse("sharedfolder-stats", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(len(response['speakers']), 2)
+        for speaker in response['speakers']:
+            if speaker['name'] == user2.username:
+                for text in speaker['texts']:
+                    if text['title'] == 'text1':
+                        self.assertEqual(text['finished'], 2)
+                        self.assertEqual(text['total'], 3)
+                    elif text['title'] == 'text2':
+                        self.assertEqual(text['finished'], 0)
+                        self.assertEqual(text['total'], 4)
+                    elif text['title'] == 'text3':
+                        self.assertEqual(text['finished'], 0)
+                        self.assertEqual(text['total'], 5)
+            elif speaker['name'] == user4.username:
+                for text in speaker['texts']:
+                    if text['title'] == 'text1':
+                        self.assertEqual(text['finished'], 3)
+                        self.assertEqual(text['total'], 3)
+                    elif text['title'] == 'text2':
+                        self.assertEqual(text['finished'], 0)
+                        self.assertEqual(text['total'], 4)
+                    elif text['title'] == 'text3':
+                        self.assertEqual(text['finished'], 1)
+                        self.assertEqual(text['total'], 5)
+
+    def test_sharedfolder_stats_shared_folder_does_not_exist(self):
+        response = self.client.get(reverse("sharedfolder-stats", args=[99]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sharedfolder_stats_invalid_shared_folder(self):
+        # setup
+        user3 = get_user(3)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.get(reverse("sharedfolder-stats", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    def test_sharedfolder_stats_folder_is_not_shared(self):
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        # test
+        response = self.client.get(reverse("sharedfolder-stats", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+
+class TestTextStatsView(TestCase):
+    """
+    urls tested:
+    /api/pub/texts/<int:pk>/stats/
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        setup_languages()
+        Group.objects.create(name='Publisher')
+        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+    
+    def setUp(self):
+        self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
+        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
+                        "password": USER_DATA_CORRECT_2['password']}
+        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
+        self.token_2 = 'Token ' + login_response_2.json()['token']
+    
+    def tearDown(self):
+        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
+            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            if (os.path.exists(path)):
+                shutil.rmtree(path)
+    
+    def test_text_stats_no_auth(self):
+        response = self.client.get(reverse("text-stats", args=[1]))
+        self.assertEqual(response.status_code, 401)
+
+    def test_text_stats_user_is_not_a_publisher(self):
+        response = self.client.get(reverse("text-stats", args=[1]), HTTP_AUTHORIZATION=self.token_2)
+        self.assertEqual(response.status_code, 403)
+    
+    def test_text_stats_correct(self):
+        # !!! This test relies on the fact that test_resources/testtext.txt has exactly 3 sentences !!!
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        user4 = get_user(4)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text1', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        f1.sharedfolder.speaker.add(user4)
+        tr2_1 = TextRecording.objects.create(speaker=user2, text=t1)
+        SentenceRecording.objects.create(recording=tr2_1, index=1, audiofile='test_resources/s1.wav')
+        SentenceRecording.objects.create(recording=tr2_1, index=2, audiofile='test_resources/s2.wav')
+        tr4_1 = TextRecording.objects.create(speaker=user4, text=t1)
+        SentenceRecording.objects.create(recording=tr4_1, index=1, audiofile='test_resources/s1.wav')
+        SentenceRecording.objects.create(recording=tr4_1, index=2, audiofile='test_resources/s2.wav')
+        SentenceRecording.objects.create(recording=tr4_1, index=3, audiofile='test_resources/s3.wav')
+        # test
+        response = self.client.get(reverse("text-stats", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response['title'], t1.title)
+        self.assertEqual(response['total'], t1.sentence_count())
+        self.assertEqual(len(response['speakers']), 2)
+        for speaker in response['speakers']:
+            if speaker['name'] == user2.username:
+                self.assertEqual(speaker['finished'], 2)
+            if speaker['name'] == user4.username:
+                self.assertEqual(speaker['finished'], 3)
+
+    def test_text_stats_shared_folder_does_not_exist(self):
+        response = self.client.get(reverse("text-stats", args=[99]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+    
+    def test_text_stats_invalid_shared_folder(self):
+        # setup
+        user3 = get_user(3)
+        user2 = get_user(2)
+        f1 = Folder.objects.create(name='f1', owner=user3)
+        t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        # test
+        response = self.client.get(reverse("text-stats", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)

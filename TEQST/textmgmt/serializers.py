@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from .models import Folder, SharedFolder, Text
 from .utils import NAME_ID_SPLITTER
-from usermgmt.models import CustomUser
+from usermgmt.models import CustomUser, Language
 from usermgmt.serializers import UserBasicSerializer
+from recordingmgmt.models import TextRecording
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
@@ -14,7 +15,7 @@ class FolderPKField(serializers.PrimaryKeyRelatedField):
 
 class FolderFullSerializer(serializers.ModelSerializer):
     """
-    to be used by view: FolderListView
+    to be used by view: PubFolderListView
     for: Folder creation, top-level-folder list retrieval
     """
     parent = FolderPKField(allow_null=True)
@@ -56,7 +57,7 @@ class FolderBasicSerializer(serializers.ModelSerializer):
 
 class FolderDetailedSerializer(serializers.ModelSerializer):
     """
-    to be used by view: FolderDetailView
+    to be used by view: PubFolderDetailView
     for: retrieval of a Folder with its subfolders
     """
     parent = FolderPKField(allow_null=True)
@@ -70,9 +71,43 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
+    def get_queryset(self):
+        user = self.context['request'].user
+        queryset = Folder.objects.filter(owner=user, subfolder=None)
+        return queryset
+
+
+class TextFullSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PubTextListView, PubTextDetailedView, SpkTextDetailedView
+    for: creation of a text, retrieval of a text
+    """
+    content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
+    shared_folder = SharedFolderPKField()
+    #language = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), required=True)
+    #is_right_to_left = serializers.BooleanField(read_only=True, source='is_right_to_left')
+
+    class Meta:
+        model = Text
+        fields = ['id', 'title', 'language', 'is_right_to_left', 'shared_folder', 'content', 'textfile']
+        read_only_fields = ['is_right_to_left', 'content']
+        extra_kwargs = {'textfile': {'write_only': True}}
+
+    def validate(self, data):
+        if Text.objects.filter(shared_folder=data['shared_folder'], title=data['title']).exists():
+            raise serializers.ValidationError("A text with the given title in the given folder already exists")
+        return super().validate(data)
+    
+    def validate_title(self, value):
+        if ' ' in value:
+            raise serializers.ValidationError("Text title can't contain an underscore or a space character.")
+        return value
+
+
 class TextBasicSerializer(serializers.ModelSerializer):
     """
-    to be used by view: PublisherTextListView
+    to be used by view: PubTextListView
     for: retrieval of a list of texts contained in a sharedfolder
     """
     class Meta:
@@ -80,9 +115,42 @@ class TextBasicSerializer(serializers.ModelSerializer):
         fields = ['id', 'title']
 
 
-class SharedFolderContentSerializer(serializers.ModelSerializer):
+class TextStatsSerializer(serializers.ModelSerializer):
     """
-    to be used by view: SpeakerTextListView
+    to be used by view: PubTextStatsView
+    for: retrieval of stats about speakers' progress of a text
+    """
+    speakers = serializers.SerializerMethodField(read_only=True, method_name='get_speaker_stats')
+    total = serializers.IntegerField(read_only=True, source='sentence_count')
+
+    class Meta:
+        model = Text
+        fields = ['id', 'title', 'total', 'speakers']
+        read_only_fields = fields
+    
+    def get_speaker_stats(self, obj):
+        """
+        example return (multiple speakers are of course possible):
+        [
+            {
+                'name': 'John',
+                'finished': 5
+            },
+        ]
+        """
+        text = obj
+        stats = []
+        for speaker in text.shared_folder.sharedfolder.speaker.all():
+            spk = {'name': speaker.username, 'finished': 0}
+            if TextRecording.objects.filter(speaker=speaker, text=text).exists():
+                spk['finished'] = TextRecording.objects.get(speaker=speaker, text=text).active_sentence() - 1
+            stats.append(spk)
+        return stats
+
+
+class SharedFolderTextSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: SpkTextListView
     for: retrieval of a sharedfolder with the texts it contains
     """
     texts = TextBasicSerializer(read_only=True, many=True, source='text')
@@ -93,9 +161,9 @@ class SharedFolderContentSerializer(serializers.ModelSerializer):
         read_only_fields = ['name', 'owner']
 
 
-class SharedFolderDetailSerializer(serializers.ModelSerializer):
+class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     """
-    to be used by view: SharedFolderDetailView
+    to be used by view: PubSharedFolderSpeakerView
     for: retrieval and update of the speakers of a shared folder
     """
     speaker_ids = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
@@ -108,41 +176,55 @@ class SharedFolderDetailSerializer(serializers.ModelSerializer):
         depth = 1
 
 
-class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
-    def get_queryset(self):
-        user = self.context['request'].user
-        queryset = Folder.objects.filter(owner=user, subfolder=None)
-        return queryset
-
-
-class TextFullSerializer(serializers.ModelSerializer):
+class SharedFolderStatsSerializer(serializers.ModelSerializer):
     """
-    to be used by view: PublisherTextListView, PublisherTextDetailedView, SpeakerTextDetailedView
-    for: creation of a text, retrieval of a text
+    to be used by view: PubSharedFolderStatsView
+    for: retrieval of stats about speakers' progress of texts in a sharedfolder
     """
-    content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
-    shared_folder = SharedFolderPKField()
+    speakers = serializers.SerializerMethodField(read_only=True, method_name='get_speaker_stats')
 
     class Meta:
-        model = Text
-        fields = ['id', 'title', 'shared_folder', 'content', 'textfile']
-        read_only_fields = ['content']
-        extra_kwargs = {'textfile': {'write_only': True}}
-
-    def validate(self, data):
-        if Text.objects.filter(shared_folder=data['shared_folder'], title=data['title']).exists():
-            raise serializers.ValidationError("A text with the given title in the given folder already exists")
-        return super().validate(data)
+        model = SharedFolder
+        fields = ['id', 'name', 'speakers']
+        read_only_fields = fields
     
-    def validate_title(self, value):
-        if '_' in value or ' ' in value:
-            raise serializers.ValidationError("Text title can't contain an underscore or a space character.")
-        return value
+    def get_speaker_stats(self, obj):
+        """
+        example return (multiple speakers are of course possible):
+        [
+            {
+                'name': 'John',
+                'texts':[
+                    {
+                        'title': 't1',
+                        'finished': 5,
+                        'total': 9
+                    },
+                    {
+                        'title': 't2',
+                        'finished': 0,
+                        'total': 4
+                    }
+                ]
+            }
+        ]
+        """
+        sf = obj
+        stats = []
+        for speaker in sf.speaker.all():
+            spk = {'name': speaker.username, 'texts': []}
+            for text in Text.objects.filter(shared_folder=sf.folder_ptr):
+                txt = {'title': text.title, 'finished': 0, 'total': text.sentence_count()}
+                if TextRecording.objects.filter(speaker=speaker, text=text).exists():
+                    txt['finished'] = TextRecording.objects.get(speaker=speaker, text=text).active_sentence() - 1
+                spk['texts'].append(txt)
+            stats.append(spk)
+        return stats
 
 
 class PublisherSerializer(serializers.ModelSerializer):
     """
-    to be used by view: PublisherListView, PublisherDetailedView
+    to be used by view: SpkPublisherListView, SpkPublisherDetailedView
     for: retrieval of single publisher or list of publishers, who own sharedfolders (freedfolders) shared with request.user
     """
     freedfolders = serializers.SerializerMethodField(read_only=True, method_name='get_freed_folders')

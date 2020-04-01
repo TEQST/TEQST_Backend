@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import CustomUser, Language
+from . import utils
 
 from datetime import date
 
@@ -33,7 +34,7 @@ class UserFullSerializer(serializers.ModelSerializer):
 
     class Meta():
         model = CustomUser
-        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'country', 'is_publisher']
+        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'accent', 'country', 'is_publisher']
         read_only_fields = ['id', 'username', 'is_publisher']
 
     #checks if the given birth_year is in a certain "valid" range, is called automatically by the drf
@@ -47,6 +48,13 @@ class UserFullSerializer(serializers.ModelSerializer):
         if not value.is_menu_language():
             raise serializers.ValidationError("Invalid menu language.")
         return value
+    
+    def validate(self, data):
+        # this is so that the default will be set and we dont have some users accents be '' and some users accents 'Not specified'
+        if 'accent' in data.keys():
+            if data['accent'] == '':
+                data['accent'] = utils.ACCENT_DEFAULT
+        return data
         
 
 class UserBasicSerializer(serializers.ModelSerializer):
@@ -56,7 +64,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
     class Meta():
         model = CustomUser
         depth = 1
-        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'country']
+        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'accent', 'country']
         read_only_fields = fields
 
 
@@ -77,7 +85,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'password', 'education', 'gender', 'birth_year', 'language_ids', 'languages', 'menu_language', 'menu_language_id', 'country']
+        fields = ['username', 'password', 'education', 'gender', 'birth_year', 'language_ids', 'languages', 'menu_language', 'menu_language_id', 'accent', 'country']
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
     
     def create(self, validated_data):
@@ -103,3 +111,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         if value == 'locale':
             raise serializers.ValidationError("Username not allowed.")
         return value
+    
+    def validate(self, data):
+        # this is so that the default will be set and we dont have some users accents be '' and some users accents 'Not specified'
+        if 'accent' in data.keys():
+            if data['accent'] == '':
+                data['accent'] = utils.ACCENT_DEFAULT
+        return data

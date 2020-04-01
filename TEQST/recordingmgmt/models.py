@@ -33,6 +33,12 @@ class TextRecording(models.Model):
     
     def is_finished(self):
         return SentenceRecording.objects.filter(recording=self).count() == self.text.sentence_count()
+    
+    def get_progress(self):
+        """
+        returns a tuple of (# sentences completed, # sentences in the text)
+        """
+        return (self.active_sentence() - 1, self.text.sentence_count())
 
 
 def sentence_rec_upload_path(instance, filename):
@@ -177,5 +183,7 @@ def add_user_to_log(path, user):
     logfile.write('birth_year: ' + str(user.birth_year) + '\n')
     logfile.write('gender: ' + str(user.gender) + '\n')
     logfile.write('education: ' + str(user.education) + '\n')
+    logfile.write('accent: ' + str(user.accent) + '\n')
+    logfile.write('country: ' + str(user.country) + '\n')
     logfile.write('#\n')
     logfile.close()

@@ -16,5 +16,7 @@ GENDER_CHOICES = (
     ('N', 'Prefer not to say')
 )
 
+ACCENT_DEFAULT = 'Not specified'
+
 def upload_path(instance, filename):
     return os.path.join(settings.MEDIA_ROOT, LOCALIZATION_FOLDER, filename)

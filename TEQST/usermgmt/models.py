@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
-from .utils import EDU_CHOICES, GENDER_CHOICES, upload_path
+from .utils import EDU_CHOICES, GENDER_CHOICES, ACCENT_DEFAULT, upload_path
 from django.db import transaction
 
 
@@ -47,6 +47,8 @@ class CustomUser(AbstractUser):
     birth_year = models.IntegerField()
     education = models.CharField(max_length=50, choices=EDU_CHOICES, default='N')
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
+    # the accent field is for now just a charfield.
+    accent = models.CharField(max_length=100, default=ACCENT_DEFAULT, blank=True)
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
 

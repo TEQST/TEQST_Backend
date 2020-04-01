@@ -16,7 +16,7 @@ import re
 from django.http import HttpResponse
 
 
-class UserListView(generics.ListAPIView):
+class PubUserListView(generics.ListAPIView):
     '''
     Is used to get a list of users, publishers should use this to assign speakers to their texts(sharedFolders)
     '''
@@ -41,7 +41,7 @@ class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
         return self.request.user
 
-class LanguageView(generics.ListAPIView):
+class LanguageListView(generics.ListAPIView):
     '''
     Is used to retrieve a list of all languages
     This view has no permission requirements because this information is relevant when registering a new user
