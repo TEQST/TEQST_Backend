@@ -276,10 +276,18 @@ class TestSentenceRecordingUpdateView(TestCase):
     
     def setUp(self):
         self.client = Client()
+        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
+                        "password": USER_DATA_CORRECT_1['password']}
+        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
+        self.token_1 = 'Token ' + login_response_1.json()['token']
         login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
                         "password": USER_DATA_CORRECT_2['password']}
         login_response_2 = self.client.post(reverse("login"), data=login_data_2)
         self.token_2 = 'Token ' + login_response_2.json()['token']
+        login_data_3 = {"username": USER_DATA_CORRECT_3['username'],
+                        "password": USER_DATA_CORRECT_3['password']}
+        login_response_3 = self.client.post(reverse("login"), data=login_data_3)
+        self.token_3 = 'Token ' + login_response_3.json()['token']
         self.user1 = get_user(1)
         self.user2 = get_user(2)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
@@ -300,6 +308,8 @@ class TestSentenceRecordingUpdateView(TestCase):
         with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
             response = self.client.put(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'audiofile': fp, 'index': 1})
         self.assertEqual(response.status_code, 401)
+
+    # GET speaker related
 
     def test_sentencerec_detail_GET_correct(self):
         response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 1}, HTTP_AUTHORIZATION=self.token_2)
@@ -332,6 +342,22 @@ class TestSentenceRecordingUpdateView(TestCase):
         self.assertEqual(response.status_code, 404)
         response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': -1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 404)
+    
+    # GET publisher related
+
+    def test_sentencerec_detail_pub_GET_correct(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 1}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+    
+    def test_sentencerec_detail_pub_GET_invalid_trec(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 1}, HTTP_AUTHORIZATION=self.token_3)
+        self.assertEqual(response.status_code, 404)
+    
+    def test_sentencerec_detail_pub_GET_trec_does_not_exist(self):
+        response = self.client.get(reverse("sentencerecs-detail", args=[99]), data={'index': 1}, HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 404)
+
+    # PUT speaker related
 
     def test_sentencerec_detail_PUT_correct(self):
         pass   
