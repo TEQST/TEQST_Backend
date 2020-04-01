@@ -104,11 +104,15 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     serializer_class = SentenceRecordingUpdateSerializer
 
     def get_object(self):
-        # the sentencerecording is uniquely defined by a textrecording id (rec) and the index of the sentence within that textrecording (index)
-        # rec is part of the core url string
+        # the sentencerecording is uniquely defined by a textrecording id (tr_id) and the index of the sentence within that textrecording (index)
+        # tr_id is part of the core url string
         tr_id = self.kwargs['tr_id']
         if not TextRecording.objects.filter(pk=tr_id, speaker=self.request.user).exists():
-            raise NotFound("Invalid Textrecording id")
+            if self.request.method == 'GET':
+                if not TextRecording.objects.filter(pk=tr_id, text__shared_folder__owner=self.request.user).exists():
+                    raise NotFound("Invalid Textrecording id")
+            else:
+                raise NotFound("Invalid Textrecording id")
         # index is the other part or the url
         index = self.kwargs['index']
         if not SentenceRecording.objects.filter(recording__id=tr_id, index=index).exists():
