@@ -11,11 +11,13 @@ urlpatterns = [
     path('publishers/', views.SpkPublisherListView.as_view(), name='publishers'),
     # spk/publishers/<int:pk>/
     path('publishers/<int:pk>/', views.SpkPublisherDetailedView.as_view(), name='publisher-detail'),
-    # pub/texts/
+    # maybe split into
+    # pub/sharedfolders/<int:pk>/texts/ for the GET Method
+    # pub/texts/ for the POST method
     path('pub/texts/', views.PubTextListView.as_view(), name='pub-texts'),
-    # spk/sharedfolders/<int:pk>/
+    # spk/sharedfolders/<int:pk>/texts/
     path('spk/sharedfolders/<int:pk>/', views.SpkTextListView.as_view(), name='sharedfolder-detail'),
-    # pub/sharedfolders/<int:pk>/
+    # pub/sharedfolders/<int:pk>/speakers/
     path('sharedfolders/<int:pk>/', views.PubSharedFolderSpeakerView.as_view(), name='sharedfolder-speakers'),
     # pub/texts/<int:pk>/
     path('pub/texts/<int:pk>/', views.PubTextDetailedView.as_view(), name='pub-text-detail'),
