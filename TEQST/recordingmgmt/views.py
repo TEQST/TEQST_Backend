@@ -89,3 +89,38 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         response['Content-Type'] = 'audio/wav'
         response['Content-Length'] = os.path.getsize(instance.audiofile.path)
         return response
+
+
+class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    """
+    url: api/sentencerecordings/<tr_id>/<index>/
+    use: retrieval and update of a single recording of a sentence
+    """
+    queryset = SentenceRecording.objects.all()
+    serializer_class = SentenceRecordingUpdateSerializer
+
+    def get_object(self):
+        # the sentencerecording is uniquely defined by a textrecording id (rec) and the index of the sentence within that textrecording (index)
+        # rec is part of the core url string
+        tr_id = self.kwargs['tr_id']
+        if not TextRecording.objects.filter(pk=tr_id, speaker=self.request.user).exists():
+            raise NotFound("Invalid Textrecording id")
+        # index is the other part or the url
+        index = self.kwargs['index']
+        if not SentenceRecording.objects.filter(recording__id=tr_id, index=index).exists():
+            raise NotFound("Invalid index")
+        return SentenceRecording.objects.get(recording__id=tr_id, index=index)
+
+        
+
+    def get(self, request, *args, **kwargs):
+        """
+        handles the get request
+        """
+        instance = self.get_object()
+        f = instance.audiofile.open("rb") 
+        response = HttpResponse()
+        response.write(f.read())
+        response['Content-Type'] = 'audio/wav'
+        response['Content-Length'] = os.path.getsize(instance.audiofile.path)
+        return response
