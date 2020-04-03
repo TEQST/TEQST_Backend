@@ -1,9 +1,15 @@
 from rest_framework import serializers
+from django.conf import settings
 from .models import Folder, SharedFolder, Text
 from .utils import NAME_ID_SPLITTER
 from usermgmt.models import CustomUser, Language
 from usermgmt.serializers import UserBasicSerializer
 from recordingmgmt.models import TextRecording
+import django.core.files.uploadedfile as uploadedfile
+import math
+from chardet import detect
+from io import BytesIO
+import os, random, string
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
@@ -85,12 +91,12 @@ class TextFullSerializer(serializers.ModelSerializer):
     """
     content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
     shared_folder = SharedFolderPKField()
-    #language = serializers.PrimaryKeyRelatedField(queryset=Language.objects.all(), required=True)
-    #is_right_to_left = serializers.BooleanField(read_only=True, source='is_right_to_left')
+    # specify the maximum number of lines in a text. If a text is longer, it will be split up.
+    max_lines = serializers.IntegerField(write_only=True, required=False)
 
     class Meta:
         model = Text
-        fields = ['id', 'title', 'language', 'is_right_to_left', 'shared_folder', 'content', 'textfile']
+        fields = ['id', 'title', 'language', 'is_right_to_left', 'shared_folder', 'content', 'textfile', 'max_lines']
         read_only_fields = ['is_right_to_left', 'content']
         extra_kwargs = {'textfile': {'write_only': True}}
 
@@ -101,8 +107,130 @@ class TextFullSerializer(serializers.ModelSerializer):
     
     def validate_title(self, value):
         if ' ' in value:
-            raise serializers.ValidationError("Text title can't contain an underscore or a space character.")
+            raise serializers.ValidationError("Text title can't contain a space character.")
         return value
+    
+    def split_text(self, textfile: uploadedfile.InMemoryUploadedFile, max_lines):
+        filename = textfile.name
+        textfiles = []
+        # get encoding
+        textfile.open(mode='rb')
+        encoding = detect(textfile.read())['encoding']
+
+        # put all sentences in a list
+        filecontent = []  # list of all sentences in the textfile
+        sentence = ''  # one sentence in the textfile that is resetted after every \n\n and added to filecontent
+        # the open method simply does seek(0). This needs to be done, because the file was already opened to find the encoding
+        textfile.open()
+        for line in textfile:
+            line = line.decode(encoding=encoding)
+            # this will not work if the newline character is just '\r'
+            line = line.replace('\r', '')
+
+            if line == '\n':
+                if sentence != '':
+                    filecontent.append(sentence)
+                    sentence = ''
+            else:
+                sentence += line.replace('\n', '')
+        if sentence != '':
+            filecontent.append(sentence)
+        # end of gathering filecontent
+        # create SimpleUploadedFiles with max_lines of content from the textfile
+        for i in range(math.ceil(len(filecontent) / max_lines)):
+            filesentences, filecontent = filecontent[:max_lines], filecontent[max_lines:]
+            content = ''
+            for sentence in filesentences:
+                content += sentence + '\n\n'
+            #contentbytes = bytearray(content, encoding='utf-8')
+            new_filename = filename[:-4] + '_' + str(i + 1) + filename[-4:]
+            #textfiles.append(uploadedfile.InMemoryUploadedFile(BytesIO(contentbytes), textfile.field_name, new_filename, textfile.content_type, len(contentbytes), 'utf-8'))
+            textfiles.append(uploadedfile.SimpleUploadedFile(new_filename, content.encode('utf-8-sig')))
+            # print('\nencoded content:', content.encode('utf-8'))
+
+        return textfiles
+    
+    # alternative for split_text(). Currently not used.
+    # def create_splitted_textfiles(self, textfile, max_lines, sharedfolder):
+    #     sf = sharedfolder.make_shared_folder()
+    #     sf_path = sf.get_path()
+    #     filename = textfile.name
+    #     textfilepaths = []
+    #     # get encoding
+    #     textfile.open(mode='rb')
+    #     encoding = detect(textfile.read())['encoding']
+
+    #     # put all sentences in a list
+    #     filecontent = []  # list of all sentences in the textfile
+    #     sentence = ''  # one sentence in the textfile that is resetted after every \n\n and added to filecontent
+    #     # the open method simply does seek(0). This needs to be done, because the file was already opened to find the encoding
+    #     textfile.open()
+    #     for line in textfile:
+    #         line = line.decode(encoding=encoding)
+    #         # this will not work if the newline character is just '\r'
+    #         line = line.replace('\r', '')
+
+    #         if line == '\n':
+    #             if sentence != '':
+    #                 filecontent.append(sentence)
+    #                 sentence = ''
+    #         else:
+    #             sentence += line.replace('\n', '')
+    #     if sentence != '':
+    #         filecontent.append(sentence)
+
+    #     for i in range(math.ceil(len(filecontent) / max_lines)):
+    #         filesentences, filecontent = filecontent[:max_lines], filecontent[max_lines:]
+    #         content = ''
+    #         for sentence in filesentences:
+    #             content += sentence + '\n\n'
+    #         new_filename = filename[:-4] + '_' + str(i + 1) + filename[-4:]
+    #         path = os.path.join(settings.MEDIA_ROOT, sf_path + '/' + new_filename)
+    #         while os.path.exists(path):
+    #             randstr = ''.join(random.choice(string.ascii_lowercase) for i in range(7))
+    #             new_filename = filename[:-4] + '_' + str(i + 1) + '_' + randstr + filename[-4:]
+    #             path = os.path.join(settings.MEDIA_ROOT, sf_path + '/' + new_filename)
+    #         with open(path, 'w', encoding='utf-8') as partfile:
+    #             partfile.write(content)
+    #         textfilepaths.append(sf_path + '/' + new_filename)
+    #     return textfilepaths
+    
+    def create(self, validated_data):
+        max_lines = validated_data.pop('max_lines', None)
+        if max_lines is None:
+            return super().create(validated_data)
+        else:  # max_lines is given
+            textfile = validated_data['textfile']
+            # type(textfile) is django.core.files.uploadedfile.InMemoryUploadedFile
+            # print('\nFileinfo:\nfile class:', type(textfile.file), '\nfield_name:', textfile.field_name, '\nname:', textfile.name,
+            #       '\ncontent_type:', textfile.content_type, '\nsize:', textfile.size, '\ncharset:', textfile.charset,
+            #       '\ncontent_type_extra:', textfile.content_type_extra)
+            
+            # using split_texts()
+            textfiles = self.split_text(textfile, max_lines)
+            return_obj = None
+            for i in range(len(textfiles)):
+                data = validated_data.copy()
+                data['textfile'] = textfiles[i]
+                data['title'] = validated_data['title'] + '_' + str(i + 1)
+                return_obj = Text.objects.create(**data)
+            return return_obj
+            
+            # # second attempt using create_splitted_textfiles()
+            # textfilepaths = self.create_splitted_textfiles(textfile, max_lines, validated_data['shared_folder'])
+            # print(textfilepaths)
+            # return_obj = None
+            # for i in range(len(textfilepaths)):
+            #     data = validated_data.copy()
+            #     data['textfile'] = textfilepaths[i]
+            #     data['title'] = validated_data['title'] + '_' + str(i + 1)
+            #     return_obj = Text.objects.create(**data)
+            # return return_obj
+            
+            # do everything as usual
+            # return super().create(validated_data)
+
+    # if there ever comes an update method, be sure to pop 'max_lines' like it's done in the create method.
 
 
 class TextBasicSerializer(serializers.ModelSerializer):
