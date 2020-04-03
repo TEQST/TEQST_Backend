@@ -142,58 +142,10 @@ class TextFullSerializer(serializers.ModelSerializer):
             content = ''
             for sentence in filesentences:
                 content += sentence + '\n\n'
-            #contentbytes = bytearray(content, encoding='utf-8')
             new_filename = filename[:-4] + '_' + str(i + 1) + filename[-4:]
-            #textfiles.append(uploadedfile.InMemoryUploadedFile(BytesIO(contentbytes), textfile.field_name, new_filename, textfile.content_type, len(contentbytes), 'utf-8'))
             textfiles.append(uploadedfile.SimpleUploadedFile(new_filename, content.encode('utf-8-sig')))
-            # print('\nencoded content:', content.encode('utf-8'))
 
         return textfiles
-    
-    # alternative for split_text(). Currently not used.
-    # def create_splitted_textfiles(self, textfile, max_lines, sharedfolder):
-    #     sf = sharedfolder.make_shared_folder()
-    #     sf_path = sf.get_path()
-    #     filename = textfile.name
-    #     textfilepaths = []
-    #     # get encoding
-    #     textfile.open(mode='rb')
-    #     encoding = detect(textfile.read())['encoding']
-
-    #     # put all sentences in a list
-    #     filecontent = []  # list of all sentences in the textfile
-    #     sentence = ''  # one sentence in the textfile that is resetted after every \n\n and added to filecontent
-    #     # the open method simply does seek(0). This needs to be done, because the file was already opened to find the encoding
-    #     textfile.open()
-    #     for line in textfile:
-    #         line = line.decode(encoding=encoding)
-    #         # this will not work if the newline character is just '\r'
-    #         line = line.replace('\r', '')
-
-    #         if line == '\n':
-    #             if sentence != '':
-    #                 filecontent.append(sentence)
-    #                 sentence = ''
-    #         else:
-    #             sentence += line.replace('\n', '')
-    #     if sentence != '':
-    #         filecontent.append(sentence)
-
-    #     for i in range(math.ceil(len(filecontent) / max_lines)):
-    #         filesentences, filecontent = filecontent[:max_lines], filecontent[max_lines:]
-    #         content = ''
-    #         for sentence in filesentences:
-    #             content += sentence + '\n\n'
-    #         new_filename = filename[:-4] + '_' + str(i + 1) + filename[-4:]
-    #         path = os.path.join(settings.MEDIA_ROOT, sf_path + '/' + new_filename)
-    #         while os.path.exists(path):
-    #             randstr = ''.join(random.choice(string.ascii_lowercase) for i in range(7))
-    #             new_filename = filename[:-4] + '_' + str(i + 1) + '_' + randstr + filename[-4:]
-    #             path = os.path.join(settings.MEDIA_ROOT, sf_path + '/' + new_filename)
-    #         with open(path, 'w', encoding='utf-8') as partfile:
-    #             partfile.write(content)
-    #         textfilepaths.append(sf_path + '/' + new_filename)
-    #     return textfilepaths
     
     def create(self, validated_data):
         max_lines = validated_data.pop('max_lines', None)
@@ -202,11 +154,6 @@ class TextFullSerializer(serializers.ModelSerializer):
         else:  # max_lines is given
             textfile = validated_data['textfile']
             # type(textfile) is django.core.files.uploadedfile.InMemoryUploadedFile
-            # print('\nFileinfo:\nfile class:', type(textfile.file), '\nfield_name:', textfile.field_name, '\nname:', textfile.name,
-            #       '\ncontent_type:', textfile.content_type, '\nsize:', textfile.size, '\ncharset:', textfile.charset,
-            #       '\ncontent_type_extra:', textfile.content_type_extra)
-            
-            # using split_texts()
             textfiles = self.split_text(textfile, max_lines)
             return_obj = None
             for i in range(len(textfiles)):
@@ -214,21 +161,8 @@ class TextFullSerializer(serializers.ModelSerializer):
                 data['textfile'] = textfiles[i]
                 data['title'] = validated_data['title'] + '_' + str(i + 1)
                 return_obj = Text.objects.create(**data)
+            # some object has to be returned, so it has been decided that the last partfile will be returned
             return return_obj
-            
-            # # second attempt using create_splitted_textfiles()
-            # textfilepaths = self.create_splitted_textfiles(textfile, max_lines, validated_data['shared_folder'])
-            # print(textfilepaths)
-            # return_obj = None
-            # for i in range(len(textfilepaths)):
-            #     data = validated_data.copy()
-            #     data['textfile'] = textfilepaths[i]
-            #     data['title'] = validated_data['title'] + '_' + str(i + 1)
-            #     return_obj = Text.objects.create(**data)
-            # return return_obj
-            
-            # do everything as usual
-            # return super().create(validated_data)
 
     # if there ever comes an update method, be sure to pop 'max_lines' like it's done in the create method.
 
