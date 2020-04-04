@@ -110,7 +110,22 @@ class TextFullSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Text title can't contain a space character.")
         return value
     
+    def check_max_lines(self, max_lines: int, text_len: int):
+        """
+        This is very similar to the standard validate_<field_name> methods, but is called from the split_text method.
+        The reason for that is that only then is the length of the uploaded text known.
+        """
+        if max_lines < 1:
+            raise serializers.ValidationError("max_lines cannot be less than 1")
+        if text_len / max_lines > 100:
+            raise serializers.ValidationError("Splitting a file into more than 100 partfiles is not permitted. Choose max_lines accordingly.")
+
+    
     def split_text(self, textfile: uploadedfile.InMemoryUploadedFile, max_lines):
+        """
+        Splits the textfile into smaller files with at most max_lines sentences. 
+        A list of SimpleUploadedFile objects is returned.
+        """
         filename = textfile.name
         textfiles = []
         # get encoding
@@ -136,6 +151,8 @@ class TextFullSerializer(serializers.ModelSerializer):
         if sentence != '':
             filecontent.append(sentence)
         # end of gathering filecontent
+        # validate max_lines
+        self.check_max_lines(max_lines, len(filecontent))
         # create SimpleUploadedFiles with max_lines of content from the textfile
         for i in range(math.ceil(len(filecontent) / max_lines)):
             filesentences, filecontent = filecontent[:max_lines], filecontent[max_lines:]
