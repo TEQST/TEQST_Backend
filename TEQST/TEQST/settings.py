@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import logging
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -154,3 +155,49 @@ REST_FRAMEWORK = {
 #CORS once again
 CORS_ORIGIN_ALLOW_ALL = True
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+# This logging configuration is a mix of the django default and this article:
+# https://xxx-cook-book.gitbooks.io/django-cook-book/Logs/Handlers/FileHandler/rotating-file-handler.html
+LOGGING =  {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+        }
+    },
+    'handlers': {
+        'mail_admins': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'django.utils.log.AdminEmailHandler'
+        },
+        'logfile': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR, 'logfile.log'),
+            'maxBytes': 5242880,  # 1024 * 1024 * 5B = 5MB
+            'backupCount': 10,
+            'formatter': 'verbose',
+        }
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['mail_admins'],
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['logfile'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    }
+}
