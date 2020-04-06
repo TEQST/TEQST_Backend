@@ -9,3 +9,4 @@ migrations/
 static/
 htmlcov/
 *.pyc
+logfile.log
