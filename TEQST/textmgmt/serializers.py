@@ -213,7 +213,8 @@ class TextStatsSerializer(serializers.ModelSerializer):
         [
             {
                 'name': 'John',
-                'finished': 5
+                'finished': 5,
+                'textrecording_id': 32  # this key is only there if a textrecording exists
             },
         ]
         """
@@ -222,7 +223,9 @@ class TextStatsSerializer(serializers.ModelSerializer):
         for speaker in text.shared_folder.sharedfolder.speaker.all():
             spk = {'name': speaker.username, 'finished': 0}
             if TextRecording.objects.filter(speaker=speaker, text=text).exists():
-                spk['finished'] = TextRecording.objects.get(speaker=speaker, text=text).active_sentence() - 1
+                textrecording = TextRecording.objects.get(speaker=speaker, text=text)
+                spk['textrecording_id'] = textrecording.pk
+                spk['finished'] = textrecording.active_sentence() - 1
             stats.append(spk)
         return stats
 

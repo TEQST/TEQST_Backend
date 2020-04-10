@@ -1299,8 +1299,38 @@ class TestTextStatsView(TestCase):
         for speaker in response['speakers']:
             if speaker['name'] == user2.username:
                 self.assertEqual(speaker['finished'], 2)
+                self.assertEqual(speaker['textrecording_id'], tr2_1.pk)
             if speaker['name'] == user4.username:
                 self.assertEqual(speaker['finished'], 3)
+                self.assertEqual(speaker['textrecording_id'], tr4_1.pk)
+    
+    def test_text_stats_only_one_textrecording(self):
+        # !!! This test relies on the fact that test_resources/testtext.txt has exactly 3 sentences !!!
+        # setup
+        user1 = get_user(1)
+        user2 = get_user(2)
+        user4 = get_user(4)
+        f1 = Folder.objects.create(name='f1', owner=user1)
+        t1 = Text.objects.create(title='text1', shared_folder=f1, textfile='test_resources/testtext.txt')
+        f1.sharedfolder.speaker.add(user2)
+        f1.sharedfolder.speaker.add(user4)
+        tr2_1 = TextRecording.objects.create(speaker=user2, text=t1)
+        SentenceRecording.objects.create(recording=tr2_1, index=1, audiofile='test_resources/s1.wav')
+        SentenceRecording.objects.create(recording=tr2_1, index=2, audiofile='test_resources/s2.wav')
+        # test
+        response = self.client.get(reverse("text-stats", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
+        self.assertEqual(response.status_code, 200)
+        response = response.json()
+        self.assertEqual(response['title'], t1.title)
+        self.assertEqual(response['total'], t1.sentence_count())
+        self.assertEqual(len(response['speakers']), 2)
+        for speaker in response['speakers']:
+            if speaker['name'] == user2.username:
+                self.assertEqual(speaker['finished'], 2)
+                self.assertEqual(speaker['textrecording_id'], tr2_1.pk)
+            if speaker['name'] == user4.username:
+                self.assertEqual(speaker['finished'], 0)
+                self.assertFalse('textrecording_id' in speaker.keys())
 
     def test_text_stats_shared_folder_does_not_exist(self):
         response = self.client.get(reverse("text-stats", args=[99]), HTTP_AUTHORIZATION=self.token_1)
