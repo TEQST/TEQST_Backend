@@ -113,10 +113,12 @@ class TextFullSerializer(serializers.ModelSerializer):
     def check_max_lines(self, max_lines: int, text_len: int):
         """
         This is very similar to the standard validate_<field_name> methods, but is called from the split_text method.
-        The reason for that is that only then is the length of the uploaded text known.
+        The reason for that is that only then is the length of the uploaded text known, which max_lines is checked against.
         """
-        if max_lines < 1:
-            raise serializers.ValidationError("max_lines cannot be less than 1")
+        if max_lines < 10:
+            raise serializers.ValidationError("max_lines cannot be less than 10")
+        if max_lines > 300:
+            raise serializers.ValidationError("max_lines cannot be greater than 300")
         if text_len / max_lines > 100:
             raise serializers.ValidationError("Splitting a file into more than 100 partfiles is not permitted. Choose max_lines accordingly.")
 
