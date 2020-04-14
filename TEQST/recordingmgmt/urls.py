@@ -10,5 +10,5 @@ urlpatterns = [
     #
     path('sentencerecordings/<int:rec>/', SentenceRecordingUpdateView.as_view(), name='sentencerecs-detail'),
     # spk/...
-    path('sentencerecordings/<int:tr_id>/<int:index>', SentenceRecordingRetrieveUpdateView.as_view(), name='sentencerecs-retrieveupdate')
+    path('sentencerecordings/<int:tr_id>/<int:index>/', SentenceRecordingRetrieveUpdateView.as_view(), name='sentencerecs-retrieveupdate')
 ]
