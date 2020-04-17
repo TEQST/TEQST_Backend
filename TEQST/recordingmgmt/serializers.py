@@ -65,6 +65,13 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid index.")
         return value
     
+    def check_audio_duration(self, duration: float, sentence: str):
+        if duration > len(sentence) / 2.5:
+            raise serializers.ValidationError("Recording is too long")
+        elif duration < len(sentence) / 40:
+            raise serializers.ValidationError("Recording is too short")
+
+    
     def create(self, validated_data):
         # type(validated_data['audiofile']) is InMemoryUploadedFile
         wav = wave.open(validated_data['audiofile'].file, 'rb')
@@ -72,6 +79,9 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
         wav.close()
         # print('DURATION:', duration)
         textrecording = validated_data['recording']
+
+        sentence = textrecording.text.get_content()[validated_data['index'] - 1]
+        self.check_audio_duration(duration, sentence)
 
         obj = super().create(validated_data)
 
@@ -101,6 +111,12 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['recording', 'index']
         extra_kwargs = {'audiofile': {'write_only': True}}
     
+    def check_audio_duration(self, duration: float, sentence: str):
+        if duration > len(sentence) / 2.5:
+            raise serializers.ValidationError("Recording is too long")
+        elif duration < len(sentence) / 40:
+            raise serializers.ValidationError("Recording is too short")
+    
     def update(self, instance, validated_data):
         wav = wave.open(validated_data['audiofile'].file, 'rb')
         duration = wav.getnframes() / wav.getframerate()
@@ -112,6 +128,10 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
         instance.audiofile.close()  # refer to the wave docs: the caller must close the file, this is not done by wave.close()
         # print('DURATION OLD:', duration_old)
         textrecording = instance.recording
+
+        # TODO uncomment this and get the index (XXXX) if it is clear which view is used for this
+        #sentence = textrecording.text.get_content()[XXXX - 1]
+        #self.check_audio_duration(duration, sentence)
 
         obj = super().update(instance, validated_data)
 
