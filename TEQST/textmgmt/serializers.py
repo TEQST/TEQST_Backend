@@ -239,6 +239,7 @@ class SharedFolderTextSerializer(serializers.ModelSerializer):
     """
     texts = TextBasicSerializer(read_only=True, many=True, source='text')
     path = serializers.CharField(read_only=True, source='get_readable_path')
+    
     class Meta:
         model = SharedFolder
         fields = ['id', 'name', 'owner', 'path', 'texts']

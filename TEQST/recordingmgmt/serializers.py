@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import TextRecording, SentenceRecording
 from textmgmt.models import Text
+import wave
 
 
 class TextPKField(serializers.PrimaryKeyRelatedField):
@@ -21,8 +22,8 @@ class TextRecordingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TextRecording
-        fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence']
-        read_only_fields = ['speaker', 'active_sentence']
+        fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence', 'rec_time_without_rep', 'rec_time_with_rep']
+        read_only_fields = ['speaker', 'active_sentence', 'rec_time_without_rep', 'rec_time_with_rep']
     
     def validate(self, data):
         if TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
@@ -56,12 +57,29 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
         if data['index'] > TextRecording.objects.get(pk=data['recording'].pk).active_sentence(): 
             raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
+        # type(data['audiofile']) is InMemoryUploadedFile
         return super().validate(data)
     
     def validate_index(self, value):
         if value < 1:
             raise serializers.ValidationError("Invalid index.")
         return value
+    
+    def create(self, validated_data):
+        # type(validated_data['audiofile']) is InMemoryUploadedFile
+        wav = wave.open(validated_data['audiofile'].file, 'rb')
+        duration = wav.getnframes() / wav.getframerate()
+        wav.close()
+        # print('DURATION:', duration)
+        textrecording = validated_data['recording']
+
+        obj = super().create(validated_data)
+
+        textrecording.rec_time_without_rep += duration
+        textrecording.rec_time_with_rep += duration
+        textrecording.save()
+
+        return obj
 
     class Meta:
         model = SentenceRecording
@@ -82,3 +100,24 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
         fields = ['recording', 'audiofile', 'index']
         read_only_fields = ['recording', 'index']
         extra_kwargs = {'audiofile': {'write_only': True}}
+    
+    def update(self, instance, validated_data):
+        wav = wave.open(validated_data['audiofile'].file, 'rb')
+        duration = wav.getnframes() / wav.getframerate()
+        wav.close()
+        # print('DURATION:', duration)
+        wav_old = wave.open(instance.audiofile, 'rb')
+        duration_old = wav_old.getnframes() / wav_old.getframerate()
+        wav_old.close()
+        instance.audiofile.close()  # refer to the wave docs: the caller must close the file, this is not done by wave.close()
+        # print('DURATION OLD:', duration_old)
+        textrecording = instance.recording
+
+        obj = super().update(instance, validated_data)
+
+        textrecording.rec_time_without_rep += duration
+        textrecording.rec_time_without_rep -= duration_old
+        textrecording.rec_time_with_rep += duration
+        textrecording.save()
+
+        return obj
