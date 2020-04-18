@@ -216,7 +216,9 @@ class TextStatsSerializer(serializers.ModelSerializer):
             {
                 'name': 'John',
                 'finished': 5,
-                'textrecording_id': 32  # this key is only there if a textrecording exists
+                'textrecording_id': 32,  # this key is only there if a textrecording exists
+                'rec_time_without_rep': 3.072,  # same
+                'rec_time_with_rep': 4.532  # same
             },
         ]
         """
@@ -228,6 +230,8 @@ class TextStatsSerializer(serializers.ModelSerializer):
                 textrecording = TextRecording.objects.get(speaker=speaker, text=text)
                 spk['textrecording_id'] = textrecording.pk
                 spk['finished'] = textrecording.active_sentence() - 1
+                spk['rec_time_without_rep'] = textrecording.rec_time_without_rep
+                spk['rec_time_with_rep'] = textrecording.rec_time_with_rep
             stats.append(spk)
         return stats
 
@@ -239,11 +243,23 @@ class SharedFolderTextSerializer(serializers.ModelSerializer):
     """
     texts = TextBasicSerializer(read_only=True, many=True, source='text')
     path = serializers.CharField(read_only=True, source='get_readable_path')
+    timestats = serializers.SerializerMethodField()
     
     class Meta:
         model = SharedFolder
-        fields = ['id', 'name', 'owner', 'path', 'texts']
-        read_only_fields = ['name', 'owner']
+        fields = ['id', 'name', 'owner', 'path', 'timestats', 'texts']
+        read_only_fields = ['name', 'owner', 'timestats']
+    
+    def get_timestats(self, obj):
+        user = self.context['request'].user
+        sharedfolder = obj
+        timestats = {'rec_time_without_rep': 0, 'rec_time_with_rep': 0}
+        for text in sharedfolder.text.all():
+            if TextRecording.objects.filter(text=text, speaker=user).exists():
+                textrecording = TextRecording.objects.get(text=text, speaker=user)
+                timestats['rec_time_without_rep'] += textrecording.rec_time_without_rep
+                timestats['rec_time_with_rep'] += textrecording.rec_time_with_rep
+        return timestats
 
 
 class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
@@ -279,11 +295,15 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         [
             {
                 'name': 'John',
+                'rec_time_without_rep': 10.452,
+                'rec_time_with_rep': 12.001
                 'texts':[
                     {
                         'title': 't1',
                         'finished': 5,
-                        'total': 9
+                        'total': 9, 
+                        'rec_time_without_rep': 10.452,
+                        'rec_time_with_rep': 12.001
                     },
                     {
                         'title': 't2',
@@ -297,11 +317,16 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         sf = obj
         stats = []
         for speaker in sf.speaker.all():
-            spk = {'name': speaker.username, 'texts': []}
+            spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
             for text in Text.objects.filter(shared_folder=sf.folder_ptr):
                 txt = {'title': text.title, 'finished': 0, 'total': text.sentence_count()}
                 if TextRecording.objects.filter(speaker=speaker, text=text).exists():
-                    txt['finished'] = TextRecording.objects.get(speaker=speaker, text=text).active_sentence() - 1
+                    textrecording = TextRecording.objects.get(speaker=speaker, text=text)
+                    txt['finished'] = textrecording.active_sentence() - 1
+                    txt['rec_time_without_rep'] = textrecording.rec_time_without_rep
+                    txt['rec_time_with_rep'] = textrecording.rec_time_with_rep
+                    spk['rec_time_without_rep'] += textrecording.rec_time_without_rep
+                    spk['rec_time_with_rep'] += textrecording.rec_time_with_rep
                 spk['texts'].append(txt)
             stats.append(spk)
         return stats
