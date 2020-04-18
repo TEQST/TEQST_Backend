@@ -10,3 +10,4 @@ static/
 htmlcov/
 *.pyc
 logfile.log
+debug.py
