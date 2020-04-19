@@ -65,11 +65,11 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid index.")
         return value
     
-    def check_audio_duration(self, duration: float, sentence: str):
-        if duration > len(sentence) / 2.5:
-            raise serializers.ValidationError("Recording is too long")
-        elif duration < len(sentence) / 40:
-            raise serializers.ValidationError("Recording is too short")
+    # def check_audio_duration(self, duration: float, sentence: str):
+    #     if duration > len(sentence) / 2.5:
+    #         raise serializers.ValidationError("Recording is too long")
+    #     elif duration < len(sentence) / 40:
+    #         raise serializers.ValidationError("Recording is too short")
 
     
     def create(self, validated_data):
@@ -80,8 +80,8 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
         # print('DURATION:', duration)
         textrecording = validated_data['recording']
 
-        sentence = textrecording.text.get_content()[validated_data['index'] - 1]
-        self.check_audio_duration(duration, sentence)
+        # sentence = textrecording.text.get_content()[validated_data['index'] - 1]
+        # self.check_audio_duration(duration, sentence)
 
         obj = super().create(validated_data)
 
@@ -111,11 +111,11 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['recording', 'index']
         extra_kwargs = {'audiofile': {'write_only': True}}
     
-    def check_audio_duration(self, duration: float, sentence: str):
-        if duration > len(sentence) / 2.5:
-            raise serializers.ValidationError("Recording is too long")
-        elif duration < len(sentence) / 40:
-            raise serializers.ValidationError("Recording is too short")
+    # def check_audio_duration(self, duration: float, sentence: str):
+    #     if duration > len(sentence) / 2.5:
+    #         raise serializers.ValidationError("Recording is too long")
+    #     elif duration < len(sentence) / 40:
+    #         raise serializers.ValidationError("Recording is too short")
     
     def update(self, instance, validated_data):
         wav = wave.open(validated_data['audiofile'].file, 'rb')
