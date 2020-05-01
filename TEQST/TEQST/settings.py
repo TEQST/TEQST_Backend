@@ -57,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'TEQST.logging_middleware.ContentLogging',
 ]
 
 PASSWORD_HASHERS = [
@@ -170,8 +171,9 @@ LOGGING =  {
     },
     'formatters': {
         'verbose': {  # this includes status_code, so it can only be used by handlers of loggers that provide status_code
-            'format': '%(status_code)d %(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
-        }
+            #'format': '%(status_code)d %(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+        },
     },
     'handlers': {
         'mail_admins': {
