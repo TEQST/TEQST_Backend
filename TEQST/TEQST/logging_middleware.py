@@ -14,9 +14,10 @@ class ContentLogging(object):
         
         try:
             request_body = request.body.decode('utf-8')
+            if 'password' in request_body:
+                request_body = 'login data will not be logged'
         except UnicodeDecodeError:
             request_body = None
-            #self.logger.warning('Body is multipart (in our case this usually means it is a sentencerecording POST or PUT)')
 
         response = self.get_response(request)
 
