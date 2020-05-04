@@ -1,5 +1,5 @@
 from django.core.files.storage import FileSystemStorage
-import os
+import os, datetime
 
 
 class OverwriteStorage(FileSystemStorage):
@@ -19,5 +19,8 @@ class BackupStorage(FileSystemStorage):
     def get_available_name(self, name, max_length=None):
         if self.exists(name):
             dir_name, file_name = os.path.split(self.path(name))
-            os.rename(dir_name + file_name, dir_name + "Backup/" + file_name)
+            name, ext = os.path.splitext(file_name)
+            date = datetime.datetime.now()
+            new_file_name = name + "__" + date.strftime("%Y_%m_%d_%H_%M_%S") + ext
+            os.renames(os.path.join(dir_name, file_name), os.path.join(dir_name, 'Backup', new_file_name))
         return name
