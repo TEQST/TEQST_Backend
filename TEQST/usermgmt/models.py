@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from .utils import EDU_CHOICES, GENDER_CHOICES, ACCENT_DEFAULT, upload_path
+from .storages import OverwriteStorage
 from django.db import transaction
 
 
@@ -21,7 +22,7 @@ class Language(models.Model):
     english_name = models.CharField(max_length=50)
     short = models.CharField(max_length=5, unique=True, primary_key=True)
     right_to_left = models.BooleanField(default=False)
-    localization_file = models.FileField(upload_to=upload_path, null=True, blank=True)
+    localization_file = models.FileField(upload_to=upload_path, null=True, blank=True, storage=OverwriteStorage())
 
     def __str__(self):
         return self.english_name + ' (' + self.native_name + ')'
