@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from usermgmt.models import CustomUser
 from textmgmt.models import Text
-from .storages import OverwriteStorage
+from .storages import BackupStorage
 import wave
 import os
 import io
@@ -58,7 +58,7 @@ class SentenceRecording(models.Model):
     """
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
-    audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=OverwriteStorage())
+    audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=BackupStorage())
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
