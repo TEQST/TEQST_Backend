@@ -52,6 +52,7 @@ class CustomUser(AbstractUser):
     accent = models.CharField(max_length=100, default=ACCENT_DEFAULT, blank=True)
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
+    dark_mode = models.BooleanField(default=False, blank=True)
 
     def is_publisher(self):
         p = Group.objects.get(name='Publisher')
