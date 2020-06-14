@@ -64,6 +64,13 @@ class SentenceRecording(models.Model):
         super().save(*args, **kwargs)
         if self.recording.active_sentence() > self.recording.text.sentence_count():
             create_textrecording_stm(self.recording.id)
+    
+    def get_audio_length(self):
+        wav = wave.open(self.audiofile, 'rb')
+        duration = wav.getnframes() / wav.getframerate()
+        wav.close()
+        self.audiofile.close()
+        return duration
 
 
 def create_textrecording_stm(trec_pk):
