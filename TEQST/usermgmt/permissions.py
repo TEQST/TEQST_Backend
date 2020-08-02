@@ -1,7 +1,7 @@
-from rest_framework.permissions import BasePermission
+from rest_framework import permissions
 
 
-class IsPublisher(BasePermission):
+class IsPublisher(permissions.BasePermission):
 
     def has_permission(self, request, view):
 
