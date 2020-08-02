@@ -1,10 +1,9 @@
 from django.db import models
 from django.conf import settings
-from .utils import folder_path, folder_relative_path, NAME_ID_SPLITTER
-from usermgmt.models import Language
-import os
-from zipfile import ZipFile
-from chardet import detect
+from . import utils
+from usermgmt import models as user_models
+import os, zipfile, chardet
+
 
 
 class Folder(models.Model):
@@ -36,7 +35,7 @@ class Folder(models.Model):
         return hasattr(self, 'sharedfolder')
     
     def get_path(self):
-        return folder_relative_path(self)
+        return utils.folder_relative_path(self)
 
     def make_shared_folder(self):
         if self.is_shared_folder():
@@ -60,7 +59,7 @@ class SharedFolder(Folder):
     
     def get_path(self):
         path = super().get_path()
-        return path + NAME_ID_SPLITTER + str(self.id)
+        return path + utils.NAME_ID_SPLITTER + str(self.id)
 
     def get_readable_path(self):
         path = super().get_path()
@@ -77,7 +76,7 @@ class SharedFolder(Folder):
         create zip file and return the path to the download.zip file
         """
         path = settings.MEDIA_ROOT + '/' + self.get_path()
-        zf = ZipFile(path + "/download.zip", 'w')
+        zf = zipfile.ZipFile(path + "/download.zip", 'w')
         # arcname is the name/path which the file will have inside the zip file
         zf.write(path + '/' + self.name + ".stm", arcname=self.name + ".stm")
         zf.write(path + "/log.txt", arcname="log.txt")
@@ -103,12 +102,12 @@ def upload_path(instance, filename):
 def get_encoding_type(file_path):
     with open(file_path, 'rb') as f:
         rawdata = f.read()
-    return detect(rawdata)['encoding']
+    return chardet.detect(rawdata)['encoding']
 
 
 class Text(models.Model):
     title = models.CharField(max_length=100)
-    language = models.ForeignKey(Language, on_delete=models.SET_NULL, null=True, blank=True)
+    language = models.ForeignKey(user_models.Language, on_delete=models.SET_NULL, null=True, blank=True)
     shared_folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='text')
     textfile = models.FileField(upload_to=upload_path)
 
