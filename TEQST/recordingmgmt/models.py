@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from usermgmt import models as user_models
+from django.contrib import auth
 from textmgmt import models as text_models
 from . import storages
 import os, wave, io
@@ -17,7 +17,7 @@ class TextRecording(models.Model):
     """
     Acts as a relation between a user and a text and saves all information that are specific to that recording. 
     """
-    speaker = models.ForeignKey(user_models.CustomUser, on_delete=models.CASCADE)
+    speaker = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
     text = models.ForeignKey(text_models.Text, on_delete=models.CASCADE, related_name='textrecording')
 
     TTS_permission = models.BooleanField(default=True)

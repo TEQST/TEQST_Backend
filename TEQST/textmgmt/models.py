@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.contrib import auth
 from . import utils
 from usermgmt import models as user_models
 import os, zipfile, chardet
@@ -8,7 +9,7 @@ import os, zipfile, chardet
 
 class Folder(models.Model):
     name = models.CharField(max_length=250)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='folder')  
+    owner = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE, related_name='folder')  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
 
     # this method is useful for the shell and for the admin view
@@ -52,7 +53,7 @@ class Folder(models.Model):
 
 
 class SharedFolder(Folder):
-    speaker = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='sharedfolder', blank=True)
+    speaker = models.ManyToManyField(auth.get_user_model(), related_name='sharedfolder', blank=True)
     
     def make_shared_folder(self):
         return self

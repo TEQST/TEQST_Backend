@@ -1,4 +1,5 @@
 from django.db import models, transaction
+from django.contrib import auth
 from django.contrib.auth import models as auth_models
 from . import utils, storages
 
@@ -74,7 +75,7 @@ class CustomUser(auth_models.AbstractUser):
 
 class Usage(models.Model):
     #TODO maybe limit_choices_to publisher if it works properly
-    publisher = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    publisher = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     language = models.ForeignKey(Language, on_delete=models.CASCADE)
     meaning = models.CharField(max_length=200)
@@ -84,7 +85,7 @@ class Usage(models.Model):
 
 
 class Customization(models.Model):
-    speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    speaker = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     custom_color = models.CharField(max_length=10)
 
