@@ -1,6 +1,5 @@
 from django.shortcuts import render
 from django import http
-from django.db import transaction
 from rest_framework import status, exceptions, response, generics, mixins, views, permissions as rf_permissions
 from rest_framework.authtoken import views as token_views, models as token_models
 from . import permissions, models, serializers
@@ -52,10 +51,9 @@ class MenuLanguageView(generics.RetrieveAPIView):
         if re.match('[a-z]+\.po$', filename) is None:
             raise exceptions.NotFound('Invalid filename')
         data = filename.split('.')
-        with transaction.atomic():
-            if not models.Language.objects.filter(short=data[0]).exists():
-                raise exceptions.NotFound('Not a supported Language')
-            lang = models.Language.objects.get(short=data[0])
+        if not models.Language.objects.filter(short=data[0]).exists():
+            raise exceptions.NotFound('Not a supported Language')
+        lang = models.Language.objects.get(short=data[0])
         if not lang.is_menu_language():
             raise exceptions.NotFound('Translations for this language are unavailable')
         return lang
@@ -88,8 +86,8 @@ class GetAuthToken(token_views.ObtainAuthToken):
     permission_classes = []
 
     def post(self, request, *args, **kwargs):
-        resp = super(GetAuthToken, self).post(request, *args, **kwargs)
-        token = token_models.Token.objects.get(key=resp.data['token'])
+        response = super(GetAuthToken, self).post(request, *args, **kwargs)
+        token = token_models.Token.objects.get(key=response.data['token'])
         user = models.CustomUser.objects.get(id=token.user_id)
         user_serializer = serializers.UserFullSerializer(user, many=False)
         return response.Response({'token': token.key, 'user': user_serializer.data})
