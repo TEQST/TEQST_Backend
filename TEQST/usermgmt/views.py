@@ -86,8 +86,8 @@ class GetAuthToken(token_views.ObtainAuthToken):
     permission_classes = []
 
     def post(self, request, *args, **kwargs):
-        response = super(GetAuthToken, self).post(request, *args, **kwargs)
-        token = token_models.Token.objects.get(key=response.data['token'])
+        resp = super(GetAuthToken, self).post(request, *args, **kwargs)
+        token = token_models.Token.objects.get(key=resp.data['token'])
         user = models.CustomUser.objects.get(id=token.user_id)
         user_serializer = serializers.UserFullSerializer(user, many=False)
         return response.Response({'token': token.key, 'user': user_serializer.data})
