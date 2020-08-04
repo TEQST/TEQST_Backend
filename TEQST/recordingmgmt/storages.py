@@ -1,8 +1,9 @@
 from django.core.files.storage import FileSystemStorage
+from django.core.files import storage
 import os, datetime
 
 
-class OverwriteStorage(FileSystemStorage):
+class OverwriteStorage(storage.FileSystemStorage):
     """
     This provides a file storage policy that overwrites files in the event of equal filenames
     """
@@ -11,7 +12,7 @@ class OverwriteStorage(FileSystemStorage):
         self.delete(name)
         return name
 
-class BackupStorage(FileSystemStorage):
+class BackupStorage(storage.FileSystemStorage):
     """
     This provides a file storage policy that overwrites files in the event of equal filenames
     """

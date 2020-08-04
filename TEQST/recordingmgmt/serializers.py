@@ -1,13 +1,13 @@
 from rest_framework import serializers
-from .models import TextRecording, SentenceRecording
-from textmgmt.models import Text
+from . import models
+from textmgmt import models as text_models
 import wave
 
 
 class TextPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
-        queryset = Text.objects.filter(shared_folder__sharedfolder__speaker__id=user.id)
+        queryset = text_models.Text.objects.filter(shared_folder__sharedfolder__speaker__id=user.id)
         return queryset
 
 
@@ -21,12 +21,12 @@ class TextRecordingSerializer(serializers.ModelSerializer):
     text = TextPKField()
 
     class Meta:
-        model = TextRecording
+        model = models.TextRecording
         fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence', 'rec_time_without_rep', 'rec_time_with_rep']
         read_only_fields = ['speaker', 'active_sentence', 'rec_time_without_rep', 'rec_time_with_rep']
     
     def validate(self, data):
-        if TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
+        if models.TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
             raise serializers.ValidationError("A recording for the given text by the given user already exists")
         if data['TTS_permission'] is False and data['SR_permission'] is False:
             raise serializers.ValidationError("Either TTS or SR permission must be True")
@@ -36,7 +36,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
 class RecordingPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
-        queryset = TextRecording.objects.filter(speaker__id=user.id)
+        queryset = models.TextRecording.objects.filter(speaker__id=user.id)
         return queryset
 
 
@@ -53,9 +53,9 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
             data['index']
         except KeyError:
             raise serializers.ValidationError("No index provided")
-        if SentenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
+        if models.SentenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
             raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
-        if data['index'] > TextRecording.objects.get(pk=data['recording'].pk).active_sentence(): 
+        if data['index'] > models.TextRecording.objects.get(pk=data['recording'].pk).active_sentence(): 
             raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
         # type(data['audiofile']) is InMemoryUploadedFile
         return super().validate(data)
@@ -92,7 +92,7 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
         return obj
 
     class Meta:
-        model = SentenceRecording
+        model = models.SentenceRecording
         fields = ['recording', 'audiofile', 'index']
         extra_kwargs = {'audiofile': {'write_only': True}}
 
@@ -106,7 +106,7 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
     recording = RecordingPKField(read_only=True)
 
     class Meta:
-        model = SentenceRecording
+        model = models.SentenceRecording
         fields = ['recording', 'audiofile', 'index']
         read_only_fields = ['recording', 'index']
         extra_kwargs = {'audiofile': {'write_only': True}}

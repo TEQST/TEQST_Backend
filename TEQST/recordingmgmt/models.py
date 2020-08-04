@@ -1,11 +1,10 @@
 from django.db import models
 from django.conf import settings
-from usermgmt.models import CustomUser
-from textmgmt.models import Text
-from .storages import BackupStorage
-import wave
-import os
-import io
+from usermgmt import models as user_models
+from textmgmt import models as text_models
+from . import storages
+import os, wave, io
+
 
 
 #May be needed in a future version
@@ -18,8 +17,8 @@ class TextRecording(models.Model):
     """
     Acts as a relation between a user and a text and saves all information that are specific to that recording. 
     """
-    speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    text = models.ForeignKey(Text, on_delete=models.CASCADE, related_name='textrecording')
+    speaker = models.ForeignKey(user_models.CustomUser, on_delete=models.CASCADE)
+    text = models.ForeignKey(text_models.Text, on_delete=models.CASCADE, related_name='textrecording')
 
     TTS_permission = models.BooleanField(default=True)
     SR_permission = models.BooleanField(default=True)
@@ -58,7 +57,7 @@ class SentenceRecording(models.Model):
     """
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
-    audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=BackupStorage())
+    audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
