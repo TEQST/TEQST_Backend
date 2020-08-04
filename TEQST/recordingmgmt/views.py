@@ -36,11 +36,11 @@ class TextRecordingView(generics.ListCreateAPIView):
         """
         handles the get request
         """
-        response = super().get(*args, **kwargs)
+        resp = super().get(*args, **kwargs)
         if not self.get_queryset().exists():
             #response.status_code = status.HTTP_204_NO_CONTENT
-            response = response.Response(status=status.HTTP_204_NO_CONTENT)
-        return response
+            resp = response.Response(status=status.HTTP_204_NO_CONTENT)
+        return resp
 
 class SentenceRecordingCreateView(generics.CreateAPIView):
     """
