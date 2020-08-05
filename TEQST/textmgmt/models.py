@@ -41,6 +41,8 @@ class Folder(models.Model):
     def make_shared_folder(self):
         if self.is_shared_folder():
             return self.sharedfolder
+        if self.subfolder.all().exists():
+            raise TypeError("This folder can't be a shared folder")
         # create SharedFolder instance
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
@@ -109,7 +111,7 @@ def get_encoding_type(file_path):
 class Text(models.Model):
     title = models.CharField(max_length=100)
     language = models.ForeignKey(user_models.Language, on_delete=models.SET_NULL, null=True, blank=True)
-    shared_folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='text')
+    shared_folder = models.ForeignKey(SharedFolder, on_delete=models.CASCADE, related_name='text')
     textfile = models.FileField(upload_to=upload_path)
 
     def __str__(self):
@@ -127,7 +129,9 @@ class Text(models.Model):
         return False
     
     def save(self, *args, **kwargs):
-        self.shared_folder = self.shared_folder.make_shared_folder()
+        #Now expects a proper sharedfolder instance
+        #Parsing a folder to sharedfolder is done in serializer or has to be done manually when working via shell
+        #self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
         
         # change encoding of uploaded file to utf-8

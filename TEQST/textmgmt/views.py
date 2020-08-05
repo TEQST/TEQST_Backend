@@ -131,7 +131,7 @@ class SpkTextDetailedView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return models.Text.objects.filter(shared_folder__sharedfolder__speaker__id=user.id)
+        return models.Text.objects.filter(shared_folder__speaker__id=user.id)
 
 
 class SpkPublisherListView(generics.ListAPIView):

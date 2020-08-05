@@ -163,6 +163,9 @@ class TextFullSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         max_lines = validated_data.pop('max_lines', None)
+        sf = validated_data['shared_folder']
+        sf = sf.make_shared_folder()
+        validated_data['shared_folder'] = sf
         if max_lines is None:
             return super().create(validated_data)
         else:  # max_lines is given
@@ -219,7 +222,7 @@ class TextStatsSerializer(serializers.ModelSerializer):
         """
         text = obj
         stats = []
-        for speaker in text.shared_folder.sharedfolder.speaker.all():
+        for speaker in text.shared_folder.speaker.all():
             spk = {'name': speaker.username, 'finished': 0}
             if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
                 textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
