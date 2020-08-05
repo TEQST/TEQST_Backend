@@ -196,6 +196,7 @@ class TestFolderDetailedView(TestCase):
         # setup
         user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.delete(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
@@ -234,6 +235,7 @@ class TestFolderDetailedView(TestCase):
         # setup
         user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.get(reverse("folder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
@@ -451,6 +453,7 @@ class TestPublisherTextList(TestCase):
         # setup
         user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         t1.delete()
         self.assertEqual(len(Text.objects.all()), 0)
@@ -463,6 +466,7 @@ class TestPublisherTextList(TestCase):
         # setup
         user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         Text.objects.create(title='test2', shared_folder=f1, textfile='test_resources/testtext2.txt')
         # test
@@ -482,6 +486,7 @@ class TestPublisherTextList(TestCase):
         # setup
         user3 = CustomUser.objects.get(username=USER_DATA_CORRECT_3['username'])
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.get(reverse("pub-texts"), data={'sharedfolder': f1.pk}, HTTP_AUTHORIZATION=self.token_1)
@@ -538,8 +543,9 @@ class TestPublisherListView(TestCase):
         user2 = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username'])
         for user in [user1, user3]:
             f1 = Folder.objects.create(name='f1', owner=user)
+            f1 = f1.make_shared_folder()
             Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-            f1.sharedfolder.speaker.add(user2)
+            f1.speaker.add(user2)
         # test
         response = self.client.get(reverse("publishers"), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 200)
@@ -584,11 +590,13 @@ class TestPublisherDetailedView(TestCase):
         user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         user2 = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username'])
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         f2 = Folder.objects.create(name='f2', owner=user1)
+        f2 = f2.make_shared_folder()
         Text.objects.create(title='test2', shared_folder=f2, textfile='test_resources/testtext2.txt')
-        f2.sharedfolder.speaker.add(user2)
+        f2.speaker.add(user2)
         # test
         response = self.client.get(reverse("publisher-detail", args=[user1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 200)
@@ -644,9 +652,10 @@ class TestSpeakerTextListView(TestCase):
         user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         user2 = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username'])
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         Text.objects.create(title='test2', shared_folder=f1, textfile='test_resources/testtext2.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.get(reverse("sharedfolder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 200)
@@ -657,8 +666,9 @@ class TestSpeakerTextListView(TestCase):
         user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         user2 = CustomUser.objects.get(username=USER_DATA_CORRECT_2['username'])
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         t1.delete()
         self.assertEqual(len(Text.objects.all()), 0)
         # test
@@ -674,6 +684,7 @@ class TestSpeakerTextListView(TestCase):
         # setup
         user3 = CustomUser.objects.get(username=USER_DATA_CORRECT_3['username'])
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.get(reverse("sharedfolder-detail", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_2)
@@ -733,6 +744,7 @@ class TestSharedFolderDetailView(TestCase):
         # setup
         user1 = get_user(1)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.get(reverse("sharedfolder-speakers", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
@@ -745,9 +757,10 @@ class TestSharedFolderDetailView(TestCase):
         user2 = get_user(2)
         user4 = get_user(4)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
-        f1.sharedfolder.speaker.add(user4)
+        f1.speaker.add(user2)
+        f1.speaker.add(user4)
         # test
         response = self.client.get(reverse("sharedfolder-speakers", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 200)
@@ -757,6 +770,7 @@ class TestSharedFolderDetailView(TestCase):
         # setup
         user3 = get_user(3)
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.get(reverse("sharedfolder-speakers", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
@@ -778,6 +792,7 @@ class TestSharedFolderDetailView(TestCase):
         # setup
         user3 = get_user(3)
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [1]}, HTTP_AUTHORIZATION=self.token_1)
@@ -800,8 +815,9 @@ class TestSharedFolderDetailView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': []}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 200)
@@ -813,6 +829,7 @@ class TestSharedFolderDetailView(TestCase):
         user2 = get_user(2)
         user4 = get_user(4)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [user2.pk, user4.pk]}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
@@ -831,6 +848,7 @@ class TestSharedFolderDetailView(TestCase):
         # setup
         user1 = get_user(1)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [99]}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
@@ -841,6 +859,7 @@ class TestSharedFolderDetailView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.put(reverse("sharedfolder-speakers", args=[f1.pk]), data={'speaker_ids': [user2.pk, user2.pk]}, content_type='application/json', HTTP_AUTHORIZATION=self.token_1)
@@ -893,6 +912,7 @@ class TestPublisherTextDetailedView(TestCase):
         # setup
         user1 = get_user(1)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.get(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
@@ -907,6 +927,7 @@ class TestPublisherTextDetailedView(TestCase):
         # setup
         user3 = get_user(3)
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.get(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
@@ -916,6 +937,7 @@ class TestPublisherTextDetailedView(TestCase):
         # setup
         user1 = get_user(1)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.delete(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
@@ -929,6 +951,7 @@ class TestPublisherTextDetailedView(TestCase):
         # setup
         user3 = get_user(3)
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.delete(reverse("pub-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_1)
@@ -970,8 +993,9 @@ class TestSpeakerTextDetailedView(TestCase):
         user2 = get_user(2)
         engl = get_lang('en')
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', language=engl, shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 200)
@@ -985,8 +1009,9 @@ class TestSpeakerTextDetailedView(TestCase):
         user2 = get_user(2)
         arab = get_lang('ar')
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', language=arab, shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 200)
@@ -999,8 +1024,9 @@ class TestSpeakerTextDetailedView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 200)
@@ -1016,6 +1042,7 @@ class TestSpeakerTextDetailedView(TestCase):
         # setup
         user1 = get_user(1)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.get(reverse("spk-text-detail", args=[t1.pk]), HTTP_AUTHORIZATION=self.token_2)
@@ -1066,8 +1093,9 @@ class TestSpeechDataDownloadView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         tr1 = TextRecording.objects.create(speaker=user2, text=t1)
         SentenceRecording.objects.create(recording=tr1, index=1, audiofile='test_resources/s1.wav')
         SentenceRecording.objects.create(recording=tr1, index=2, audiofile='test_resources/s2.wav')
@@ -1086,8 +1114,9 @@ class TestSpeechDataDownloadView(TestCase):
         user3 = get_user(3)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         tr1 = TextRecording.objects.create(speaker=user2, text=t1)
         SentenceRecording.objects.create(recording=tr1, index=1, audiofile='test_resources/s1.wav')
         SentenceRecording.objects.create(recording=tr1, index=2, audiofile='test_resources/s2.wav')
@@ -1111,8 +1140,9 @@ class TestSpeechDataDownloadView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         tr1 = TextRecording.objects.create(speaker=user2, text=t1)
         SentenceRecording.objects.create(recording=tr1, index=1, audiofile='test_resources/s1.wav')
         SentenceRecording.objects.create(recording=tr1, index=2, audiofile='test_resources/s2.wav')
@@ -1167,11 +1197,12 @@ class TestSharedFolderStatsView(TestCase):
         user2 = get_user(2)
         user4 = get_user(4)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text1', shared_folder=f1, textfile='test_resources/testtext.txt')
         t2 = Text.objects.create(title='text2', shared_folder=f1, textfile='test_resources/testtext2.txt')
         t3 = Text.objects.create(title='text3', shared_folder=f1, textfile='test_resources/testtext3.txt')
-        f1.sharedfolder.speaker.add(user2)
-        f1.sharedfolder.speaker.add(user4)
+        f1.speaker.add(user2)
+        f1.speaker.add(user4)
         tr2_1 = TextRecording.objects.create(speaker=user2, text=t1)
         SentenceRecording.objects.create(recording=tr2_1, index=1, audiofile='test_resources/s1.wav')
         SentenceRecording.objects.create(recording=tr2_1, index=2, audiofile='test_resources/s2.wav')
@@ -1219,8 +1250,9 @@ class TestSharedFolderStatsView(TestCase):
         user3 = get_user(3)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.get(reverse("sharedfolder-stats", args=[f1.pk]), HTTP_AUTHORIZATION=self.token_1)
         self.assertEqual(response.status_code, 404)
@@ -1279,9 +1311,10 @@ class TestTextStatsView(TestCase):
         user2 = get_user(2)
         user4 = get_user(4)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text1', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
-        f1.sharedfolder.speaker.add(user4)
+        f1.speaker.add(user2)
+        f1.speaker.add(user4)
         tr2_1 = TextRecording.objects.create(speaker=user2, text=t1)
         SentenceRecording.objects.create(recording=tr2_1, index=1, audiofile='test_resources/s1.wav')
         SentenceRecording.objects.create(recording=tr2_1, index=2, audiofile='test_resources/s2.wav')
@@ -1311,9 +1344,10 @@ class TestTextStatsView(TestCase):
         user2 = get_user(2)
         user4 = get_user(4)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text1', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
-        f1.sharedfolder.speaker.add(user4)
+        f1.speaker.add(user2)
+        f1.speaker.add(user4)
         tr2_1 = TextRecording.objects.create(speaker=user2, text=t1)
         SentenceRecording.objects.create(recording=tr2_1, index=1, audiofile='test_resources/s1.wav')
         SentenceRecording.objects.create(recording=tr2_1, index=2, audiofile='test_resources/s2.wav')
@@ -1341,6 +1375,7 @@ class TestTextStatsView(TestCase):
         user3 = get_user(3)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user3)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='text', shared_folder=f1, textfile='test_resources/testtext.txt')
         f1.sharedfolder.speaker.add(user2)
         # test
