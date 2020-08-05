@@ -21,6 +21,6 @@ class BackupStorage(FileSystemStorage):
             dir_name, file_name_ext = os.path.split(self.path(name))
             file_name, ext = os.path.splitext(file_name_ext)
             date = datetime.datetime.now()
-            new_file_name_ext = file_name + "__" + date.strftime("%Y_%m_%d_%H_%M_%S") + ext
+            new_file_name_ext = f'{file_name}__{date.strftime("%Y_%m_%d_%H_%M_%S")}{ext}'
             os.renames(os.path.join(dir_name, file_name_ext), os.path.join(dir_name, 'Backup', new_file_name_ext))
         return name

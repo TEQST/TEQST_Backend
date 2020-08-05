@@ -160,7 +160,7 @@ class TestFolderDetailedView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -359,7 +359,7 @@ class TestTextCreation(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -435,7 +435,7 @@ class TestPublisherTextList(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -518,7 +518,7 @@ class TestPublisherListView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -568,7 +568,7 @@ class TestPublisherDetailedView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -631,7 +631,7 @@ class TestSpeakerTextListView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -713,7 +713,7 @@ class TestSharedFolderDetailView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -873,7 +873,7 @@ class TestPublisherTextDetailedView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -956,7 +956,7 @@ class TestSpeakerTextDetailedView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -1048,7 +1048,7 @@ class TestSpeechDataDownloadView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -1146,7 +1146,7 @@ class TestSharedFolderStatsView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -1260,7 +1260,7 @@ class TestTextStatsView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     

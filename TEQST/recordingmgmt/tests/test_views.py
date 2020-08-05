@@ -36,7 +36,7 @@ class TestTextRecordingView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -198,7 +198,7 @@ class TestSentenceRecordingCreateView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -300,7 +300,7 @@ class TestSentenceRecordingUpdateView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     
@@ -416,7 +416,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = settings.MEDIA_ROOT + '/' + user['username'] + '/'
+            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
             if (os.path.exists(path)):
                 shutil.rmtree(path)
     

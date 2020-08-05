@@ -45,7 +45,7 @@ class Folder(models.Model):
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
         # create actual folders and files:
-        sf_path = settings.MEDIA_ROOT + '/' + sf.get_path()
+        sf_path = f'{settings.MEDIA_ROOT}/{sf.get_path()}'
         os.makedirs(sf_path + '/STM')
         os.mkdir(sf_path + '/AudioData')
         open(sf_path + '/log.txt', 'w').close()
@@ -76,7 +76,7 @@ class SharedFolder(Folder):
         """
         create zip file and return the path to the download.zip file
         """
-        path = settings.MEDIA_ROOT + '/' + self.get_path()
+        path = f'{settings.MEDIA_ROOT}/{self.get_path()}'
         zf = ZipFile(path + "/download.zip", 'w')
         # arcname is the name/path which the file will have inside the zip file
         zf.write(path + '/' + self.name + ".stm", arcname=self.name + ".stm")
@@ -95,7 +95,7 @@ def upload_path(instance, filename):
     Generates the upload path for a text
     """
     sf_path = instance.shared_folder.sharedfolder.get_path()
-    path = sf_path + '/' + filename
+    path = f'{sf_path}/{filename}'
     return path
 
 

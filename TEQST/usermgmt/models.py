@@ -25,7 +25,7 @@ class Language(models.Model):
     localization_file = models.FileField(upload_to=upload_path, null=True, blank=True, storage=OverwriteStorage())
 
     def __str__(self):
-        return self.english_name + ' (' + self.native_name + ')'
+        return f'{self.english_name} ({self.native_name})'
 
     def is_menu_language(self):
         return bool(self.localization_file)
@@ -82,7 +82,7 @@ class Usage(models.Model):
     meaning = models.CharField(max_length=200)
 
     def __str__(self):
-        return "by " + self.publisher.__str__() + " for " + self.tag.__str__() + " in " + self.language.__str__()
+        return f'by {self.publisher.__str__()} for {self.tag.__str__()} in {self.language.__str__()}'
 
 
 class Customization(models.Model):
