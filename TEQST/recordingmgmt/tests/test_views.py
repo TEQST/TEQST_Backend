@@ -23,22 +23,14 @@ class TestTextRecordingView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
-    
+        create_languages_users_groups()
+        
     def setUp(self):
         self.client = Client()
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_textrecordings_no_auth(self):
         response = self.client.get(reverse("textrecs"), data={'text': 1})
@@ -179,16 +171,11 @@ class TestSentenceRecordingCreateView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_2 = login_test_user(2, self.client)
         self.user1 = get_user(1)
         self.user2 = get_user(2)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
@@ -197,10 +184,7 @@ class TestSentenceRecordingCreateView(TestCase):
         self.tr1 = TextRecording.objects.create(speaker=self.user2, text=self.t1)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_sentencerec_create_no_auth(self):
         with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
@@ -272,24 +256,13 @@ class TestSentenceRecordingUpdateView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
-        login_data_3 = {"username": USER_DATA_CORRECT_3['username'],
-                        "password": USER_DATA_CORRECT_3['password']}
-        login_response_3 = self.client.post(reverse("login"), data=login_data_3)
-        self.token_3 = 'Token ' + login_response_3.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
+        self.token_3 = login_test_user(3, self.client)
         self.user1 = get_user(1)
         self.user2 = get_user(2)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
@@ -299,10 +272,7 @@ class TestSentenceRecordingUpdateView(TestCase):
         self.sc1 = SentenceRecording.objects.create(recording=self.tr1, index=1, audiofile='test_resources/s1.wav')
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_sentencerec_detail_no_auth(self):
         response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 1})
@@ -388,24 +358,13 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
-        login_data_3 = {"username": USER_DATA_CORRECT_3['username'],
-                        "password": USER_DATA_CORRECT_3['password']}
-        login_response_3 = self.client.post(reverse("login"), data=login_data_3)
-        self.token_3 = 'Token ' + login_response_3.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
+        self.token_3 = login_test_user(3, self.client)
         self.user1 = get_user(1)
         self.user2 = get_user(2)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
@@ -415,10 +374,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
         self.sc1 = SentenceRecording.objects.create(recording=self.tr1, index=1, audiofile='test_resources/s1.wav')
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_sentencerec_detail_no_auth(self):
         response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]))

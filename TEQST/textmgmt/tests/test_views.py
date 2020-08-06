@@ -21,20 +21,15 @@ class TestFolderListView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
 
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
+
+    def tearDown(self):
+        delete_all_users()
     
     def test_folders_no_auth(self):
         response = self.client.get(reverse("folders"))
@@ -143,26 +138,15 @@ class TestFolderDetailedView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
 
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_folder_detail_no_auth(self):
         # setup
@@ -339,29 +323,18 @@ class TestTextCreation(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
         self.user1 = get_user(1)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
         self.textpath = os.path.join(settings.MEDIA_ROOT, 'test_resources/testtext.txt')
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_upload_no_auth(self):
         with open(self.textpath) as fp:
@@ -418,26 +391,15 @@ class TestPublisherTextList(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_pub_text_list_no_auth(self):
         response = self.client.get(reverse("pub-texts"), data={'sharedfolder': 1})
@@ -505,22 +467,14 @@ class TestPublisherListView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_pub_list_no_auth(self):
         response = self.client.get(reverse("publishers"))
@@ -555,22 +509,14 @@ class TestPublisherDetailedView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_pub_detail_no_auth(self):
         # setup
@@ -614,26 +560,15 @@ class TestSpeakerTextListView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_spk_text_list_no_auth(self):
         response = self.client.get(reverse("sharedfolder-detail", args=[1]))
@@ -696,26 +631,15 @@ class TestSharedFolderDetailView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_sf_speakers_no_auth(self):
         response = self.client.get(reverse("sharedfolder-speakers", args=[1]))
@@ -856,26 +780,15 @@ class TestPublisherTextDetailedView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_pub_text_no_auth(self):
         response = self.client.get(reverse("pub-text-detail", args=[1]))
@@ -943,22 +856,14 @@ class TestSpeakerTextDetailedView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_spk_text_no_auth(self):
         response = self.client.get(reverse("spk-text-detail", args=[1]))
@@ -1031,26 +936,15 @@ class TestSpeechDataDownloadView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_download_no_auth(self):
         response = self.client.get(reverse("download", args=[1]))
@@ -1129,26 +1023,15 @@ class TestSharedFolderStatsView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_sharedfolder_stats_no_auth(self):
         response = self.client.get(reverse("sharedfolder-stats", args=[1]))
@@ -1243,26 +1126,15 @@ class TestTextStatsView(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
     
     def setUp(self):
         self.client = Client()
-        login_data_1 = {"username": USER_DATA_CORRECT_1['username'],
-                        "password": USER_DATA_CORRECT_1['password']}
-        login_response_1 = self.client.post(reverse("login"), data=login_data_1)
-        self.token_1 = 'Token ' + login_response_1.json()['token']
-        login_data_2 = {"username": USER_DATA_CORRECT_2['username'],
-                        "password": USER_DATA_CORRECT_2['password']}
-        login_response_2 = self.client.post(reverse("login"), data=login_data_2)
-        self.token_2 = 'Token ' + login_response_2.json()['token']
+        self.token_1 = login_test_user(1, self.client)
+        self.token_2 = login_test_user(2, self.client)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_text_stats_no_auth(self):
         response = self.client.get(reverse("text-stats", args=[1]))
