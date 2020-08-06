@@ -114,23 +114,23 @@ def create_textrecording_stm(trec_pk):
         #On concatenating the first file: also copy all settings
         if current_timestamp == 0:
             wav_full.setparams(wav.getparams())
-        duration = wav.getnframes()/wav.getframerate()
+        duration = wav.getnframes() / wav.getframerate()
 
-        #utterance id
-        stm_file.write(wav_path_rel + '_')
-        stm_file.write(username + '_')
-        stm_file.write(format_timestamp(current_timestamp) + '_')
-        stm_file.write(format_timestamp(current_timestamp + duration) + ' ')
+        stm_file.writelines([#utterance id
+                             wav_path_rel + '_',
+                             username + '_',
+                             format_timestamp(current_timestamp) + '_',
+                             format_timestamp(current_timestamp + duration) + ' ',
+                             #write .stm file entry
+                             wav_path_rel + ' ',
+                             str(wav.getnchannels()) + ' ',
+                             username + ' ',
+                             "{0:.2f}".format(current_timestamp) + ' ',
+                             "{0:.2f}".format(current_timestamp + duration) + ' ',
+                             user_str + ' ',
+                             sentences[srec.index - 1] + '\n'])
 
-        #write .stm file entry
-        stm_file.write(wav_path_rel + ' ')
-        stm_file.write(str(wav.getnchannels()) + ' ')
-        stm_file.write(username + ' ')
-        stm_file.write("{0:.2f}".format(current_timestamp) + ' ')
         current_timestamp += duration
-        stm_file.write("{0:.2f}".format(current_timestamp) + ' ')
-        stm_file.write(user_str + ' ')
-        stm_file.write(sentences[srec.index - 1] + '\n')
 
         #copy audio
         wav_full.writeframesraw(wav.readframes(wav.getnframes()))
@@ -190,11 +190,13 @@ def add_user_to_log(path, user):
     if log_contains_user(path, str(user.username)):
         return
     logfile = open(path, 'a')
-    logfile.write(f'username: {user.username}\n')
-    logfile.write(f'birth_year: {user.birth_year}\n')
-    logfile.write(f'gender: {user.gender}\n')
-    logfile.write(f'education: {user.education}\n')
-    logfile.write(f'accent: {user.accent}\n')
-    logfile.write(f'country: {user.country}\n')
-    logfile.write('#\n')
+    logfile.writelines(line + '\n' for line in [
+        f'username: {user.username}',
+        f'birth_year: {user.birth_year}',
+        f'gender: {user.gender}',
+        f'education: {user.education}',
+        f'accent: {user.accent}',
+        f'country: {user.country}',
+        '#'
+    ])
     logfile.close()
