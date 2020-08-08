@@ -4,8 +4,8 @@ from usermgmt.models import CustomUser
 from textmgmt.models import Text
 from .storages import BackupStorage
 import wave
-import os
 import io
+from pathlib import Path
 
 
 #May be needed in a future version
@@ -83,7 +83,7 @@ def create_textrecording_stm(trec_pk):
     srecs = SentenceRecording.objects.filter(recording=trec)
 
     # update logfile
-    logpath = f'{settings.MEDIA_ROOT}/{trec.text.shared_folder.sharedfolder.get_path()}/log.txt'
+    logpath = settings.MEDIA_ROOT/trec.text.shared_folder.sharedfolder.get_path()/'log.txt'
     add_user_to_log(logpath, trec.speaker)
 
     #create string with encoded userdata
@@ -98,14 +98,14 @@ def create_textrecording_stm(trec_pk):
     sentences = trec.text.get_content()
 
     # create .stm file and open in write mode
-    path = f'{settings.MEDIA_ROOT}/{trec.text.shared_folder.sharedfolder.get_path()}/STM/{trec.text.title}-{username}.stm'
+    path = settings.MEDIA_ROOT/trec.text.shared_folder.sharedfolder.get_path()/'STM'/f'{trec.text.title}-{username}.stm'
 
     stm_file = io.open(path, 'w+', encoding='utf8')
 
     # create concatenated wav file and open in write mode (uses 'wave' library)
     wav_path_rel = f'{trec.text.title}-{username}'
-    wav_path = f'{settings.MEDIA_ROOT}/{trec.text.shared_folder.sharedfolder.get_path()}/AudioData/{wav_path_rel}.wav'
-    wav_full = wave.open(wav_path, 'wb')
+    wav_path = settings.MEDIA_ROOT/trec.text.shared_folder.sharedfolder.get_path()/'AudioData'/f'{wav_path_rel}.wav'
+    wav_full = wave.open(str(wav_path), 'wb') # wave does not yet support pathlib, therefore the string conversion
 
     #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
     for srec in srecs:
@@ -154,17 +154,17 @@ def concat_stms(sharedfolder):
     #Build paths and open the 'large' stm in read-mode
     sf_path = sharedfolder.get_path()
     stm_path = sf_path + '/STM'
-    temp_stm_names = os.listdir(f'{settings.MEDIA_ROOT}/{stm_path}')  # this lists directories as well, but there shouldnt be any in this directory
-    stm_file = io.open(f'{settings.MEDIA_ROOT}/{sf_path}/{sharedfolder.name}.stm', 'w', encoding='utf8')
+    temp_stm_names = (settings.MEDIA_ROOT/stm_path).glob('*.stm')
+    stm_file = io.open(settings.MEDIA_ROOT/sf_path/f'{sharedfolder.name}.stm', 'w', encoding='utf8')
 
     #Open, concatenate and close the header file
-    header_file = io.open(settings.BASE_DIR + '/header.stm', 'r', encoding='utf8')
+    header_file = io.open(settings.BASE_DIR/'header.stm', 'r', encoding='utf8')
     stm_file.write(header_file.read())
     header_file.close()
 
     #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
-        temp_stm_file = io.open(f'{settings.MEDIA_ROOT}/{stm_path}/{temp_stm_name}', 'r', encoding='utf8')
+        temp_stm_file = io.open(settings.MEDIA_ROOT/stm_path/temp_stm_name, 'r', encoding='utf8')
         stm_file.write(temp_stm_file.read())
         temp_stm_file.close()
     

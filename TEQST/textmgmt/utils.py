@@ -1,5 +1,4 @@
 from django.conf import settings
-import os
 
 NAME_ID_SPLITTER = '__'
 
@@ -17,5 +16,5 @@ def folder_relative_path(folder):
 
 def folder_path(folder):
     media_path = folder_relative_path(folder)
-    path = os.path.join(settings.MEDIA_ROOT, media_path)
+    path = settings.MEDIA_ROOT/media_path
     return path

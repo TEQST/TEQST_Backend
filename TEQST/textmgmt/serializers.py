@@ -9,7 +9,7 @@ import django.core.files.uploadedfile as uploadedfile
 import math
 from chardet import detect
 from io import BytesIO
-import os, random, string
+import random, string
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):

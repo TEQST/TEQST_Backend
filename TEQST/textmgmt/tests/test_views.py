@@ -8,7 +8,6 @@ from usermgmt.models import CustomUser
 from recordingmgmt.models import TextRecording, SentenceRecording
 
 import shutil
-import os
 from django.core.files import File
 
 
@@ -331,7 +330,7 @@ class TestTextCreation(TestCase):
         self.token_2 = login_test_user(2, self.client)
         self.user1 = get_user(1)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
-        self.textpath = os.path.join(settings.MEDIA_ROOT, 'test_resources/testtext.txt')
+        self.textpath = settings.MEDIA_ROOT/'test_resources'/'testtext.txt'
     
     def tearDown(self):
         delete_all_users()

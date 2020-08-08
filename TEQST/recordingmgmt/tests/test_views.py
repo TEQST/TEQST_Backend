@@ -10,7 +10,6 @@ from usermgmt.models import CustomUser
 from recordingmgmt.models import TextRecording, SentenceRecording
 
 import shutil
-import os
 from django.core.files import File
 from io import BytesIO
 
@@ -187,25 +186,25 @@ class TestSentenceRecordingCreateView(TestCase):
         delete_all_users()
     
     def test_sentencerec_create_no_auth(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 1})
         self.assertEqual(response.status_code, 401)
 
     def test_sentencerec_create_correct(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 201)
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s2.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 2}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 201)
 
     def test_sentencerec_create_without_recording(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s2.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
 
     def test_sentencerec_create_recording_does_not_exist(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': 99, 'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
 
@@ -215,7 +214,7 @@ class TestSentenceRecordingCreateView(TestCase):
         self.f1.sharedfolder.speaker.add(user4)
         tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
         # test
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': tr2.pk, 'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
 
@@ -224,12 +223,12 @@ class TestSentenceRecordingCreateView(TestCase):
         self.assertEqual(response.status_code, 400)
 
     def test_sentencerec_create_without_index(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
 
     def test_sentencerec_create_index_too_big(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 2}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
 
@@ -238,12 +237,12 @@ class TestSentenceRecordingCreateView(TestCase):
         user2 = get_user(2)
         SentenceRecording.objects.create(recording=self.tr1, index=1, audiofile='test_resources/s1.wav')
         # test
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s2.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': 1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
 
     def test_sentencerec_create_index_negative(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s2.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s2.wav', 'rb') as fp:
             response = self.client.post(reverse("sentencerecs-create"), data={'recording': self.tr1.pk, 'audiofile': fp, 'index': -1}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
 
@@ -277,7 +276,7 @@ class TestSentenceRecordingUpdateView(TestCase):
     def test_sentencerec_detail_no_auth(self):
         response = self.client.get(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'index': 1})
         self.assertEqual(response.status_code, 401)
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             response = self.client.put(reverse("sentencerecs-detail", args=[self.tr1.pk]), data={'audiofile': fp, 'index': 1})
         self.assertEqual(response.status_code, 401)
 
@@ -379,7 +378,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
     def test_sentencerec_detail_no_auth(self):
         response = self.client.get(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]))
         self.assertEqual(response.status_code, 401)
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             response = self.client.put(reverse("sentencerecs-retrieveupdate", args=[self.tr1.pk, 1]), data={'audiofile': fp})
         self.assertEqual(response.status_code, 401)
 
@@ -428,7 +427,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
     # PUT speaker related
 
     def test_sentencerec_detail_PUT_correct(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             data = {'audiofile': fp}
             content = encode_multipart('mybndry', data)
             content_type = 'multipart/form-data; boundary=mybndry'
@@ -436,7 +435,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
         self.assertEqual(response.status_code, 200)
     
     def test_sentencerec_detail_PUT_user_is_publisher_of_text(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             data = {'audiofile': fp}
             content = encode_multipart('mybndry', data)
             content_type = 'multipart/form-data; boundary=mybndry'
@@ -444,7 +443,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_sentencerec_detail_PUT_trec_does_not_exist(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             data = {'audiofile': fp}
             content = encode_multipart('mybndry', data)
             content_type = 'multipart/form-data; boundary=mybndry'
@@ -458,7 +457,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
         tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
         sr2 = SentenceRecording.objects.create(recording=tr2, index=1, audiofile='test_resources/s1.wav')
         # test
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             data = {'audiofile': fp}
             content = encode_multipart('mybndry', data)
             content_type = 'multipart/form-data; boundary=mybndry'
@@ -466,7 +465,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_sentencerec_detail_PUT_index_too_big(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             data = {'audiofile': fp}
             content = encode_multipart('mybndry', data)
             content_type = 'multipart/form-data; boundary=mybndry'
@@ -474,7 +473,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_sentencerec_detail_PUT_index_is_zero(self):
-        with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
+        with open(settings.MEDIA_ROOT/'test_resources'/'s1.wav', 'rb') as fp:
             data = {'audiofile': fp}
             content = encode_multipart('mybndry', data)
             content_type = 'multipart/form-data; boundary=mybndry'

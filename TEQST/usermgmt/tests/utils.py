@@ -4,7 +4,6 @@ from django.conf import settings
 from usermgmt.models import Language, CustomUser
 
 import shutil
-import os
 
 USER_DATA_CORRECT_1 = {"username": "harry",
                      "password": "testing321",
@@ -98,6 +97,6 @@ def login_test_user(user_number, client):
 
 def delete_all_users():
     for user in USERS_DATA_CORRECT:
-        path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-        if (os.path.exists(path)):
+        path = settings.MEDIA_ROOT/user["username"]
+        if path.exists():
             shutil.rmtree(path)

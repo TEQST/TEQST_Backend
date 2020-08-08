@@ -1,5 +1,4 @@
 from django.conf import settings
-import os
 
 LOCALIZATION_FOLDER = 'locale'
 
@@ -19,4 +18,4 @@ GENDER_CHOICES = (
 ACCENT_DEFAULT = 'Not specified'
 
 def upload_path(instance, filename):
-    return os.path.join(settings.MEDIA_ROOT, LOCALIZATION_FOLDER, filename)
+    return settings.MEDIA_ROOT/LOCALIZATION_FOLDER/filename

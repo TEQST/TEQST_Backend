@@ -7,7 +7,7 @@ from .models import TextRecording, SentenceRecording
 from textmgmt.models import Text
 
 from django.http import HttpResponse
-import os
+from pathlib import Path
 
 
 class TextRecordingView(generics.ListCreateAPIView):
@@ -91,7 +91,7 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         response = HttpResponse()
         response.write(f.read())
         response['Content-Type'] = 'audio/wav'
-        response['Content-Length'] = os.path.getsize(instance.audiofile.path)
+        response['Content-Length'] = Path(instance.audiofile.path).stat().st_size
         return response
 
 
@@ -130,5 +130,5 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         response = HttpResponse()
         response.write(f.read())
         response['Content-Type'] = 'audio/wav'
-        response['Content-Length'] = os.path.getsize(instance.audiofile.path)
+        response['Content-Length'] = Path(instance.audiofile.path).stat().st_size
         return response

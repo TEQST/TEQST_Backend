@@ -2,9 +2,9 @@ from django.db import models
 from django.conf import settings
 from .utils import folder_path, folder_relative_path, NAME_ID_SPLITTER
 from usermgmt.models import Language
-import os
 from zipfile import ZipFile
 from chardet import detect
+from pathlib import Path
 
 
 class Folder(models.Model):
@@ -45,10 +45,10 @@ class Folder(models.Model):
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
         # create actual folders and files:
-        sf_path = f'{settings.MEDIA_ROOT}/{sf.get_path()}'
-        os.makedirs(sf_path + '/STM')
-        os.mkdir(sf_path + '/AudioData')
-        open(sf_path + '/log.txt', 'w').close()
+        sf_path = settings.MEDIA_ROOT/sf.get_path()
+        (sf_path/'STM').mkdir(parents=True) # creates parents if they do not exist
+        (sf_path/'AudioData').mkdir()
+        open(sf_path/'log.txt', 'w').close()
         return sf
 
 
@@ -76,17 +76,18 @@ class SharedFolder(Folder):
         """
         create zip file and return the path to the download.zip file
         """
-        path = f'{settings.MEDIA_ROOT}/{self.get_path()}'
-        zf = ZipFile(path + "/download.zip", 'w')
+        path = settings.MEDIA_ROOT/self.get_path()
+        zf = ZipFile(path/'download.zip', 'w')
         # arcname is the name/path which the file will have inside the zip file
-        zf.write(path + '/' + self.name + ".stm", arcname=self.name + ".stm")
-        zf.write(path + "/log.txt", arcname="log.txt")
-        # os.listdir also lists folders, but there should not be any folders in /AudioData
-        for file_to_zip in os.listdir(path + "/AudioData"):
-            arcpath = "AudioData/" + file_to_zip
-            zf.write(path + "/AudioData/" + file_to_zip, arcname=arcpath)
+        zf.write(path/f'{self.name}.stm', arcname=f'{self.name}.stm')
+        zf.write(path/'log.txt', arcname='log.txt')
+
+        for file_to_zip in (path/'AudioData').glob('*'):
+            if file_to_zip.is_file():
+                arcpath = f'AudioData/{file_to_zip}'
+                zf.write(path/'AudioData'/file_to_zip, arcname=arcpath)
         zf.close()
-        return path + "/download.zip"
+        return path/'download.zip'
 
 
 
@@ -94,8 +95,8 @@ def upload_path(instance, filename):
     """
     Generates the upload path for a text
     """
-    sf_path = instance.shared_folder.sharedfolder.get_path()
-    path = f'{sf_path}/{filename}'
+    sf_path = Path(instance.shared_folder.sharedfolder.get_path())
+    path = sf_path/filename
     return path
 
 
@@ -131,16 +132,16 @@ class Text(models.Model):
         super().save(*args, **kwargs)
         
         # change encoding of uploaded file to utf-8
-        srcfile = self.textfile.path
-        trgfile = srcfile[:-4] + '_enc' + srcfile[-4:]
+        srcfile_path_str = self.textfile.path
+        srcfile = Path(srcfile_path_str)
+        trgfile = Path(srcfile_path_str[:-4] + '_enc' + srcfile_path_str[-4:])
         from_codec = get_encoding_type(srcfile)
 
         with open(srcfile, 'r', encoding=from_codec) as f, open(trgfile, 'w', encoding='utf-8') as e:
             text = f.read()
             e.write(text)
 
-        os.remove(srcfile) # remove old encoding file
-        os.rename(trgfile, srcfile) # rename new encoding
+        trgfile.replace(srcfile) # replace old file with the newly encoded file
 
     def get_content(self):
         f = open(self.textfile.path, 'r', encoding='utf-8-sig')

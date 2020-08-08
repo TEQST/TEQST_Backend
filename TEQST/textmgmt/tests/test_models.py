@@ -4,26 +4,20 @@ from textmgmt.models import Text, Folder
 from usermgmt.models import CustomUser
 from usermgmt.tests.utils import *
 import shutil
-import os
 
 class TestText(TestCase):
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()  # 1 and 3 are publishers, 2 and 4 are not
+        create_languages_users_groups()
 
     def setUp(self):
         self.user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         self.folder = Folder.objects.create(name='f1', owner=self.user1)
     
     def tearDown(self):
-        for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:
-            path = f'{settings.MEDIA_ROOT}/{user["username"]}/'
-            if (os.path.exists(path)):
-                shutil.rmtree(path)
+        delete_all_users()
     
     def test_get_content_only_single_lines_one_newline(self):
         # setup
