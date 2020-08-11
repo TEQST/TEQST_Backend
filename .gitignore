@@ -11,3 +11,4 @@ htmlcov/
 *.pyc
 logfile.log
 debug.py
+venv/
