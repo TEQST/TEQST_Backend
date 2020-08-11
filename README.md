@@ -1,7 +1,6 @@
 # TEQST Backend Server
 
 ## Setup
-\
 **Create a new virtual environment**:\
 python3 -m venv TEQST_Backend/venv\
 \
