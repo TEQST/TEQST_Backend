@@ -19,9 +19,11 @@ python3 manage.py makemigrations usermgmt\
 python3 manage.py makemigrations textmgmt\
 python3 manage.py makemigrations recordingmgmt\
 python3 manage.py migrate\
-python3 manage.py createsuperuser: create a superuser\
 \
-create a group called "Publisher" with no permissions\
+**create a superuser**\
+python3 manage.py createsuperuser\
+\
+**create a group called "Publisher" with no permissions**\
 \
 **Run the server**:\
 python3 manage.py runserver
