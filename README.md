@@ -27,5 +27,5 @@ create a group called "Publisher" with no permissions\
 python3 manage.py runserver
 
 ## Testing
-**Run all tests**:
+**Run all tests**:\
 python3 manage.py test
