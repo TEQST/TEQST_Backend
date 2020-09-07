@@ -55,8 +55,11 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("No index provided")
         if SentenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
             raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
-        if data['index'] > TextRecording.objects.get(pk=data['recording'].pk).active_sentence(): 
+        text_recording = TextRecording.objects.get(pk=data['recording'].pk)
+        if data['index'] > text_recording.active_sentence(): 
             raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
+        if text_recording.is_finished():
+            raise serializers.ValidationError("Text already finished. You can't add more Sentencerecordings.")
         # type(data['audiofile']) is InMemoryUploadedFile
         return super().validate(data)
     
