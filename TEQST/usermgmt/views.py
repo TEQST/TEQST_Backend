@@ -101,3 +101,17 @@ class LogoutView(views.APIView):
         token = request.auth 
         token.delete()
         return response.Response('Logout successful!', status=status.HTTP_200_OK)
+
+
+class UsernameCheckView(views.APIView):
+    '''
+    Is used to check if a username is available
+    '''
+    permission_classes = []
+
+    def get(self, request, *args, **kwargs):
+        if not 'username' in self.request.query_params:
+            raise exceptions.NotFound('no username specified')
+        username = self.request.query_params['username']
+        available = not models.CustomUser.objects.filter(username=username).exists()
+        return response.Response({'available': available}, status=status.HTTP_200_OK)
