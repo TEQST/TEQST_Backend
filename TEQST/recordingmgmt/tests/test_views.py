@@ -51,8 +51,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.get(reverse("textrecs"), data={'text': t1.pk}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 204)
@@ -62,8 +63,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         TextRecording.objects.create(speaker=user2, text=t1)
         # test
         response = self.client.get(reverse("textrecs"), data={'text': t1.pk}, HTTP_AUTHORIZATION=self.token_2)
@@ -83,8 +85,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user4 = get_user(4)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user4)
+        f1.speaker.add(user4)
         # test
         response = self.client.get(reverse("textrecs"), data={'text': t1.pk}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 404)
@@ -94,8 +97,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.post(reverse("textrecs"), data={'text': t1.pk, 'TTS_permission': True, 'SR_permission': True}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 201)
@@ -105,8 +109,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         TextRecording.objects.create(speaker=user2, text=t1)
         # test
         response = self.client.post(reverse("textrecs"), data={'text': t1.pk, 'TTS_permission': True, 'SR_permission': True}, HTTP_AUTHORIZATION=self.token_2)
@@ -117,8 +122,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.post(reverse("textrecs"), data={'TTS_permission': True, 'SR_permission': True}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
@@ -132,6 +138,7 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
         # test
         response = self.client.post(reverse("textrecs"), data={'text': t1.pk, 'TTS_permission': True, 'SR_permission': True}, HTTP_AUTHORIZATION=self.token_2)
@@ -142,8 +149,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.post(reverse("textrecs"), data={'text': t1.pk, 'SR_permission': True}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 201)
@@ -153,8 +161,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.post(reverse("textrecs"), data={'text': t1.pk, 'TTS_permission': True}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 201)
@@ -164,8 +173,9 @@ class TestTextRecordingView(TestCase):
         user1 = get_user(1)
         user2 = get_user(2)
         f1 = Folder.objects.create(name='f1', owner=user1)
+        f1 = f1.make_shared_folder()
         t1 = Text.objects.create(title='test', shared_folder=f1, textfile='test_resources/testtext.txt')
-        f1.sharedfolder.speaker.add(user2)
+        f1.speaker.add(user2)
         # test
         response = self.client.post(reverse("textrecs"), data={'text': t1.pk, 'TTS_permission': False, 'SR_permission': False}, HTTP_AUTHORIZATION=self.token_2)
         self.assertEqual(response.status_code, 400)
@@ -192,8 +202,9 @@ class TestSentenceRecordingCreateView(TestCase):
         self.user1 = get_user(1)
         self.user2 = get_user(2)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
+        self.f1 = self.f1.make_shared_folder()
         self.t1 = Text.objects.create(title='test', shared_folder=self.f1, textfile='test_resources/testtext.txt')
-        self.f1.sharedfolder.speaker.add(self.user2)
+        self.f1.speaker.add(self.user2)
         self.tr1 = TextRecording.objects.create(speaker=self.user2, text=self.t1)
     
     def tearDown(self):
@@ -228,7 +239,7 @@ class TestSentenceRecordingCreateView(TestCase):
     def test_sentencerec_create_invalid_recording(self):
         # setup
         user4 = get_user(4)
-        self.f1.sharedfolder.speaker.add(user4)
+        self.f1.speaker.add(user4)
         tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
         # test
         with open(os.path.join(settings.MEDIA_ROOT, 'test_resources/s1.wav'), 'rb') as fp:
@@ -293,8 +304,9 @@ class TestSentenceRecordingUpdateView(TestCase):
         self.user1 = get_user(1)
         self.user2 = get_user(2)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
+        self.f1 = self.f1.make_shared_folder()
         self.t1 = Text.objects.create(title='test', shared_folder=self.f1, textfile='test_resources/testtext.txt')
-        self.f1.sharedfolder.speaker.add(self.user2)
+        self.f1.speaker.add(self.user2)
         self.tr1 = TextRecording.objects.create(speaker=self.user2, text=self.t1)
         self.sc1 = SentenceRecording.objects.create(recording=self.tr1, index=1, audiofile='test_resources/s1.wav')
     
@@ -324,7 +336,7 @@ class TestSentenceRecordingUpdateView(TestCase):
     def test_sentencerec_detail_GET_invalid_trec(self):
         # setup
         user4 = get_user(4)
-        self.f1.sharedfolder.speaker.add(user4)
+        self.f1.speaker.add(user4)
         tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
         sr2 = SentenceRecording.objects.create(recording=tr2, index=1, audiofile='test_resources/s1.wav')
         # test
@@ -409,8 +421,9 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
         self.user1 = get_user(1)
         self.user2 = get_user(2)
         self.f1 = Folder.objects.create(name='f1', owner=self.user1)
+        self.f1 = self.f1.make_shared_folder()
         self.t1 = Text.objects.create(title='test', shared_folder=self.f1, textfile='test_resources/testtext.txt')
-        self.f1.sharedfolder.speaker.add(self.user2)
+        self.f1.speaker.add(self.user2)
         self.tr1 = TextRecording.objects.create(speaker=self.user2, text=self.t1)
         self.sc1 = SentenceRecording.objects.create(recording=self.tr1, index=1, audiofile='test_resources/s1.wav')
     
@@ -440,7 +453,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
     def test_sentencerec_detail_GET_invalid_trec(self):
         # setup
         user4 = get_user(4)
-        self.f1.sharedfolder.speaker.add(user4)
+        self.f1.speaker.add(user4)
         tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
         sr2 = SentenceRecording.objects.create(recording=tr2, index=1, audiofile='test_resources/s1.wav')
         # test
@@ -498,7 +511,7 @@ class TestSentenceRecordingRetrieveUpdateView(TestCase):
     def test_sentencerec_detail_PUT_invalid_trec(self):
         # setup
         user4 = get_user(4)
-        self.f1.sharedfolder.speaker.add(user4)
+        self.f1.speaker.add(user4)
         tr2 = TextRecording.objects.create(speaker=user4, text=self.t1)
         sr2 = SentenceRecording.objects.create(recording=tr2, index=1, audiofile='test_resources/s1.wav')
         # test

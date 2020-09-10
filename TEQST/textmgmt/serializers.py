@@ -1,21 +1,16 @@
 from rest_framework import serializers
 from django.conf import settings
-from .models import Folder, SharedFolder, Text
-from .utils import NAME_ID_SPLITTER
-from usermgmt.models import CustomUser, Language
-from usermgmt.serializers import UserBasicSerializer
-from recordingmgmt.models import TextRecording
+from . import models, utils
+from usermgmt import models as user_models, serializers as user_serializers
+from recordingmgmt import models as rec_models
 import django.core.files.uploadedfile as uploadedfile
-import math
-from chardet import detect
-from io import BytesIO
-import os, random, string
+import os, random, string, chardet, io, math
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
-        queryset = Folder.objects.filter(owner=user, sharedfolder=None)
+        queryset = models.Folder.objects.filter(owner=user, sharedfolder=None)
         return queryset
 
 
@@ -29,7 +24,7 @@ class FolderFullSerializer(serializers.ModelSerializer):
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
  
     class Meta:
-        model = Folder
+        model = models.Folder
         fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder']
         read_only_fields = ['owner', 'is_sharedfolder']
     
@@ -37,15 +32,15 @@ class FolderFullSerializer(serializers.ModelSerializer):
         """
         validates the name field
         """
-        if NAME_ID_SPLITTER in value:
-            raise serializers.ValidationError('The folder name contains invalid characters "' + NAME_ID_SPLITTER + '"')
+        if utils.NAME_ID_SPLITTER in value:
+            raise serializers.ValidationError('The folder name contains invalid characters "' + utils.NAME_ID_SPLITTER + '"')
         return value
 
     def validate(self, data):
         """
         validation that has to do with multiple fields of the serializer
         """
-        if Folder.objects.filter(owner=self.context['request'].user, name=data['name'], parent=data['parent']).exists():
+        if models.Folder.objects.filter(owner=self.context['request'].user, name=data['name'], parent=data['parent']).exists():
             raise serializers.ValidationError('A folder with the given name in the given place already exists')
         return super().validate(data)
 
@@ -57,7 +52,7 @@ class FolderBasicSerializer(serializers.ModelSerializer):
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
     
     class Meta:
-        model = Folder
+        model = models.Folder
         fields = ['id', 'name', 'is_sharedfolder']
         read_only_fields = ['name', 'is_sharedfolder']
 
@@ -72,7 +67,7 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
     
     class Meta:
-        model = Folder
+        model = models.Folder
         fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
         read_only_fields = fields
 
@@ -80,7 +75,7 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
-        queryset = Folder.objects.filter(owner=user, subfolder=None)
+        queryset = models.Folder.objects.filter(owner=user, subfolder=None)
         return queryset
 
 
@@ -95,13 +90,13 @@ class TextFullSerializer(serializers.ModelSerializer):
     max_lines = serializers.IntegerField(write_only=True, required=False)
 
     class Meta:
-        model = Text
+        model = models.Text
         fields = ['id', 'title', 'language', 'is_right_to_left', 'shared_folder', 'content', 'textfile', 'max_lines']
         read_only_fields = ['is_right_to_left', 'content']
         extra_kwargs = {'textfile': {'write_only': True}}
 
     def validate(self, data):
-        if Text.objects.filter(shared_folder=data['shared_folder'], title=data['title']).exists():
+        if models.Text.objects.filter(shared_folder=data['shared_folder'], title=data['title']).exists():
             raise serializers.ValidationError("A text with the given title in the given folder already exists")
         return super().validate(data)
     
@@ -132,7 +127,7 @@ class TextFullSerializer(serializers.ModelSerializer):
         textfiles = []
         # get encoding
         textfile.open(mode='rb')
-        encoding = detect(textfile.read())['encoding']
+        encoding = chardet.detect(textfile.read())['encoding']
 
         # put all sentences in a list
         filecontent = []  # list of all sentences in the textfile
@@ -168,6 +163,9 @@ class TextFullSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         max_lines = validated_data.pop('max_lines', None)
+        sf = validated_data['shared_folder']
+        sf = sf.make_shared_folder()
+        validated_data['shared_folder'] = sf
         if max_lines is None:
             return super().create(validated_data)
         else:  # max_lines is given
@@ -179,7 +177,7 @@ class TextFullSerializer(serializers.ModelSerializer):
                 data = validated_data.copy()
                 data['textfile'] = textfiles[i]
                 data['title'] = validated_data['title'] + '_' + str(i + 1)
-                return_obj = Text.objects.create(**data)
+                return_obj = models.Text.objects.create(**data)
             # some object has to be returned, so it has been decided that the last partfile will be returned
             return return_obj
 
@@ -192,7 +190,7 @@ class TextBasicSerializer(serializers.ModelSerializer):
     for: retrieval of a list of texts contained in a sharedfolder
     """
     class Meta:
-        model = Text
+        model = models.Text
         fields = ['id', 'title']
 
 
@@ -205,7 +203,7 @@ class TextStatsSerializer(serializers.ModelSerializer):
     total = serializers.IntegerField(read_only=True, source='sentence_count')
 
     class Meta:
-        model = Text
+        model = models.Text
         fields = ['id', 'title', 'total', 'speakers']
         read_only_fields = fields
     
@@ -224,10 +222,10 @@ class TextStatsSerializer(serializers.ModelSerializer):
         """
         text = obj
         stats = []
-        for speaker in text.shared_folder.sharedfolder.speaker.all():
+        for speaker in text.shared_folder.speaker.all():
             spk = {'name': speaker.username, 'finished': 0}
-            if TextRecording.objects.filter(speaker=speaker, text=text).exists():
-                textrecording = TextRecording.objects.get(speaker=speaker, text=text)
+            if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
+                textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
                 spk['textrecording_id'] = textrecording.pk
                 spk['finished'] = textrecording.active_sentence() - 1
                 spk['rec_time_without_rep'] = textrecording.rec_time_without_rep
@@ -246,7 +244,7 @@ class SharedFolderTextSerializer(serializers.ModelSerializer):
     timestats = serializers.SerializerMethodField()
     
     class Meta:
-        model = SharedFolder
+        model = models.SharedFolder
         fields = ['id', 'name', 'owner', 'path', 'timestats', 'texts']
         read_only_fields = ['name', 'owner', 'timestats']
     
@@ -255,8 +253,8 @@ class SharedFolderTextSerializer(serializers.ModelSerializer):
         sharedfolder = obj
         timestats = {'rec_time_without_rep': 0, 'rec_time_with_rep': 0}
         for text in sharedfolder.text.all():
-            if TextRecording.objects.filter(text=text, speaker=user).exists():
-                textrecording = TextRecording.objects.get(text=text, speaker=user)
+            if rec_models.TextRecording.objects.filter(text=text, speaker=user).exists():
+                textrecording = rec_models.TextRecording.objects.get(text=text, speaker=user)
                 timestats['rec_time_without_rep'] += textrecording.rec_time_without_rep
                 timestats['rec_time_with_rep'] += textrecording.rec_time_with_rep
         return timestats
@@ -267,10 +265,10 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     to be used by view: PubSharedFolderSpeakerView
     for: retrieval and update of the speakers of a shared folder
     """
-    speaker_ids = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
-    speakers = UserBasicSerializer(many=True, read_only=True, source='speaker')
+    speaker_ids = serializers.PrimaryKeyRelatedField(queryset=user_models.CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
+    speakers = user_serializers.UserBasicSerializer(many=True, read_only=True, source='speaker')
     class Meta:
-        model = SharedFolder
+        model = models.SharedFolder
         fields = ['id', 'name', 'speakers', 'speaker_ids']
         read_only_fields = ['name', 'speakers']
         write_only_fields = ['speaker_ids']
@@ -285,7 +283,7 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
     speakers = serializers.SerializerMethodField(read_only=True, method_name='get_speaker_stats')
 
     class Meta:
-        model = SharedFolder
+        model = models.SharedFolder
         fields = ['id', 'name', 'speakers']
         read_only_fields = fields
     
@@ -318,10 +316,10 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         stats = []
         for speaker in sf.speaker.all():
             spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
-            for text in Text.objects.filter(shared_folder=sf.folder_ptr):
+            for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
                 txt = {'title': text.title, 'finished': 0, 'total': text.sentence_count()}
-                if TextRecording.objects.filter(speaker=speaker, text=text).exists():
-                    textrecording = TextRecording.objects.get(speaker=speaker, text=text)
+                if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
+                    textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
                     txt['finished'] = textrecording.active_sentence() - 1
                     txt['rec_time_without_rep'] = textrecording.rec_time_without_rep
                     txt['rec_time_with_rep'] = textrecording.rec_time_with_rep
@@ -340,7 +338,7 @@ class PublisherSerializer(serializers.ModelSerializer):
     freedfolders = serializers.SerializerMethodField(read_only=True, method_name='get_freed_folders')
 
     class Meta:
-        model = CustomUser
+        model = user_models.CustomUser
         fields = ['id', 'username', 'freedfolders']
         read_only_fields = ['username']
     
@@ -348,7 +346,7 @@ class PublisherSerializer(serializers.ModelSerializer):
         pub = obj
         spk = self.context['request'].user
         info = []
-        for sf in SharedFolder.objects.filter(owner=pub, speaker=spk):
+        for sf in models.SharedFolder.objects.filter(owner=pub, speaker=spk):
             info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
         return info
 

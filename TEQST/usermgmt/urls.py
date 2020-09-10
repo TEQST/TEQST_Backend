@@ -1,13 +1,13 @@
 from django.urls import path, include
-from .views import PubUserListView, UserDetailedView, UserRegisterView, LanguageListView, GetAuthToken, LogoutView, MenuLanguageView
+from . import views
 
 
 urlpatterns = [
-    path('users/', PubUserListView.as_view(), name="users"),
-    path('user/', UserDetailedView.as_view(), name="user"),
-    path('langs/', LanguageListView.as_view(), name="langs"),
-    path('locale/<lang>', MenuLanguageView.as_view(), name="locale"),
-    path('auth/register/', UserRegisterView.as_view(), name="register"),
-    path('auth/login/', GetAuthToken.as_view(), name="login"),
-    path('auth/logout/', LogoutView.as_view(), name="logout")
+    path('users/', views.PubUserListView.as_view(), name="users"),
+    path('user/', views.UserDetailedView.as_view(), name="user"),
+    path('langs/', views.LanguageListView.as_view(), name="langs"),
+    path('locale/<lang>', views.MenuLanguageView.as_view(), name="locale"),
+    path('auth/register/', views.UserRegisterView.as_view(), name="register"),
+    path('auth/login/', views.GetAuthToken.as_view(), name="login"),
+    path('auth/logout/', views.LogoutView.as_view(), name="logout")
 ]
