@@ -9,7 +9,6 @@ https://docs.djangoproject.com/en/3.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
-from .debug import DEBUG
 import os
 import logging
 
@@ -17,21 +16,14 @@ import logging
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '6be^vsjs(9+#g#l%abyq%f%@2&e0*dy4n1le5+^w)q1_amie#o'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
     #this is for CORS requests
-    'corsheaders',
+    #'corsheaders',
 
     'textmgmt.apps.TextmgmtConfig',
     'recordingmgmt.apps.RecordingmgmtConfig',
@@ -48,7 +40,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     #This is for CORS requests
-    'corsheaders.middleware.CorsMiddleware',
+    #'corsheaders.middleware.CorsMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -86,17 +78,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'TEQST.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
 
 
 # Password validation
@@ -153,8 +134,9 @@ REST_FRAMEWORK = {
 }
 
 #CORS once again
-CORS_ORIGIN_ALLOW_ALL = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+#CORS_ALLOWED_ORIGINS = [
+#    "https://i13pc108.ira.uka.de"
+#]
 
 # This logging configuration is a mix of the django default and this article:
 # https://xxx-cook-book.gitbooks.io/django-cook-book/Logs/Handlers/FileHandler/rotating-file-handler.html
@@ -202,3 +184,6 @@ LOGGING =  {
         },
     }
 }
+
+
+from .localsettings import *
