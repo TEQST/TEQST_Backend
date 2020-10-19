@@ -138,52 +138,6 @@ REST_FRAMEWORK = {
 #    "https://i13pc108.ira.uka.de"
 #]
 
-# This logging configuration is a mix of the django default and this article:
-# https://xxx-cook-book.gitbooks.io/django-cook-book/Logs/Handlers/FileHandler/rotating-file-handler.html
-LOGGING =  {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',
-        },
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        },
-    },
-    'formatters': {
-        'verbose': {  # this includes status_code, so it can only be used by handlers of loggers that provide status_code
-            #'format': '%(status_code)d %(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
-            'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
-        },
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'logfile': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logfile.log'),
-            'maxBytes': 5242880,  # 1024 * 1024 * 5B = 5MB
-            'backupCount': 10,
-            'formatter': 'verbose',
-        }
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['mail_admins'],
-            'level': 'INFO',
-        },
-        'django.request': {
-            'handlers': ['logfile'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    }
-}
 
-
+#Leave this as far down in this file as possible. Only settings that rely on definitions in the localsettings file should go below this import
 from .localsettings import *
