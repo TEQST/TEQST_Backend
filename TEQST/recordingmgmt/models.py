@@ -1,16 +1,15 @@
 from django.db import models
 from django.conf import settings
-from usermgmt.models import CustomUser
-from textmgmt.models import Text
-from .storages import BackupStorage
-import wave
-import os
-import io
+from django.contrib import auth
+from textmgmt import models as text_models
+from . import storages
+import os, wave, io
+
 
 
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
-    sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
+    sf_path = instance.recording.text.shared_folder.get_path()
     return sf_path + '/AudioData/' + instance.text.id + '_' + instance.speaker.id + '.wav'
 
 
@@ -18,8 +17,8 @@ class TextRecording(models.Model):
     """
     Acts as a relation between a user and a text and saves all information that are specific to that recording. 
     """
-    speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    text = models.ForeignKey(Text, on_delete=models.CASCADE, related_name='textrecording')
+    speaker = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
+    text = models.ForeignKey(text_models.Text, on_delete=models.CASCADE, related_name='textrecording')
 
     TTS_permission = models.BooleanField(default=True)
     SR_permission = models.BooleanField(default=True)
@@ -48,7 +47,7 @@ def sentence_rec_upload_path(instance, filename):
     """
     Delivers the location in the filesystem where the recordings should be stored.
     """
-    sf_path = instance.recording.text.shared_folder.sharedfolder.get_path()
+    sf_path = instance.recording.text.shared_folder.get_path()
     return sf_path + '/TempAudio/' + str(instance.recording.id) + '_' + str(instance.index) + '.wav'
 
 
@@ -58,7 +57,7 @@ class SentenceRecording(models.Model):
     """
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
-    audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=BackupStorage())
+    audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -83,7 +82,7 @@ def create_textrecording_stm(trec_pk):
     srecs = SentenceRecording.objects.filter(recording=trec)
 
     # update logfile
-    logpath = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.sharedfolder.get_path() + '/log.txt'
+    logpath = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.get_path() + '/log.txt'
     add_user_to_log(logpath, trec.speaker)
 
     #create string with encoded userdata
@@ -98,12 +97,12 @@ def create_textrecording_stm(trec_pk):
     sentences = trec.text.get_content()
 
     # create .stm file and open in write mode
-    path = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.sharedfolder.get_path() + '/STM/' + trec.text.title + '-' + username + '.stm'
+    path = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.get_path() + '/STM/' + trec.text.title + '-' + username + '.stm'
     stm_file = io.open(path, 'w+', encoding='utf8')
 
     # create concatenated wav file and open in write mode (uses 'wave' library)
     wav_path_rel = trec.text.title + '-' + username
-    wav_path = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.sharedfolder.get_path() + '/AudioData/' + wav_path_rel + '.wav'
+    wav_path = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.get_path() + '/AudioData/' + wav_path_rel + '.wav'
     wav_full = wave.open(wav_path, 'wb')
 
     #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
@@ -142,7 +141,7 @@ def create_textrecording_stm(trec_pk):
     wav_full.close()
 
     #concatenate all .stm files to include the last changes
-    concat_stms(trec.text.shared_folder.sharedfolder)
+    concat_stms(trec.text.shared_folder)
 
 
 def concat_stms(sharedfolder):

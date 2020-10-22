@@ -18,6 +18,7 @@ class TestText(TestCase):
     def setUp(self):
         self.user1 = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         self.folder = Folder.objects.create(name='f1', owner=self.user1)
+        self.folder = self.folder.make_shared_folder()
     
     def tearDown(self):
         for user in [USER_DATA_CORRECT_1, USER_DATA_CORRECT_3]:

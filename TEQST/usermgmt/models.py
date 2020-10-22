@@ -1,8 +1,7 @@
-from django.db import models
-from django.contrib.auth.models import AbstractUser, Group
-from .utils import EDU_CHOICES, GENDER_CHOICES, ACCENT_DEFAULT, upload_path
-from .storages import OverwriteStorage
-from django.db import transaction
+from django.db import models, transaction
+from django.contrib import auth
+from django.contrib.auth import models as auth_models
+from . import utils, storages
 
 
 def get_english():
@@ -22,7 +21,7 @@ class Language(models.Model):
     english_name = models.CharField(max_length=50)
     short = models.CharField(max_length=5, unique=True, primary_key=True)
     right_to_left = models.BooleanField(default=False)
-    localization_file = models.FileField(upload_to=upload_path, null=True, blank=True, storage=OverwriteStorage())
+    localization_file = models.FileField(upload_to=utils.upload_path, null=True, blank=True, storage=storages.OverwriteStorage())
 
     def __str__(self):
         return self.english_name + ' (' + self.native_name + ')'
@@ -40,22 +39,22 @@ class Tag(models.Model):
         return self.identifier
 
 
-class CustomUser(AbstractUser):
+class CustomUser(auth_models.AbstractUser):
     """
     Custom User Model which represents a TEQST user
     """
-    gender = models.CharField(max_length=20, choices=GENDER_CHOICES, default='N')
+    gender = models.CharField(max_length=20, choices=utils.GENDER_CHOICES, default='N')
     birth_year = models.IntegerField()
-    education = models.CharField(max_length=50, choices=EDU_CHOICES, default='N')
+    education = models.CharField(max_length=50, choices=utils.EDU_CHOICES, default='N')
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     # the accent field is for now just a charfield.
-    accent = models.CharField(max_length=100, default=ACCENT_DEFAULT, blank=True)
+    accent = models.CharField(max_length=100, default=utils.ACCENT_DEFAULT, blank=True)
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
     dark_mode = models.BooleanField(default=False, blank=True)
 
     def is_publisher(self):
-        p = Group.objects.get(name='Publisher')
+        p = auth_models.Group.objects.get(name='Publisher')
         return p in self.groups.all()
 
     #Below is not core funcionality
@@ -76,7 +75,7 @@ class CustomUser(AbstractUser):
 
 class Usage(models.Model):
     #TODO maybe limit_choices_to publisher if it works properly
-    publisher = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    publisher = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     language = models.ForeignKey(Language, on_delete=models.CASCADE)
     meaning = models.CharField(max_length=200)
@@ -86,7 +85,7 @@ class Usage(models.Model):
 
 
 class Customization(models.Model):
-    speaker = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    speaker = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     custom_color = models.CharField(max_length=10)
 
