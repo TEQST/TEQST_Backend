@@ -16,10 +16,16 @@ python3 manage.py makemigrations textmgmt\
 python3 manage.py makemigrations recordingmgmt\
 python3 manage.py migrate
 ### create a superuser
-python3 manage.py createsuperuser
+creating a superuser via the createsuperuser utility is currently broken due to the additional required attribute of a birthyear in the user class
+you have to create a user via the shell like so:
+python3 manage.py shell
+from usermgmt.models import CustomUser
+CustomUser.objects.create_superuser('username', password='password')
 ### create a group called "Publisher" with no permissions
 ### Run the server
 python3 manage.py runserver
 ## Testing
 ### Run all tests
 python3 manage.py test
+## Python setup
+if the python3 name doesnt work on your machine try python instead but make sure (with python --version) that this calls a 3.x python
