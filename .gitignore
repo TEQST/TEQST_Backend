@@ -12,3 +12,4 @@ htmlcov/
 logfile.log
 debug.py
 localsettings.py
+venv/

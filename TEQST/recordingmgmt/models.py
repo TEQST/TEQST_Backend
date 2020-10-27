@@ -3,14 +3,14 @@ from django.conf import settings
 from django.contrib import auth
 from textmgmt import models as text_models
 from . import storages
-import os, wave, io
-
+import wave, io
+from pathlib import Path
 
 
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
     sf_path = instance.recording.text.shared_folder.get_path()
-    return sf_path + '/AudioData/' + instance.text.id + '_' + instance.speaker.id + '.wav'
+    return f'{sf_path}/AudioData/{instance.text.id}_{instance.speaker.id}.wav'
 
 
 class TextRecording(models.Model):
@@ -48,7 +48,7 @@ def sentence_rec_upload_path(instance, filename):
     Delivers the location in the filesystem where the recordings should be stored.
     """
     sf_path = instance.recording.text.shared_folder.get_path()
-    return sf_path + '/TempAudio/' + str(instance.recording.id) + '_' + str(instance.index) + '.wav'
+    return f'{sf_path}/TempAudio/{instance.recording.id}_{instance.index}.wav'
 
 
 class SentenceRecording(models.Model):
@@ -82,11 +82,11 @@ def create_textrecording_stm(trec_pk):
     srecs = SentenceRecording.objects.filter(recording=trec)
 
     # update logfile
-    logpath = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.get_path() + '/log.txt'
+    logpath = settings.MEDIA_ROOT/trec.text.shared_folder.get_path()/'log.txt'
     add_user_to_log(logpath, trec.speaker)
 
     #create string with encoded userdata
-    user_str = '<' + trec.speaker.gender + ',' + trec.speaker.education + ','
+    user_str = f'<{trec.speaker.gender},{trec.speaker.education},'
     if trec.SR_permission:
         user_str += 'SR'
     if trec.TTS_permission:
@@ -97,13 +97,14 @@ def create_textrecording_stm(trec_pk):
     sentences = trec.text.get_content()
 
     # create .stm file and open in write mode
-    path = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.get_path() + '/STM/' + trec.text.title + '-' + username + '.stm'
+    path = settings.MEDIA_ROOT/trec.text.shared_folder.get_path()/'STM'/f'{trec.text.title}-{username}.stm'
+
     stm_file = io.open(path, 'w+', encoding='utf8')
 
     # create concatenated wav file and open in write mode (uses 'wave' library)
-    wav_path_rel = trec.text.title + '-' + username
-    wav_path = settings.MEDIA_ROOT + '/' + trec.text.shared_folder.get_path() + '/AudioData/' + wav_path_rel + '.wav'
-    wav_full = wave.open(wav_path, 'wb')
+    wav_path_rel = f'{trec.text.title}-{username}'
+    wav_path = settings.MEDIA_ROOT/trec.text.shared_folder.get_path()/'AudioData'/f'{wav_path_rel}.wav'
+    wav_full = wave.open(str(wav_path), 'wb') # wave does not yet support pathlib, therefore the string conversion
 
     #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
     for srec in srecs:
@@ -112,23 +113,23 @@ def create_textrecording_stm(trec_pk):
         #On concatenating the first file: also copy all settings
         if current_timestamp == 0:
             wav_full.setparams(wav.getparams())
-        duration = wav.getnframes()/wav.getframerate()
+        duration = wav.getnframes() / wav.getframerate()
 
-        #utterance id
-        stm_file.write(wav_path_rel + '_')
-        stm_file.write(username + '_')
-        stm_file.write(format_timestamp(current_timestamp) + '_')
-        stm_file.write(format_timestamp(current_timestamp + duration) + ' ')
+        stm_file.writelines([#utterance id
+                             wav_path_rel + '_',
+                             username + '_',
+                             format_timestamp(current_timestamp) + '_',
+                             format_timestamp(current_timestamp + duration) + ' ',
+                             #write .stm file entry
+                             wav_path_rel + ' ',
+                             str(wav.getnchannels()) + ' ',
+                             username + ' ',
+                             "{0:.2f}".format(current_timestamp) + ' ',
+                             "{0:.2f}".format(current_timestamp + duration) + ' ',
+                             user_str + ' ',
+                             sentences[srec.index - 1] + '\n'])
 
-        #write .stm file entry
-        stm_file.write(wav_path_rel + ' ')
-        stm_file.write(str(wav.getnchannels()) + ' ')
-        stm_file.write(username + ' ')
-        stm_file.write("{0:.2f}".format(current_timestamp) + ' ')
         current_timestamp += duration
-        stm_file.write("{0:.2f}".format(current_timestamp) + ' ')
-        stm_file.write(user_str + ' ')
-        stm_file.write(sentences[srec.index - 1] + '\n')
 
         #copy audio
         wav_full.writeframesraw(wav.readframes(wav.getnframes()))
@@ -152,17 +153,17 @@ def concat_stms(sharedfolder):
     #Build paths and open the 'large' stm in read-mode
     sf_path = sharedfolder.get_path()
     stm_path = sf_path + '/STM'
-    temp_stm_names = os.listdir(settings.MEDIA_ROOT + '/' + stm_path)  # this lists directories as well, but there shouldnt be any in this directory
-    stm_file = io.open(settings.MEDIA_ROOT + '/' + sf_path + '/' + sharedfolder.name + '.stm', 'w', encoding='utf8')
+    temp_stm_names = (settings.MEDIA_ROOT/stm_path).glob('*.stm')
+    stm_file = io.open(settings.MEDIA_ROOT/sf_path/f'{sharedfolder.name}.stm', 'w', encoding='utf8')
 
     #Open, concatenate and close the header file
-    header_file = io.open(settings.BASE_DIR + '/header.stm', 'r', encoding='utf8')
+    header_file = io.open(settings.BASE_DIR/'header.stm', 'r', encoding='utf8')
     stm_file.write(header_file.read())
     header_file.close()
 
     #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
-        temp_stm_file = io.open(settings.MEDIA_ROOT + '/' + stm_path + '/' + temp_stm_name, 'r', encoding='utf8')
+        temp_stm_file = io.open(settings.MEDIA_ROOT/stm_path/temp_stm_name, 'r', encoding='utf8')
         stm_file.write(temp_stm_file.read())
         temp_stm_file.close()
     
@@ -188,11 +189,13 @@ def add_user_to_log(path, user):
     if log_contains_user(path, str(user.username)):
         return
     logfile = open(path, 'a')
-    logfile.write('username: ' + str(user.username) + '\n')
-    logfile.write('birth_year: ' + str(user.birth_year) + '\n')
-    logfile.write('gender: ' + str(user.gender) + '\n')
-    logfile.write('education: ' + str(user.education) + '\n')
-    logfile.write('accent: ' + str(user.accent) + '\n')
-    logfile.write('country: ' + str(user.country) + '\n')
-    logfile.write('#\n')
+    logfile.writelines(line + '\n' for line in [
+        f'username: {user.username}',
+        f'birth_year: {user.birth_year}',
+        f'gender: {user.gender}',
+        f'education: {user.education}',
+        f'accent: {user.accent}',
+        f'country: {user.country}',
+        '#'
+    ])
     logfile.close()

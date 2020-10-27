@@ -28,6 +28,6 @@ class ContentLogging(object):
             else:
                 request_msg += ' Could not decode request body'
             self.logger.warning(request_msg)
-            self.logger.warning('Resp: Code: ' + str(response.status_code) + ' ' + response.content.decode('utf-8'))
+            self.logger.warning(f'Resp: Code: {response.status_code} {response.content.decode("utf-8")}')
 
         return response

@@ -368,9 +368,7 @@ class TestUserList(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        setup_languages()
-        Group.objects.create(name='Publisher')
-        setup_users()
+        create_languages_users_groups()
         
     def setUp(self):
         self.client = Client()
