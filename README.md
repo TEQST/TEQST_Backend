@@ -20,7 +20,7 @@ creating a superuser via the createsuperuser utility is currently broken due to 
 you have to create a user via the shell like so:\
 python3 manage.py shell\
 from usermgmt.models import CustomUser\
-CustomUser.objects.create_superuser('username', password='password')
+CustomUser.objects.create_superuser('username', password='password', birth_year=2000)
 ### create a group called "Publisher" with no permissions
 ### Run the server
 python3 manage.py runserver
