@@ -246,7 +246,9 @@ class TextStatsSerializer(serializers.ModelSerializer):
         """
         text = obj
         stats = []
-        for speaker in text.shared_folder.speaker.all():
+        q1 = text.shared_folder.speaker.all()
+        q2 = user_models.CustomUser.objects.filter(textrecording__text=text)
+        for speaker in q1.union(q2):
             spk = {'name': speaker.username, 'finished': 0}
             if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
                 textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
@@ -338,7 +340,9 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         """
         sf = obj
         stats = []
-        for speaker in sf.speaker.all():
+        q1 = sf.speaker.all()
+        q2 = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sf)
+        for speaker in q1.union(q2):
             spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
             for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
                 txt = {'title': text.title, 'finished': 0, 'total': text.sentence_count()}
