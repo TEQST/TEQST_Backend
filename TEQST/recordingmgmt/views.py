@@ -1,4 +1,5 @@
 from rest_framework import generics, mixins, status, exceptions, response
+from django.db.models import Q
 from . import serializers, models
 from textmgmt import models as text_models
 
@@ -18,7 +19,7 @@ class TextRecordingView(generics.ListCreateAPIView):
         user = self.request.user
         if 'text' in self.request.query_params:
             try:
-                if not text_models.Text.objects.filter(pk=self.request.query_params['text'], shared_folder__speaker=user).exists():
+                if not text_models.Text.objects.filter(Q(pk=self.request.query_params['text']), Q(shared_folder__speaker=user) | Q(shared_folder__public=True)).exists():
                     raise exceptions.NotFound("Invalid text id")
                 return models.TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
             except ValueError:

@@ -293,7 +293,7 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     speakers = user_serializers.UserBasicSerializer(many=True, read_only=True, source='speaker')
     class Meta:
         model = models.SharedFolder
-        fields = ['id', 'name', 'speakers', 'speaker_ids']
+        fields = ['id', 'name', 'speakers', 'speaker_ids', 'public']
         read_only_fields = ['name', 'speakers']
         write_only_fields = ['speaker_ids']
         depth = 1
@@ -373,6 +373,19 @@ class PublisherSerializer(serializers.ModelSerializer):
         for sf in models.SharedFolder.objects.filter(owner=pub, speaker=spk):
             info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
         return info
+
+class PublicFolderSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: SpkPublicFoldersView
+    for: list of public folders
+    """
+
+    path = serializers.CharField(read_only=True, source='get_readable_path')
+
+    class Meta:
+        model = models.SharedFolder
+        fields = ['id', 'name', 'path']
+        read_only_fields = ['id', 'name', 'path']
 
 
 
