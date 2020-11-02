@@ -165,18 +165,3 @@ class Text(models.Model):
     
     def sentence_count(self):
         return len(self.get_content())
-    
-    def word_count(self, sentence_limit=None):
-        """
-        count words of a text up to a given sentence
-        @param sentence_limit: int, specify for how many sentences (starting from the beginning)
-        the words should be counted. (e.g. 2: count word of the first two sentences)
-        @return: int, number of words
-        """
-        sentences = self.get_content()
-        if sentence_limit is None or sentence_limit > len(sentences):
-            sentence_limit = len(sentences)
-        count = 0
-        for i in range(sentence_limit):
-            count += sentences[i].strip().count(' ') + 1
-        return count
