@@ -1,7 +1,7 @@
 from django.core.files import storage
 
 
-class OverwriteStorage(storage.FileSystemStorage):
+class OverwriteStorage(storage.default_storage.__class__):
     """
     This provides a file storage policy that overwrites files in the event of equal filenames
     """
