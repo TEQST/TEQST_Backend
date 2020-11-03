@@ -19,7 +19,7 @@ class BackupStorage(storage.default_storage.__class__):
 
     def get_available_name(self, name, max_length=None):
         if self.exists(name):
-            path = Path(self.path(name))
+            path = Path(name)
             date = datetime.datetime.now()
             new_file_name_ext = f'{path.stem}__{date.strftime("%Y_%m_%d_%H_%M_%S")}{path.suffix}'
             old_file = self.open(str(path), 'rb')
