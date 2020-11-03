@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.contrib import auth
 from . import utils
 from usermgmt import models as user_models
@@ -79,7 +80,10 @@ class SharedFolder(Folder):
         create zip file and return the path to the download.zip file
         """
         path = settings.MEDIA_ROOT/self.get_path()
-        zf = zipfile.ZipFile(path/'download.zip', 'w')
+
+        file = default_storage.open(path/'download.zip', 'w')
+
+        zf = zipfile.ZipFile(file, 'w')
         # arcname is the name/path which the file will have inside the zip file
         zf.write(path/f'{self.name}.stm', arcname=f'{self.name}.stm')
         zf.write(path/'log.txt', arcname='log.txt')
@@ -104,7 +108,7 @@ def upload_path(instance, filename):
 
 # get file encoding type
 def get_encoding_type(file_path):
-    with open(file_path, 'rb') as f:
+    with default_storage.open(file_path, 'rb') as f:
         rawdata = f.read()
     return chardet.detect(rawdata)['encoding']
 
@@ -141,14 +145,14 @@ class Text(models.Model):
         trgfile = Path(srcfile_path_str[:-4] + '_enc' + srcfile_path_str[-4:])
         from_codec = get_encoding_type(srcfile)
 
-        with open(srcfile, 'r', encoding=from_codec) as f, open(trgfile, 'w', encoding='utf-8') as e:
+        with default_storage.open(srcfile, 'r', encoding=from_codec) as f, default_storage.open(trgfile, 'w', encoding='utf-8') as e:
             text = f.read()
             e.write(text)
 
         trgfile.replace(srcfile) # replace old file with the newly encoded file
 
     def get_content(self):
-        f = open(self.textfile.path, 'r', encoding='utf-8-sig')
+        f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
         sentence = ""
         content = []
         for line in f:

@@ -1,3 +1,4 @@
+from django.core.files.storage import default_storage
 from rest_framework import serializers
 from . import models
 from textmgmt import models as text_models
@@ -77,7 +78,8 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # type(validated_data['audiofile']) is InMemoryUploadedFile
-        wav = wave.open(validated_data['audiofile'].file, 'rb')
+        wav_file = default_storage.open(validated_data['audiofile'].file, 'rb')
+        wav = wave.open(wav_file, 'rb')
         duration = wav.getnframes() / wav.getframerate()
         wav.close()
         # print('DURATION:', duration)
@@ -121,11 +123,13 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
     #         raise serializers.ValidationError("Recording is too short")
 
     def update(self, instance, validated_data):
-        wav = wave.open(validated_data['audiofile'].file, 'rb')
+        wav_file = default_storage.open(validated_data['audiofile'].file, 'rb')
+        wav = wave.open(wav_file, 'rb')
         duration = wav.getnframes() / wav.getframerate()
         wav.close()
         # print('DURATION:', duration)
-        wav_old = wave.open(instance.audiofile, 'rb')
+        wav_file_old = default_storage.open(instance.audiofile, 'rb')
+        wav_old = wave.open(wav_file_old, 'rb')
         duration_old = wav_old.getnframes() / wav_old.getframerate()
         wav_old.close()
         instance.audiofile.close()  # refer to the wave docs: the caller must close the file, this is not done by wave.close()

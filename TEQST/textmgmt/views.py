@@ -1,5 +1,6 @@
 from rest_framework import generics, mixins, response, status, views, exceptions, permissions as rf_permissions
 from django import http
+from django.core.files.storage import default_storage
 from . import models, serializers
 from usermgmt import models as user_models, permissions
 
@@ -193,7 +194,7 @@ class SpeechDataDownloadView(views.APIView):
         if not instance.has_any_recordings():
             raise exceptions.ParseError("Nothing to download yet.")
         zip_path = instance.create_zip_for_download()
-        zipfile = open(zip_path, 'rb')
+        zipfile = default_storage.open(zip_path, 'rb')
         resp = http.HttpResponse()
         resp.write(zipfile.read())
         zipfile.close()
