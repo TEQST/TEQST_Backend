@@ -49,7 +49,7 @@ class Folder(models.Model):
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
         # create actual folders and files:
-        sf_path = sf.get_path()
+        sf_path = Path(sf.get_path())
         logfile = uploadedfile.SimpleUploadedFile('', '')
         default_storage.save(str(sf_path/'log.txt'), logfile)
         return sf
@@ -79,7 +79,7 @@ class SharedFolder(Folder):
         """
         create zip file and return the path to the download.zip file
         """
-        path = self.get_path()
+        path = Path(self.get_path())
 
         file = default_storage.open(path/'download.zip', 'w')
 

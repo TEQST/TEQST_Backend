@@ -85,7 +85,7 @@ def create_textrecording_stm(trec_pk):
     srecs = SentenceRecording.objects.filter(recording=trec)
 
     # update logfile
-    logpath = trec.text.shared_folder.get_path()/'log.txt'
+    logpath = Path(trec.text.shared_folder.get_path())/'log.txt'
     add_user_to_log(logpath, trec.speaker)
 
     #create string with encoded userdata
@@ -103,7 +103,7 @@ def create_textrecording_stm(trec_pk):
     empty_file = uploadedfile.SimpleUploadedFile('', '')
 
     # create .stm file and open in write mode
-    path = trec.text.shared_folder.get_path()/'STM'/f'{trec.text.title}-{username}.stm'
+    path = Path(trec.text.shared_folder.get_path())/'STM'/f'{trec.text.title}-{username}.stm'
 
     #stm_file = io.open(path, 'w+', encoding='utf8')
     if not default_storage.exists(str(path)):
@@ -113,8 +113,8 @@ def create_textrecording_stm(trec_pk):
 
     # create concatenated wav file and open in write mode (uses 'wave' library)
     wav_path_rel = f'{trec.text.title}-{username}'
-    wav_path = trec.text.shared_folder.get_path()/'AudioData'/f'{wav_path_rel}.wav'
-    if not default_storage.exists(str(path)):
+    wav_path = Path(trec.text.shared_folder.get_path())/'AudioData'/f'{wav_path_rel}.wav'
+    if not default_storage.exists(str(wav_path)):
         default_storage.save(str(wav_path), empty_file)
     wav_file = default_storage.open(str(wav_path), 'wb')
     wav_full = wave.open(wav_file, 'wb') # wave does not yet support pathlib, therefore the string conversion
@@ -169,7 +169,7 @@ def concat_stms(sharedfolder):
     stm_path = sf_path + '/STM'
     temp_stm_names = default_storage.listdir(stm_path)[1]
     #stm_file = default_storage.open(sf_path/f'{sharedfolder.name}.stm', 'w', encoding='utf8')
-    stm_file = default_storage.open(sf_path/f'{sharedfolder.name}.stm', 'w')
+    stm_file = default_storage.open(Path(sf_path)/f'{sharedfolder.name}.stm', 'w')
 
     #Open, concatenate and close the header file
     header_file = open(settings.BASE_DIR/'header.stm', 'r', encoding='utf8')
@@ -179,7 +179,7 @@ def concat_stms(sharedfolder):
     #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
         #temp_stm_file = default_storage.open(stm_path/temp_stm_name, 'r', encoding='utf8')
-        temp_stm_file = default_storage.open(stm_path/temp_stm_name, 'r')
+        temp_stm_file = default_storage.open(Path(stm_path)/temp_stm_name, 'r')
         stm_file.write(temp_stm_file.read())
         temp_stm_file.close()
     

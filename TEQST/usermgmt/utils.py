@@ -18,4 +18,4 @@ GENDER_CHOICES = (
 ACCENT_DEFAULT = 'Not specified'
 
 def upload_path(instance, filename):
-    return LOCALIZATION_FOLDER/filename
+    return Path(LOCALIZATION_FOLDER)/filename
