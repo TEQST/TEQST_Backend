@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.files import uploadedfile
 from django.core.files.storage import default_storage
 from django.contrib import auth
 from . import utils
@@ -49,9 +50,8 @@ class Folder(models.Model):
         sf.save()
         # create actual folders and files:
         sf_path = settings.MEDIA_ROOT/sf.get_path()
-        (sf_path/'STM').mkdir(parents=True) # creates parents if they do not exist
-        (sf_path/'AudioData').mkdir()
-        open(sf_path/'log.txt', 'w').close()
+        logfile = uploadedfile.SimpleUploadedFile('', '')
+        default_storage.save(str(sf_path/'log.txt'), logfile)
         return sf
 
 
@@ -145,14 +145,16 @@ class Text(models.Model):
         trgfile = Path(srcfile_path_str[:-4] + '_enc' + srcfile_path_str[-4:])
         from_codec = get_encoding_type(srcfile)
 
-        with default_storage.open(srcfile, 'r', encoding=from_codec) as f, default_storage.open(trgfile, 'w', encoding='utf-8') as e:
+        #with default_storage.open(srcfile, 'r', encoding=from_codec) as f, default_storage.open(trgfile, 'w', encoding='utf-8') as e:
+        with default_storage.open(srcfile, 'r') as f, default_storage.open(trgfile, 'w') as e:
             text = f.read()
             e.write(text)
 
         trgfile.replace(srcfile) # replace old file with the newly encoded file
 
     def get_content(self):
-        f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
+        #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
+        f = default_storage.open(self.textfile.path, 'r')
         sentence = ""
         content = []
         for line in f:
