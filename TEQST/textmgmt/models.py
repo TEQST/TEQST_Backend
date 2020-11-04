@@ -81,17 +81,21 @@ class SharedFolder(Folder):
         """
         path = Path(self.get_path())
 
-        file = default_storage.open(path/'download.zip', 'w')
+        file = default_storage.open(path/'download.zip', 'wb')
 
         zf = zipfile.ZipFile(file, 'w')
         # arcname is the name/path which the file will have inside the zip file
-        zf.write(path/f'{self.name}.stm', arcname=f'{self.name}.stm')
-        zf.write(path/'log.txt', arcname='log.txt')
+        stm_file = default_storage.open(path/f'{self.name}.stm', 'r')
+        zf.writestr(str(f'{self.name}.stm'), stm_file.read())
+        log_file = default_storage.open(path/'log.txt', 'r')
+        zf.writestr('log.txt', log_file.read())
 
-        for file_to_zip in (path/'AudioData').glob('*'):
-            if file_to_zip.is_file():
-                arcpath = f'AudioData/{file_to_zip}'
-                zf.write(path/'AudioData'/file_to_zip, arcname=arcpath)
+        #for file_to_zip in (path/'AudioData').glob('*'):
+        for file_to_zip in default_storage.listdir(path/'AudioData')[1]:
+            #if file_to_zip.is_file():
+            arcpath = f'AudioData/{file_to_zip}'
+            arc_file = default_storage.open(path/'AudioData'/file_to_zip, 'rb')
+            zf.writestr(str(arcpath), arc_file.read())
         zf.close()
         return path/'download.zip'
 
@@ -138,9 +142,9 @@ class Text(models.Model):
         #Parsing a folder to sharedfolder is done in serializer or has to be done manually when working via shell
         #self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
-        
+        """
         # change encoding of uploaded file to utf-8
-        srcfile_path_str = self.textfile.path
+        srcfile_path_str = self.textfile.name
         srcfile = Path(srcfile_path_str)
         trgfile = Path(srcfile_path_str[:-4] + '_enc' + srcfile_path_str[-4:])
         from_codec = get_encoding_type(srcfile)
@@ -150,7 +154,12 @@ class Text(models.Model):
             text = f.read()
             e.write(text)
 
-        trgfile.replace(srcfile) # replace old file with the newly encoded file
+        #trgfile.replace(srcfile) # replace old file with the newly encoded file
+        # the below three lines don't work
+        default_storage.delete(srcfile)
+        f = default_storage.open(trgfile)
+        default_storage.save(srcfile, f)
+        """
 
     def get_content(self):
         #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
