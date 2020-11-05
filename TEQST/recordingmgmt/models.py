@@ -109,7 +109,7 @@ def create_textrecording_stm(trec_pk):
     if not default_storage.exists(str(path)):
         default_storage.save(str(path), empty_file)
     #stm_file = default_storage.open(path, 'w', encoding='utf8')
-    stm_file = default_storage.open(str(path), 'w')
+    stm_file = default_storage.open(str(path), 'wb')
 
     # create concatenated wav file and open in write mode (uses 'wave' library)
     wav_path_rel = f'{trec.text.title}-{username}'
@@ -129,19 +129,10 @@ def create_textrecording_stm(trec_pk):
             wav_full.setparams(wav.getparams())
         duration = wav.getnframes() / wav.getframerate()
 
-        stm_file.writelines([#utterance id
-                             wav_path_rel + '_',
-                             username + '_',
-                             format_timestamp(current_timestamp) + '_',
-                             format_timestamp(current_timestamp + duration) + ' ',
-                             #write .stm file entry
-                             wav_path_rel + ' ',
-                             str(wav.getnchannels()) + ' ',
-                             username + ' ',
-                             "{0:.2f}".format(current_timestamp) + ' ',
-                             "{0:.2f}".format(current_timestamp + duration) + ' ',
-                             user_str + ' ',
-                             sentences[srec.index - 1] + '\n'])
+        stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
+            + wav_path_rel + ' ' + str(wav.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
+            + user_str + ' ' + sentences[srec.index - 1] + '\n'
+        stm_file.write(bytes(stm_entry, encoding='utf-8'))
 
         current_timestamp += duration
 
@@ -169,17 +160,17 @@ def concat_stms(sharedfolder):
     stm_path = sf_path + '/STM'
     temp_stm_names = default_storage.listdir(stm_path)[1]
     #stm_file = default_storage.open(sf_path/f'{sharedfolder.name}.stm', 'w', encoding='utf8')
-    stm_file = default_storage.open(str(Path(sf_path)/f'{sharedfolder.name}.stm'), 'w')
+    stm_file = default_storage.open(str(Path(sf_path)/f'{sharedfolder.name}.stm'), 'wb')
 
     #Open, concatenate and close the header file
-    header_file = open(settings.BASE_DIR/'header.stm', 'r', encoding='utf8')
+    header_file = open(settings.BASE_DIR/'header.stm', 'rb')
     stm_file.write(header_file.read())
     header_file.close()
 
     #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
         #temp_stm_file = default_storage.open(stm_path/temp_stm_name, 'r', encoding='utf8')
-        temp_stm_file = default_storage.open(str(Path(stm_path)/temp_stm_name), 'r')
+        temp_stm_file = default_storage.open(str(Path(stm_path)/temp_stm_name), 'rb')
         stm_file.write(temp_stm_file.read())
         temp_stm_file.close()
     
@@ -191,11 +182,12 @@ def format_timestamp(t):
 
 
 def log_contains_user(path, username):
-    logfile = default_storage.open(str(path), 'r')
+    logfile = default_storage.open(str(path), 'rb')
     lines = logfile.readlines()
-    for i in range(len(lines)):
-        if lines[i][:8] == 'username':
-            if lines[i][10:] == username + '\n':
+    for line in lines:
+        line = line.decode('utf-8')
+        if line[:8] == 'username':
+            if line[10:] == username + '\n':
                 return True
     logfile.close()
     return False
@@ -204,8 +196,8 @@ def log_contains_user(path, username):
 def add_user_to_log(path, user):
     if log_contains_user(path, str(user.username)):
         return
-    logfile = default_storage.open(str(path), 'a')
-    logfile.writelines(line + '\n' for line in [
+    logfile = default_storage.open(str(path), 'ab')
+    logfile.writelines(bytes(line + '\n', encoding='utf-8') for line in [
         f'username: {user.username}',
         f'birth_year: {user.birth_year}',
         f'gender: {user.gender}',

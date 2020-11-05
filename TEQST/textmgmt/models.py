@@ -163,8 +163,8 @@ class Text(models.Model):
 
     def get_content(self):
         #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
-        f = default_storage.open(self.textfile.name, 'r')
-        #f = self.textfile.open('r')
+        #f = default_storage.open(self.textfile.name, 'rb')
+        f = self.textfile.open('rb')
         file_content = f.readlines()
         sentence = ""
         content = []
