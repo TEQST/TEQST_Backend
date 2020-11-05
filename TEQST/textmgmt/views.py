@@ -1,6 +1,7 @@
 from rest_framework import generics, mixins, response, status, views, exceptions, permissions as rf_permissions
 from django import http
 from django.db.models import Q
+from django.core.files.storage import default_storage
 from . import models, serializers
 from usermgmt import models as user_models, permissions
 
@@ -26,7 +27,7 @@ class PubFolderListView(generics.ListCreateAPIView):
             return models.Folder.objects.filter(parent=self.request.query_params['parent'], owner=user.pk)
 
         return models.Folder.objects.filter(parent=None, owner=user.pk)  # parent=None means the folder is in the topmost layer
-    
+
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
@@ -79,7 +80,7 @@ class PubTextListView(generics.ListCreateAPIView):
             except ValueError:
                 raise exceptions.NotFound("Invalid sharedfolder id")
         raise exceptions.NotFound("No sharedfolder specified")
-    
+
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return serializers.TextFullSerializer
@@ -145,7 +146,7 @@ class SpkPublisherListView(generics.ListAPIView):
 
     def get_queryset(self):
         # does not check for is_publisher. This is not necessary
-        
+
         # possible alternative solution
         # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         # current code
@@ -194,7 +195,7 @@ class SpeechDataDownloadView(views.APIView):
         if not instance.has_any_recordings():
             raise exceptions.ParseError("Nothing to download yet.")
         zip_path = instance.create_zip_for_download()
-        zipfile = open(zip_path, 'rb')
+        zipfile = default_storage.open(zip_path, 'rb')
         resp = http.HttpResponse()
         resp.write(zipfile.read())
         zipfile.close()

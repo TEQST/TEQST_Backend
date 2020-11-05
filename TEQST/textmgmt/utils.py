@@ -14,6 +14,7 @@ def folder_relative_path(folder):
     return media_path
 
 
+#Deprecated, since absolute paths aren't used anymore
 def folder_path(folder):
     media_path = folder_relative_path(folder)
     path = settings.MEDIA_ROOT/media_path
