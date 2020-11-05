@@ -87,7 +87,7 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         response = HttpResponse()
         response.write(f.read())
         response['Content-Type'] = 'audio/wav'
-        response['Content-Length'] = Path(instance.audiofile.path).stat().st_size
+        response['Content-Length'] = instance.audiofile.size
         return response
 
 
@@ -126,5 +126,5 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         response = HttpResponse()
         response.write(f.read())
         response['Content-Type'] = 'audio/wav'
-        response['Content-Length'] = Path(instance.audiofile.path).stat().st_size
+        response['Content-Length'] = instance.audiofile.size
         return response
