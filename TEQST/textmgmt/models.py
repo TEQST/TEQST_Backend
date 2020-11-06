@@ -82,23 +82,23 @@ class SharedFolder(Folder):
         """
         path = Path(self.get_path())
 
-        file = default_storage.open(path/'download.zip', 'wb')
+        file = default_storage.open(str(path/'download.zip'), 'wb')
 
         zf = zipfile.ZipFile(file, 'w')
         # arcname is the name/path which the file will have inside the zip file
-        stm_file = default_storage.open(path/f'{self.name}.stm', 'r')
+        stm_file = default_storage.open(str(path/f'{self.name}.stm'), 'rb')
         zf.writestr(str(f'{self.name}.stm'), stm_file.read())
-        log_file = default_storage.open(path/'log.txt', 'r')
+        log_file = default_storage.open(str(path/'log.txt'), 'rb')
         zf.writestr('log.txt', log_file.read())
 
         #for file_to_zip in (path/'AudioData').glob('*'):
-        for file_to_zip in default_storage.listdir(path/'AudioData')[1]:
+        for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
             #if file_to_zip.is_file():
             arcpath = f'AudioData/{file_to_zip}'
-            arc_file = default_storage.open(path/'AudioData'/file_to_zip, 'rb')
+            arc_file = default_storage.open(str(path/'AudioData'/file_to_zip), 'rb')
             zf.writestr(str(arcpath), arc_file.read())
         zf.close()
-        return path/'download.zip'
+        return str(path/'download.zip')
 
 
 
@@ -164,11 +164,14 @@ class Text(models.Model):
 
     def get_content(self):
         #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
-        f = self.textfile.open('r')
+        #f = default_storage.open(self.textfile.name, 'rb')
+        f = self.textfile.open('rb')
+        file_content = f.readlines()
         sentence = ""
         content = []
-        for line in f:
-            if line == "\n":
+        for line in file_content:
+            line = line.decode('utf-8')
+            if line == "\n" or line == "":
                 if sentence != "":
                     content.append(sentence)
                     sentence = ""
