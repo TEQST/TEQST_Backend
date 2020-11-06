@@ -13,3 +13,10 @@ logfile.log
 debug.py
 localsettings.py
 venv/
+
+# google cloud setup
+.gcloudignore
+app.yaml
+main.py
+TEQST/requirements.txt
+www/
