@@ -81,23 +81,23 @@ class SharedFolder(Folder):
         create zip file and return the path to the download.zip file
         """
         path = Path(self.get_path())
+        # not using with here will cause the file not to close and thus not to be created
+        with default_storage.open(str(path/'download.zip'), 'wb') as file:
+            zf = zipfile.ZipFile(file, 'w')
 
-        file = default_storage.open(str(path/'download.zip'), 'wb')
+            # arcname is the name/path which the file will have inside the zip file
+            stm_file = default_storage.open(str(path/f'{self.name}.stm'), 'rb')
+            zf.writestr(str(f'{self.name}.stm'), stm_file.read())
+            log_file = default_storage.open(str(path/'log.txt'), 'rb')
+            zf.writestr('log.txt', log_file.read())
 
-        zf = zipfile.ZipFile(file, 'w')
-        # arcname is the name/path which the file will have inside the zip file
-        stm_file = default_storage.open(str(path/f'{self.name}.stm'), 'rb')
-        zf.writestr(str(f'{self.name}.stm'), stm_file.read())
-        log_file = default_storage.open(str(path/'log.txt'), 'rb')
-        zf.writestr('log.txt', log_file.read())
-
-        #for file_to_zip in (path/'AudioData').glob('*'):
-        for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
-            #if file_to_zip.is_file():
-            arcpath = f'AudioData/{file_to_zip}'
-            arc_file = default_storage.open(str(path/'AudioData'/file_to_zip), 'rb')
-            zf.writestr(str(arcpath), arc_file.read())
-        zf.close()
+            #for file_to_zip in (path/'AudioData').glob('*'):
+            for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
+                #if file_to_zip.is_file():
+                arcpath = f'AudioData/{file_to_zip}'
+                arc_file = default_storage.open(str(path/'AudioData'/file_to_zip), 'rb')
+                zf.writestr(str(arcpath), arc_file.read())
+            zf.close()
         return str(path/'download.zip')
 
 
@@ -171,12 +171,12 @@ class Text(models.Model):
         content = []
         for line in file_content:
             line = line.decode('utf-8')
-            if line == "\n" or line == "":
+            if line == "\n" or line == "" or line == "\r\n":
                 if sentence != "":
                     content.append(sentence)
                     sentence = ""
             else:
-                sentence += line.replace('\n', ' ')
+                sentence += line.replace('\n', ' ').replace('\r', ' ')
         if sentence != "":
             content.append(sentence)
         f.close()
