@@ -170,12 +170,12 @@ class Text(models.Model):
         content = []
         for line in file_content:
             line = line.decode('utf-8')
-            if line == "\n" or line == "":
+            if line == "\n" or line == "" or line == "\r\n":
                 if sentence != "":
                     content.append(sentence)
                     sentence = ""
             else:
-                sentence += line.replace('\n', ' ')
+                sentence += line.replace('\n', ' ').replace('\r', ' ')
         if sentence != "":
             content.append(sentence)
         f.close()
