@@ -186,28 +186,41 @@ def format_timestamp(t):
 
 
 def log_contains_user(path, username):
-    logfile = default_storage.open(str(path), 'rb')
-    lines = logfile.readlines()
-    for line in lines:
-        line = line.decode('utf-8')
-        if line[:8] == 'username':
-            if line[10:] == username + '\n':
-                return True
-    logfile.close()
+    #logfile = default_storage.open(str(path), 'rb')
+    with default_storage.open(str(path), 'rb') as logfile:
+        lines = logfile.readlines()
+        for line in lines:
+            line = line.decode('utf-8')
+            if line[:8] == 'username':
+                if line[10:] == username + '\n':
+                    return True
+        logfile.close()
     return False
 
 
 def add_user_to_log(path, user):
     if log_contains_user(path, str(user.username)):
         return
-    logfile = default_storage.open(str(path), 'ab')
-    logfile.writelines(bytes(line + '\n', encoding='utf-8') for line in [
-        f'username: {user.username}',
-        f'birth_year: {user.birth_year}',
-        f'gender: {user.gender}',
-        f'education: {user.education}',
-        f'accent: {user.accent}',
-        f'country: {user.country}',
-        '#'
-    ])
-    logfile.close()
+    #logfile = default_storage.open(str(path), 'ab')
+    file_content = b''
+    with default_storage.open(str(path), 'rb') as logfile:
+        file_content = logfile.read()
+    with default_storage.open(str(path), 'wb') as logfile:
+        # logfile.writelines(bytes(line + '\n', encoding='utf-8') for line in [
+        #     f'username: {user.username}',
+        #     f'birth_year: {user.birth_year}',
+        #     f'gender: {user.gender}',
+        #     f'education: {user.education}',
+        #     f'accent: {user.accent}',
+        #     f'country: {user.country}',
+        #     '#'
+        # ])
+        logfile_entry = 'username: ' + str(user.username) + '\n' \
+                        + 'birth_year: ' + str(user.birth_year) + '\n' \
+                        + 'gender: ' + str(user.gender) + '\n' \
+                        + 'education: ' + str(user.education) + '\n' \
+                        + 'accent: ' + str(user.accent) + '\n' \
+                        + 'country: ' + str(user.country) + '\n#\n'
+        file_content += bytes(logfile_entry, encoding='utf-8')
+        logfile.write(file_content)
+        logfile.close()
