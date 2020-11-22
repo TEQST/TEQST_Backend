@@ -116,35 +116,39 @@ def create_textrecording_stm(trec_pk):
     wav_path = Path(trec.text.shared_folder.get_path())/'AudioData'/f'{wav_path_rel}.wav'
     if not default_storage.exists(str(wav_path)):
         default_storage.save(str(wav_path), empty_file)
-    wav_file = default_storage.open(str(wav_path), 'wb')
-    wav_full = wave.open(wav_file, 'wb') # wave does not yet support pathlib, therefore the string conversion
+    
+    #wav_file = default_storage.open(str(wav_path), 'wb')
+    with default_storage.open(str(wav_path), 'wb') as wav_file:
+        wav_full = wave.open(wav_file, 'wb') # wave does not yet support pathlib, therefore the string conversion
 
-    #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
-    for srec in srecs:
-        wav_audiofile = srec.audiofile.open('rb')
-        wav = wave.open(wav_audiofile, 'rb')
+        #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
+        for srec in srecs:
+            #wav_audiofile = srec.audiofile.open('rb')
+            with srec.audiofile.open('rb') as wav_audiofile:
+                wav = wave.open(wav_audiofile, 'rb')
 
-        #On concatenating the first file: also copy all settings
-        if current_timestamp == 0:
-            wav_full.setparams(wav.getparams())
-        duration = wav.getnframes() / wav.getframerate()
+                #On concatenating the first file: also copy all settings
+                if current_timestamp == 0:
+                    wav_full.setparams(wav.getparams())
+                duration = wav.getnframes() / wav.getframerate()
 
-        stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
-            + wav_path_rel + ' ' + str(wav.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
-            + user_str + ' ' + sentences[srec.index - 1] + '\n'
-        stm_file.write(bytes(stm_entry, encoding='utf-8'))
+                stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
+                    + wav_path_rel + ' ' + str(wav.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
+                    + user_str + ' ' + sentences[srec.index - 1] + '\n'
+                stm_file.write(bytes(stm_entry, encoding='utf-8'))
 
-        current_timestamp += duration
+                current_timestamp += duration
 
-        #copy audio
-        wav_full.writeframesraw(wav.readframes(wav.getnframes()))
+                #copy audio
+                wav_full.writeframesraw(wav.readframes(wav.getnframes()))
 
-        #close sentence-recording file
-        wav.close()
+                #close sentence-recording file
+                wav.close()
 
-    #close files
+        #close files
+        wav_full.close()
     stm_file.close()
-    wav_full.close()
+    
 
     #concatenate all .stm files to include the last changes
     concat_stms(trec.text.shared_folder)
