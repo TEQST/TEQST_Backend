@@ -194,6 +194,30 @@ class TextBasicSerializer(serializers.ModelSerializer):
         fields = ['id', 'title']
 
 
+class TextProgressSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: SpkTextListView
+    through serializer: SharedFolderTextSerializer
+    for: retrieval of texts of a sharedfolder including information on progress of request.user
+    """
+    words_total = serializers.IntegerField(read_only=True, source='word_count')
+    words_finished = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Text
+        fields = ['id', 'title', 'words_total', 'words_finished']
+        read_only_fields = fields
+
+    def get_words_finished(self, obj: models.Text):
+        text = obj
+        user = self.context['request'].user
+        sentences_finished = 0
+        if rec_models.TextRecording.objects.filter(text=text, speaker=user).exists():
+            tr = rec_models.TextRecording.objects.get(text=text, speaker=user)
+            sentences_finished = tr.active_sentence() - 1
+        return text.word_count(sentences_finished)
+
+
 class TextStatsSerializer(serializers.ModelSerializer):
     """
     to be used by view: PubTextStatsView
@@ -241,7 +265,7 @@ class SharedFolderTextSerializer(serializers.ModelSerializer):
     to be used by view: SpkTextListView
     for: retrieval of a sharedfolder with the texts it contains
     """
-    texts = TextBasicSerializer(read_only=True, many=True, source='text')
+    texts = TextProgressSerializer(read_only=True, many=True, source='text')
     path = serializers.CharField(read_only=True, source='get_readable_path')
     timestats = serializers.SerializerMethodField()
     
