@@ -6,6 +6,7 @@ from django.contrib import auth
 from textmgmt import models as text_models
 from . import storages
 import wave, io
+import librosa
 from pathlib import Path
 
 
@@ -57,12 +58,37 @@ class SentenceRecording(models.Model):
     """
     Acts as a 'component' of a TextRecording, that saves audio and information for each sentence in the text
     """
+    class Validity(models.TextChoices):
+        VALID = "VALID"
+        INVALID_START = "INVALID_START"
+        INVALID_END = "INVALID_END"
+        INVALID_START_END = "INVALID_START_END"
+
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
+    valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+
+        with default_storage.open(self.audiofile.name) as af:
+            y, sr = librosa.load(af, sr=None)
+        length = librosa.get_duration(y=y, sr=sr)
+        nonMuteSections = librosa.effects.split(y, 20)
+        start_invalid = nonMuteSections[0][0] / sr < 0.3
+        end_invalid = nonMuteSections[-1][1] / sr > length - 0.3
+        if start_invalid and end_invalid:
+            self.valid = self.Validity.INVALID_START_END
+        else:
+            if start_invalid:
+                self.valid = self.Validity.INVALID_START
+            elif end_invalid:
+                self.valid = self.Validity.INVALID_END
+            else:
+                self.valid = self.Validity.VALID
+        super().save()
+
         if self.recording.active_sentence() > self.recording.text.sentence_count():
             create_textrecording_stm(self.recording.id)
     
