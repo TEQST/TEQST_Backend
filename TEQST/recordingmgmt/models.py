@@ -76,18 +76,19 @@ class SentenceRecording(models.Model):
             y, sr = librosa.load(af, sr=None)
         length = librosa.get_duration(y=y, sr=sr)
         nonMuteSections = librosa.effects.split(y, 20)
-        start_invalid = nonMuteSections[0][0] / sr < 0.3
-        end_invalid = nonMuteSections[-1][1] / sr > length - 0.3
-        if start_invalid and end_invalid:
-            self.valid = self.Validity.INVALID_START_END
-        else:
-            if start_invalid:
-                self.valid = self.Validity.INVALID_START
-            elif end_invalid:
-                self.valid = self.Validity.INVALID_END
+        if len(nonMuteSections) != 0:  # this test is is probably unnecessary
+            start_invalid = nonMuteSections[0][0] / sr < 0.3
+            end_invalid = nonMuteSections[-1][1] / sr > length - 0.2
+            if start_invalid and end_invalid:
+                self.valid = self.Validity.INVALID_START_END
             else:
-                self.valid = self.Validity.VALID
-        super().save()
+                if start_invalid:
+                    self.valid = self.Validity.INVALID_START
+                elif end_invalid:
+                    self.valid = self.Validity.INVALID_END
+                else:
+                    self.valid = self.Validity.VALID
+            super().save()
 
         if self.recording.active_sentence() > self.recording.text.sentence_count():
             create_textrecording_stm(self.recording.id)
