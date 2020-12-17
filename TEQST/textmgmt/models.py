@@ -166,11 +166,19 @@ class Text(models.Model):
         #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
         #f = default_storage.open(self.textfile.name, 'rb')
         f = self.textfile.open('rb')
+        #file_content = f.readlines()
+
+        # it is not enough to detect the encoding from the first line
+        # it hast to be the entire file content
+        encoding = chardet.detect(f.read())['encoding']
+        f.seek(0)
         file_content = f.readlines()
+
         sentence = ""
         content = []
         for line in file_content:
-            line = line.decode('utf-8')
+            #line = line.decode('utf-8')
+            line = line.decode(encoding)
             #line = line.decode('unicode_escape')
             if line == "\n" or line == "" or line == "\r\n":
                 if sentence != "":
