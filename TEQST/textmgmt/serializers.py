@@ -248,7 +248,7 @@ class TextStatsSerializer(serializers.ModelSerializer):
         stats = []
         q1 = text.shared_folder.speaker.all()
         q2 = user_models.CustomUser.objects.filter(textrecording__text=text)
-        for speaker in q1.union(q2):
+        for speaker in q1.union(q2).order_by('username'):
             spk = {'name': speaker.username, 'finished': 0}
             if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
                 textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
@@ -340,12 +340,18 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         """
         sf = obj
         stats = []
+
+        texts = []
+        for t in sf.text.all():
+            texts.append((t, t.title, t.sentence_count()))
+
         q1 = sf.speaker.all()
         q2 = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sf)
-        for speaker in q1.union(q2):
+        for speaker in q1.union(q2).order_by('username'):
             spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
-            for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
-                txt = {'title': text.title, 'finished': 0, 'total': text.sentence_count()}
+            #for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
+            for text, title, sentence_count in texts:
+                txt = {'title': title, 'finished': 0, 'total': sentence_count}
                 if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
                     textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
                     txt['finished'] = textrecording.active_sentence() - 1
