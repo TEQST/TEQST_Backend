@@ -86,17 +86,17 @@ class SharedFolder(Folder):
             zf = zipfile.ZipFile(file, 'w')
 
             # arcname is the name/path which the file will have inside the zip file
-            stm_file = default_storage.open(str(path/f'{self.name}.stm'), 'rb')
-            zf.writestr(str(f'{self.name}.stm'), stm_file.read())
-            log_file = default_storage.open(str(path/'log.txt'), 'rb')
-            zf.writestr('log.txt', log_file.read())
+            with default_storage.open(str(path/f'{self.name}.stm'), 'rb') as stm_file:
+                zf.writestr(str(f'{self.name}.stm'), stm_file.read())
+            with default_storage.open(str(path/'log.txt'), 'rb') as log_file:
+                zf.writestr('log.txt', log_file.read())
 
             #for file_to_zip in (path/'AudioData').glob('*'):
             for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
                 #if file_to_zip.is_file():
                 arcpath = f'AudioData/{file_to_zip}'
-                arc_file = default_storage.open(str(path/'AudioData'/file_to_zip), 'rb')
-                zf.writestr(str(arcpath), arc_file.read())
+                with default_storage.open(str(path/'AudioData'/file_to_zip), 'rb') as arc_file:
+                    zf.writestr(str(arcpath), arc_file.read())
             zf.close()
         return str(path/'download.zip')
 
