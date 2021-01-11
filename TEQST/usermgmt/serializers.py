@@ -29,11 +29,13 @@ class UserFullSerializer(serializers.ModelSerializer):
 
     #'is_publisher' calculates it's value by executing the 'is_publisher' method in the CustomUser model
     is_publisher = serializers.BooleanField(read_only=True)
+    #same as is_publisher
+    is_listener = serializers.BooleanField(read_only=True)
 
     class Meta():
         model = models.CustomUser
-        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'accent', 'country', 'dark_mode', 'is_publisher']
-        read_only_fields = ['id', 'username', 'is_publisher']
+        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'accent', 'country', 'dark_mode', 'is_publisher', 'is_listener']
+        read_only_fields = ['id', 'username', 'is_publisher', 'is_listener']
 
     #checks if the given birth_year is in a certain "valid" range, is called automatically by the drf
     def validate_birth_year(self, value):

@@ -260,7 +260,7 @@ class TextStatsSerializer(serializers.ModelSerializer):
         return stats
 
 
-class SharedFolderTextSerializer(serializers.ModelSerializer):
+class SpkSharedFolderTextSerializer(serializers.ModelSerializer):
     """
     to be used by view: SpkTextListView
     for: retrieval of a sharedfolder with the texts it contains
@@ -293,11 +293,28 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     """
     speaker_ids = serializers.PrimaryKeyRelatedField(queryset=user_models.CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
     speakers = user_serializers.UserBasicSerializer(many=True, read_only=True, source='speaker')
+
     class Meta:
         model = models.SharedFolder
         fields = ['id', 'name', 'speakers', 'speaker_ids', 'public']
         read_only_fields = ['name', 'speakers']
         write_only_fields = ['speaker_ids']
+        depth = 1
+
+
+class SharedFolderListenerSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PubSharedFolderListenerView
+    for: retrieval and update of the listeners of a shared folder
+    """
+    listener_ids = serializers.PrimaryKeyRelatedField(queryset=user_models.CustomUser.objects.all(), many=True, allow_null=True, source='listener', write_only=True)
+    listeners = user_serializers.UserBasicSerializer(many=True, read_only=True, source='listener')
+    
+    class Meta:
+        model = models.SharedFolder
+        fields = ['id', 'name', 'listeners', 'listener_ids']
+        read_only_fields = ['name', 'listeners']
+        write_only_fields = ['listener_ids']
         depth = 1
 
 
@@ -364,7 +381,7 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         return stats
 
 
-class PublisherSerializer(serializers.ModelSerializer):
+class SpkPublisherSerializer(serializers.ModelSerializer):
     """
     to be used by view: SpkPublisherListView, SpkPublisherDetailedView
     for: retrieval of single publisher or list of publishers, who own sharedfolders (freedfolders) shared with request.user
@@ -398,5 +415,33 @@ class PublicFolderSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'name', 'path']
 
 
+class LstnPublisherSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: LstnPublisherListView, LstnPublisherDetailedView
+    for: retrieval of single publisher or list of publishers, who own sharedfolders (freedfolders) shared with request.user
+    """
+    freedfolders = serializers.SerializerMethodField(read_only=True, method_name='get_freed_folders')
 
-        
+    class Meta:
+        model = user_models.CustomUser
+        fields = ['id', 'username', 'freedfolders']
+        read_only_fields = ['username']
+    
+    def get_freed_folders(self, obj):
+        pub = obj
+        lstn = self.context['request'].user
+        info = []
+        for sf in models.SharedFolder.objects.filter(owner=pub, listener=lstn):
+            info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
+        return info
+
+
+class LstnSharedFolderTextSerializer(serializers.ModelSerializer):
+
+    texts = TextBasicSerializer(read_only=True, many=True, source='text')
+    path = serializers.CharField(read_only=True, source='get_readable_path')
+    
+    class Meta:
+        model = models.SharedFolder
+        fields = ['id', 'name', 'owner', 'path', 'texts']
+        read_only_fields = ['name', 'owner']
