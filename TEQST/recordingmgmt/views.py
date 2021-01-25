@@ -66,7 +66,8 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         if not models.TextRecording.objects.filter(pk=rec, speaker=self.request.user).exists():
             if self.request.method == 'GET':
                 if not models.TextRecording.objects.filter(pk=rec, text__shared_folder__owner=self.request.user).exists():
-                    raise exceptions.NotFound("Invalid Textrecording id")
+                    if not models.TextRecording.objects.filter(pk=rec, text__shared_folder__listener=self.request.user).exists():
+                        raise exceptions.NotFound("Invalid Textrecording id")
             else:
                 raise exceptions.NotFound("Invalid Textrecording id")
         # index is a query parameter
@@ -107,7 +108,8 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         if not models.TextRecording.objects.filter(pk=tr_id, speaker=self.request.user).exists():
             if self.request.method == 'GET':
                 if not models.TextRecording.objects.filter(pk=tr_id, text__shared_folder__owner=self.request.user).exists():
-                    raise exceptions.NotFound("Invalid Textrecording id")
+                    if not models.TextRecording.objects.filter(pk=tr_id, text__shared_folder__listener=self.request.user).exists():
+                        raise exceptions.NotFound("Invalid Textrecording id")
             else:
                 raise exceptions.NotFound("Invalid Textrecording id")
         # index is the other part or the url

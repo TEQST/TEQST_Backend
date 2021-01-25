@@ -322,3 +322,35 @@ class LstnTextDetailedView(generics.RetrieveAPIView):
     def get_queryset(self):
         user = self.request.user
         return models.Text.objects.filter(shared_folder__listener=user)
+
+
+class LstnSharedFolderStatsView(generics.RetrieveAPIView):
+    """
+    url: api/lstn/sharedfolders/:id/stats/
+    use: get statistics on how far the speakers of a publisher's shared folder are
+    """
+    queryset = models.SharedFolder.objects.all()
+    serializer_class = serializers.SharedFolderStatsSerializer
+    permission_classes = [rf_permissions.IsAuthenticated]
+
+    def get_object(self):
+        sf_id = self.kwargs['pk']
+        if not models.SharedFolder.objects.filter(pk=sf_id, listener=self.request.user).exists():
+            raise exceptions.NotFound("Invalid SharedFolder id")
+        return models.SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)
+
+
+class LstnTextStatsView(generics.RetrieveAPIView):
+    """
+    url: api/lstn/texts/:id/stats/
+    use: get statistics on how far the speakers are in a given text
+    """
+    queryset = models.Text.objects.all()
+    serializer_class = serializers.TextStatsSerializer
+    permission_classes = [rf_permissions.IsAuthenticated]
+
+    def get_object(self):
+        text_id = self.kwargs['pk']
+        if not models.Text.objects.filter(pk=text_id, shared_folder__listener=self.request.user).exists():
+            raise exceptions.NotFound('Invalid Text id')
+        return models.Text.objects.get(pk=text_id)
