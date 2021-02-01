@@ -194,7 +194,7 @@ class Text(models.Model):
                 f.close()
 
                 for i in range(len(content)):
-                    self.sentences.create(content=content[i], index=i, word_count=content[i].strip().count(' ') + 1)
+                    self.sentences.create(content=content[i], index=i + 1, word_count=content[i].strip().count(' ') + 1)
 
     def get_content(self):
         if not self.sentences.exists():
@@ -214,8 +214,12 @@ class Text(models.Model):
         if not self.sentences.exists():
             self.create_sentences()
         count = 0
-        for sentence in self.sentences.all():
-            count += sentence.word_count
+        if sentence_limit == None:
+            for sentence in self.sentences.all():
+                count += sentence.word_count
+        else:
+            for sentence in self.sentences.filter(index__lte=sentence_limit):
+                count += sentence.word_count
         return count
     
 
