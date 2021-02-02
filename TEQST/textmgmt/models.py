@@ -1,8 +1,9 @@
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.core.files import uploadedfile
 from django.core.files.storage import default_storage
 from django.contrib import auth
+from rest_framework import views
 from . import utils
 from usermgmt import models as user_models
 import os, zipfile, chardet
@@ -162,50 +163,76 @@ class Text(models.Model):
         default_storage.save(srcfile, f)
         """
 
-    def get_content(self):
-        #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
-        #f = default_storage.open(self.textfile.name, 'rb')
-        f = self.textfile.open('rb')
-        #file_content = f.readlines()
+    def create_sentences(self):
+        with transaction.atomic():
+            if not self.sentences.exists():
+                #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
+                #f = default_storage.open(self.textfile.name, 'rb')
+                f = self.textfile.open('rb')
+                #file_content = f.readlines()
 
-        # it is not enough to detect the encoding from the first line
-        # it hast to be the entire file content
-        encoding = chardet.detect(f.read())['encoding']
-        f.seek(0)
-        file_content = f.readlines()
+                # it is not enough to detect the encoding from the first line
+                # it hast to be the entire file content
+                encoding = chardet.detect(f.read())['encoding']
+                f.seek(0)
+                file_content = f.readlines()
 
-        sentence = ""
-        content = []
-        for line in file_content:
-            #line = line.decode('utf-8')
-            line = line.decode(encoding)
-            #line = line.decode('unicode_escape')
-            if line == "\n" or line == "" or line == "\r\n":
+                sentence = ""
+                content = []
+                for line in file_content:
+                    #line = line.decode('utf-8')
+                    line = line.decode(encoding)
+                    #line = line.decode('unicode_escape')
+                    if line == "\n" or line == "" or line == "\r\n":
+                        if sentence != "":
+                            content.append(sentence)
+                            sentence = ""
+                    else:
+                        sentence += line.replace('\n', ' ').replace('\r', ' ')
                 if sentence != "":
                     content.append(sentence)
-                    sentence = ""
-            else:
-                sentence += line.replace('\n', ' ').replace('\r', ' ')
-        if sentence != "":
-            content.append(sentence)
-        f.close()
+                f.close()
+
+                for i in range(len(content)):
+                    self.sentences.create(content=content[i], index=i + 1, word_count=content[i].strip().count(' ') + 1)
+
+    def get_content(self):
+        if not self.sentences.exists():
+            self.create_sentences()
+        content = []
+        for sentence in self.sentences.all():
+            content.append(sentence.content)
         return content
     
     def sentence_count(self):
-        return len(self.get_content())
+        if not self.sentences.exists():
+            self.create_sentences()
+        return self.sentences.count()
 
 
     def word_count(self, sentence_limit=None):
-        """
-        count words of a text up to a given sentence
-        @param sentence_limit: int, specify for how many sentences (starting from the beginning)
-        the words should be counted. (e.g. 2: count word of the first two sentences)
-        @return: int, number of words
-        """
-        sentences = self.get_content()
-        if sentence_limit is None or sentence_limit > len(sentences):
-            sentence_limit = len(sentences)
+        if not self.sentences.exists():
+            self.create_sentences()
         count = 0
-        for i in range(sentence_limit):
-            count += sentences[i].strip().count(' ') + 1
+        if sentence_limit == None:
+            for sentence in self.sentences.all():
+                count += sentence.word_count
+        else:
+            for sentence in self.sentences.filter(index__lte=sentence_limit):
+                count += sentence.word_count
         return count
+    
+
+
+class Sentence(models.Model):
+    text = models.ForeignKey(Text, on_delete=models.CASCADE, related_name='sentences', null=False, blank=False)
+    content = models.TextField(null=False, blank=False)
+    word_count = models.IntegerField(null=False, blank=False)
+    index = models.IntegerField(null=False, blank=False)
+
+    def __str__(self):
+        return str(self.index) + ": " + self.content
+
+    class Meta:
+
+        ordering = ['text', 'index']
