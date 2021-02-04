@@ -32,7 +32,7 @@ class UserFullSerializer(serializers.ModelSerializer):
 
     class Meta():
         model = models.CustomUser
-        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'accent', 'country', 'dark_mode', 'is_publisher']
+        fields = ['id', 'username', 'email', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'accent', 'country', 'dark_mode', 'is_publisher']
         read_only_fields = ['id', 'username', 'is_publisher']
 
     #checks if the given birth_year is in a certain "valid" range, is called automatically by the drf
@@ -62,7 +62,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
     class Meta():
         model = models.CustomUser
         depth = 1
-        fields = ['id', 'username', 'education', 'gender', 'birth_year', 'languages', 'accent', 'country']
+        fields = ['id', 'username', 'email', 'education', 'gender', 'birth_year', 'languages', 'accent', 'country']
         read_only_fields = fields
 
 
@@ -83,7 +83,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.CustomUser
-        fields = ['username', 'password', 'education', 'gender', 'birth_year', 'language_ids', 'languages', 'menu_language', 'menu_language_id', 'accent', 'country']
+        fields = ['username', 'password', 'email', 'education', 'gender', 'birth_year', 'language_ids', 'languages', 'menu_language', 'menu_language_id', 'accent', 'country']
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
     
     def create(self, validated_data):
