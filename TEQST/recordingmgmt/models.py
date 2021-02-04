@@ -243,6 +243,7 @@ def add_user_to_log(path, user):
         #     '#'
         # ])
         logfile_entry = 'username: ' + str(user.username) + '\n' \
+                        + 'email: ' + str(user.email) + '\n' \
                         + 'date_joined: ' + str(user.date_joined) + '\n' \
                         + 'birth_year: ' + str(user.birth_year) + '\n' \
                         + 'gender: ' + str(user.gender) + '\n' \
