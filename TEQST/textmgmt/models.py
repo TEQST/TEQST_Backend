@@ -5,7 +5,7 @@ from django.core.files.storage import default_storage
 from django.contrib import auth
 from . import utils
 from usermgmt import models as user_models
-import os, zipfile, chardet
+import os, zipfile, chardet, zlib
 from pathlib import Path
 
 
@@ -82,23 +82,57 @@ class SharedFolder(Folder):
         """
         path = Path(self.get_path())
         # not using with here will cause the file not to close and thus not to be created
-        with default_storage.open(str(path/'download.zip'), 'wb') as file:
-            zf = zipfile.ZipFile(file, 'w')
+        # with default_storage.open(str(path/'download.zip'), 'wb') as file:
+        #     zf = zipfile.ZipFile(file, 'w')  #, compression=zipfile.ZIP_DEFLATED, compresslevel=6)
 
-            # arcname is the name/path which the file will have inside the zip file
-            with default_storage.open(str(path/f'{self.name}.stm'), 'rb') as stm_file:
-                zf.writestr(str(f'{self.name}.stm'), stm_file.read())
-            with default_storage.open(str(path/'log.txt'), 'rb') as log_file:
-                zf.writestr('log.txt', log_file.read())
+        #     # arcname is the name/path which the file will have inside the zip file
+        #     with default_storage.open(str(path/f'{self.name}.stm'), 'rb') as stm_file:
+        #         zf.writestr(str(f'{self.name}.stm'), stm_file.read())  #, compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
+        #     #stm_file.close()
+        #     with default_storage.open(str(path/'log.txt'), 'rb') as log_file:
+        #         zf.writestr('log.txt', log_file.read())  #, compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
+        #     #log_file.close()
+        #     zf.close()
+        #     del zf
 
-            #for file_to_zip in (path/'AudioData').glob('*'):
-            for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
-                #if file_to_zip.is_file():
-                arcpath = f'AudioData/{file_to_zip}'
-                with default_storage.open(str(path/'AudioData'/file_to_zip), 'rb') as arc_file:
-                    zf.writestr(str(arcpath), arc_file.read())
-            zf.close()
-        return str(path/'download.zip')
+        # #for file_to_zip in (path/'AudioData').glob('*'):
+        # for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
+        #     #if file_to_zip.is_file():
+        #     arcpath = f'AudioData/{file_to_zip}'
+        #     arc_file_content = None
+        #     with default_storage.open(str(path/'AudioData'/file_to_zip), 'rb') as arc_file:
+        #         arc_file_content = arc_file.read()
+            
+        #     my_file = default_storage.open(str(path/'download.zip'), 'rwb')
+        #     my_zf = zipfile.ZipFile(my_file, 'a')
+        #     my_zf.writestr(str(arcpath), arc_file_content)  #, compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
+        #     my_zf.close()
+        #     del my_zf
+        #     my_file.close()
+
+        #with default_storage.open(str(path/'download.zip'), 'wb') as file:
+        zf = zipfile.ZipFile("/tmp/download.zip", 'w')
+
+        # arcname is the name/path which the file will have inside the zip file
+        with default_storage.open(str(path/f'{self.name}.stm'), 'rb') as stm_file:
+            zf.writestr(str(f'{self.name}.stm'), stm_file.read())
+        with default_storage.open(str(path/'log.txt'), 'rb') as log_file:
+            zf.writestr('log.txt', log_file.read())
+
+        #for file_to_zip in (path/'AudioData').glob('*'):
+        for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
+            #if file_to_zip.is_file():
+            arcpath = f'AudioData/{file_to_zip}'
+            with default_storage.open(str(path/'AudioData'/file_to_zip), 'rb') as arc_file:
+                zf.writestr(str(arcpath), arc_file.read())
+        zf.close()
+
+        # with default_storage.open(str(path/'download.zip'), 'wb') as ftw:
+        #     with open("/tmp/download.zip", 'rb') as tempfile:
+        #         ftw.write(tempfile.read())
+
+
+        return "/tmp/download.zip"
 
 
 

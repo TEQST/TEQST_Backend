@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.core.files.storage import default_storage
 from . import models, serializers
 from usermgmt import models as user_models, permissions
+from pathlib import Path
 
 
 class PubFolderListView(generics.ListCreateAPIView):
@@ -195,11 +196,17 @@ class SpeechDataDownloadView(views.APIView):
         if not instance.has_any_recordings():
             raise exceptions.ParseError("Nothing to download yet.")
         zip_path = instance.create_zip_for_download()
-        zipfile = default_storage.open(zip_path, 'rb')
-        resp = http.HttpResponse()
-        resp.write(zipfile.read())
-        zipfile.close()
-        resp['Content-Type'] = "application/zip"
+        
+        # zipfile = default_storage.open(zip_path, 'rb')
+        # resp = http.HttpResponse()
+        # resp.write(zipfile.read())
+        # zipfile.close()
+        # resp['Content-Type'] = "application/zip"
+        #resp = http.FileResponse(default_storage.open(zip_path, 'rb'), as_attachment=True, filename="download.zip")
+        resp = http.FileResponse(open(zip_path, 'rb'), as_attachment=True, filename="download.zip")
+
+        #resp = http.HttpResponse(status=status.HTTP_200_OK)
+        #resp.write("file created")
         return resp
 
 
