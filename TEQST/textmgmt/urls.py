@@ -19,6 +19,8 @@ urlpatterns = [
     path('spk/sharedfolders/<int:pk>/', views.SpkTextListView.as_view(), name='sharedfolder-detail'),
     # pub/sharedfolders/<int:pk>/speakers/
     path('sharedfolders/<int:pk>/', views.PubSharedFolderSpeakerView.as_view(), name='sharedfolder-speakers'),
+    #
+    path('pub/sharedfolders/<int:pk>/listeners/', views.PubSharedFolderListenerView.as_view(), name='sharedfolder-listeners'),
     # pub/texts/<int:pk>/
     path('pub/texts/<int:pk>/', views.PubTextDetailedView.as_view(), name='pub-text-detail'),
     # spk/texts/<int:pk>/
@@ -30,5 +32,17 @@ urlpatterns = [
 
     path('pub/texts/<int:pk>/stats/', views.PubTextStatsView.as_view(), name='text-stats'),
 
-    path('spk/publicfolders/', views.SpkPublicFoldersView.as_view(), name='public-folders')
+    path('spk/publicfolders/', views.SpkPublicFoldersView.as_view(), name='public-folders'),
+
+    path('lstn/publishers/', views.LstnPublisherListView.as_view(), name='lstn-publishers'),
+
+    path('lstn/publishers/<int:pk>/', views.LstnPublisherDetailedView.as_view(), name='lstn-publisher-detail'),
+
+    path('lstn/sharedfolders/<int:pk>/texts/', views.LstnTextListView.as_view(), name='lstn-sharedfolder-detail'),
+
+    path('lstn/texts/<int:pk>/', views.LstnTextDetailedView.as_view(), name='lstn-text-detail'),
+
+    path('lstn/sharedfolder/<int:pk>/stats/', views.LstnSharedFolderStatsView.as_view(), name='lstn-sharedfolder-stats'),
+
+    path('lstn/texts/<int:pk>/stats/', views.LstnTextStatsView.as_view(), name='lstn-text-stats')
 ]

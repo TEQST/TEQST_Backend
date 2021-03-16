@@ -57,6 +57,9 @@ class CustomUser(auth_models.AbstractUser):
         p = auth_models.Group.objects.get(name='Publisher')
         return p in self.groups.all()
 
+    def is_listener(self):
+        return self.listenfolder.exists()
+
     #Below is not core funcionality
     #TODO maybe move tag_usage to Tag class to allow limit_choices_to publisher
     tag_usage = models.ManyToManyField(Tag, through='Usage', related_name='publisher', blank=True)

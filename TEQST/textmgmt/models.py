@@ -58,6 +58,7 @@ class Folder(models.Model):
 
 class SharedFolder(Folder):
     speaker = models.ManyToManyField(auth.get_user_model(), related_name='sharedfolder', blank=True)
+    listener = models.ManyToManyField(auth.get_user_model(), related_name='listenfolder', blank=True)
     public = models.BooleanField(default=False)
     
     def make_shared_folder(self):
