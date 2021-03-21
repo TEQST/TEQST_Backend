@@ -8,6 +8,7 @@ from . import utils
 from usermgmt import models as user_models
 import os, zipfile, chardet, zlib
 from pathlib import Path
+#from google.cloud.storage import Blob
 
 
 class Folder(models.Model):
@@ -129,9 +130,26 @@ class SharedFolder(Folder):
                 zf.writestr(str(arcpath), arc_file.read())
         zf.close()
 
-        # with default_storage.open(str(path/'download.zip'), 'wb') as ftw:
-        #     with open("/tmp/download.zip", 'rb') as tempfile:
-        #         ftw.write(tempfile.read())
+        with default_storage.open(str(path/'download.zip'), 'wb') as ftw:
+            #fsize = os.stat("/tmp/download.zip").st_size
+            with open("/tmp/download.zip", 'rb') as tempfile:
+                # for i in range((fsize // 4194304) + 1):
+                #     chunk = tempfile.read(4194304)
+                #     ftw.write(chunk)
+                # cnt = 0
+                # while True:
+                #     cnt += 1
+                #     chunk = tempfile.read(4194304)
+                #     if chunk == '' or cnt > 2048:
+                #         break
+                #     ftw.write(chunk)
+                #for i in range(fsize // 4194304):
+                #    ftw.blob.upload_from_file(tempfile, size=4194304, content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
+                #ftw.blob.upload_from_file(tempfile, size=(fsize % 4194304), content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
+                ftw.blob.upload_from_file(tempfile, content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
+
+            # with default_storage.open(str(path/'res.txt'), 'wb') as res:
+            #     res.write("done with file copy")
 
 
         return "/tmp/download.zip"
