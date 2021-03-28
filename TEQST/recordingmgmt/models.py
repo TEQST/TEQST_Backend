@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.core.files import uploadedfile
+from django.core.files.storage import default_storage
 from django.contrib import auth
 from textmgmt import models as text_models
 from . import storages
@@ -65,7 +67,8 @@ class SentenceRecording(models.Model):
             create_textrecording_stm(self.recording.id)
     
     def get_audio_length(self):
-        wav = wave.open(self.audiofile, 'rb')
+        audio_file = default_storage.open(self.audiofile, 'rb')
+        wav = wave.open(audio_file, 'rb')
         duration = wav.getnframes() / wav.getframerate()
         wav.close()
         self.audiofile.close()
@@ -82,7 +85,7 @@ def create_textrecording_stm(trec_pk):
     srecs = SentenceRecording.objects.filter(recording=trec)
 
     # update logfile
-    logpath = settings.MEDIA_ROOT/trec.text.shared_folder.get_path()/'log.txt'
+    logpath = Path(trec.text.shared_folder.get_path())/'log.txt'
     add_user_to_log(logpath, trec.speaker)
 
     #create string with encoded userdata
@@ -96,38 +99,40 @@ def create_textrecording_stm(trec_pk):
     current_timestamp = 0
     sentences = trec.text.get_content()
 
-    # create .stm file and open in write mode
-    path = settings.MEDIA_ROOT/trec.text.shared_folder.get_path()/'STM'/f'{trec.text.title}-{username}.stm'
+    #Store an empty file at the location of the textrecording STM and wav file, so open has a file to work with
+    empty_file = uploadedfile.SimpleUploadedFile('', '')
 
-    stm_file = io.open(path, 'w+', encoding='utf8')
+    # create .stm file and open in write mode
+    path = Path(trec.text.shared_folder.get_path())/'STM'/f'{trec.text.title}-{username}.stm'
+
+    #stm_file = io.open(path, 'w+', encoding='utf8')
+    if not default_storage.exists(str(path)):
+        default_storage.save(str(path), empty_file)
+    #stm_file = default_storage.open(path, 'w', encoding='utf8')
+    stm_file = default_storage.open(str(path), 'wb')
 
     # create concatenated wav file and open in write mode (uses 'wave' library)
     wav_path_rel = f'{trec.text.title}-{username}'
-    wav_path = settings.MEDIA_ROOT/trec.text.shared_folder.get_path()/'AudioData'/f'{wav_path_rel}.wav'
-    wav_full = wave.open(str(wav_path), 'wb') # wave does not yet support pathlib, therefore the string conversion
+    wav_path = Path(trec.text.shared_folder.get_path())/'AudioData'/f'{wav_path_rel}.wav'
+    if not default_storage.exists(str(wav_path)):
+        default_storage.save(str(wav_path), empty_file)
+    wav_file = default_storage.open(str(wav_path), 'wb')
+    wav_full = wave.open(wav_file, 'wb') # wave does not yet support pathlib, therefore the string conversion
 
     #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
     for srec in srecs:
-        wav = wave.open(srec.audiofile, 'rb')
+        wav_audiofile = srec.audiofile.open('rb')
+        wav = wave.open(wav_audiofile, 'rb')
 
         #On concatenating the first file: also copy all settings
         if current_timestamp == 0:
             wav_full.setparams(wav.getparams())
         duration = wav.getnframes() / wav.getframerate()
 
-        stm_file.writelines([#utterance id
-                             wav_path_rel + '_',
-                             username + '_',
-                             format_timestamp(current_timestamp) + '_',
-                             format_timestamp(current_timestamp + duration) + ' ',
-                             #write .stm file entry
-                             wav_path_rel + ' ',
-                             str(wav.getnchannels()) + ' ',
-                             username + ' ',
-                             "{0:.2f}".format(current_timestamp) + ' ',
-                             "{0:.2f}".format(current_timestamp + duration) + ' ',
-                             user_str + ' ',
-                             sentences[srec.index - 1] + '\n'])
+        stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
+            + wav_path_rel + ' ' + str(wav.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
+            + user_str + ' ' + sentences[srec.index - 1] + '\n'
+        stm_file.write(bytes(stm_entry, encoding='utf-8'))
 
         current_timestamp += duration
 
@@ -153,17 +158,19 @@ def concat_stms(sharedfolder):
     #Build paths and open the 'large' stm in read-mode
     sf_path = sharedfolder.get_path()
     stm_path = sf_path + '/STM'
-    temp_stm_names = (settings.MEDIA_ROOT/stm_path).glob('*.stm')
-    stm_file = io.open(settings.MEDIA_ROOT/sf_path/f'{sharedfolder.name}.stm', 'w', encoding='utf8')
+    temp_stm_names = default_storage.listdir(stm_path)[1]
+    #stm_file = default_storage.open(sf_path/f'{sharedfolder.name}.stm', 'w', encoding='utf8')
+    stm_file = default_storage.open(str(Path(sf_path)/f'{sharedfolder.name}.stm'), 'wb')
 
     #Open, concatenate and close the header file
-    header_file = io.open(settings.BASE_DIR/'header.stm', 'r', encoding='utf8')
+    header_file = open(settings.BASE_DIR/'header.stm', 'rb')
     stm_file.write(header_file.read())
     header_file.close()
 
     #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
-        temp_stm_file = io.open(settings.MEDIA_ROOT/stm_path/temp_stm_name, 'r', encoding='utf8')
+        #temp_stm_file = default_storage.open(stm_path/temp_stm_name, 'r', encoding='utf8')
+        temp_stm_file = default_storage.open(str(Path(stm_path)/temp_stm_name), 'rb')
         stm_file.write(temp_stm_file.read())
         temp_stm_file.close()
     
@@ -175,11 +182,12 @@ def format_timestamp(t):
 
 
 def log_contains_user(path, username):
-    logfile = open(path, 'r')
+    logfile = default_storage.open(str(path), 'rb')
     lines = logfile.readlines()
-    for i in range(len(lines)):
-        if lines[i][:8] == 'username':
-            if lines[i][10:] == username + '\n':
+    for line in lines:
+        line = line.decode('utf-8')
+        if line[:8] == 'username':
+            if line[10:] == username + '\n':
                 return True
     logfile.close()
     return False

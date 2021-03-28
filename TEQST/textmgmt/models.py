@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.core.files import uploadedfile
+from django.core.files.storage import default_storage
 from django.contrib import auth
 from . import utils
 from usermgmt import models as user_models
@@ -47,10 +49,9 @@ class Folder(models.Model):
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
         # create actual folders and files:
-        sf_path = settings.MEDIA_ROOT/sf.get_path()
-        (sf_path/'STM').mkdir(parents=True) # creates parents if they do not exist
-        (sf_path/'AudioData').mkdir()
-        open(sf_path/'log.txt', 'w').close()
+        sf_path = Path(sf.get_path())
+        logfile = uploadedfile.SimpleUploadedFile('', '')
+        default_storage.save(str(sf_path/'log.txt'), logfile)
         return sf
 
 
@@ -79,18 +80,25 @@ class SharedFolder(Folder):
         """
         create zip file and return the path to the download.zip file
         """
-        path = settings.MEDIA_ROOT/self.get_path()
-        zf = zipfile.ZipFile(path/'download.zip', 'w')
-        # arcname is the name/path which the file will have inside the zip file
-        zf.write(path/f'{self.name}.stm', arcname=f'{self.name}.stm')
-        zf.write(path/'log.txt', arcname='log.txt')
+        path = Path(self.get_path())
+        # not using with here will cause the file not to close and thus not to be created
+        with default_storage.open(str(path/'download.zip'), 'wb') as file:
+            zf = zipfile.ZipFile(file, 'w')
 
-        for file_to_zip in (path/'AudioData').glob('*'):
-            if file_to_zip.is_file():
+            # arcname is the name/path which the file will have inside the zip file
+            stm_file = default_storage.open(str(path/f'{self.name}.stm'), 'rb')
+            zf.writestr(str(f'{self.name}.stm'), stm_file.read())
+            log_file = default_storage.open(str(path/'log.txt'), 'rb')
+            zf.writestr('log.txt', log_file.read())
+
+            #for file_to_zip in (path/'AudioData').glob('*'):
+            for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
+                #if file_to_zip.is_file():
                 arcpath = f'AudioData/{file_to_zip}'
-                zf.write(path/'AudioData'/file_to_zip, arcname=arcpath)
-        zf.close()
-        return path/'download.zip'
+                arc_file = default_storage.open(str(path/'AudioData'/file_to_zip), 'rb')
+                zf.writestr(str(arcpath), arc_file.read())
+            zf.close()
+        return str(path/'download.zip')
 
 
 
@@ -105,7 +113,7 @@ def upload_path(instance, filename):
 
 # get file encoding type
 def get_encoding_type(file_path):
-    with open(file_path, 'rb') as f:
+    with default_storage.open(file_path, 'rb') as f:
         rawdata = f.read()
     return chardet.detect(rawdata)['encoding']
 
@@ -135,30 +143,40 @@ class Text(models.Model):
         #Parsing a folder to sharedfolder is done in serializer or has to be done manually when working via shell
         #self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
-        
+        """
         # change encoding of uploaded file to utf-8
-        srcfile_path_str = self.textfile.path
+        srcfile_path_str = self.textfile.name
         srcfile = Path(srcfile_path_str)
         trgfile = Path(srcfile_path_str[:-4] + '_enc' + srcfile_path_str[-4:])
         from_codec = get_encoding_type(srcfile)
 
-        with open(srcfile, 'r', encoding=from_codec) as f, open(trgfile, 'w', encoding='utf-8') as e:
+        #with default_storage.open(srcfile, 'r', encoding=from_codec) as f, default_storage.open(trgfile, 'w', encoding='utf-8') as e:
+        with default_storage.open(srcfile, 'r') as f, default_storage.open(trgfile, 'w') as e:
             text = f.read()
             e.write(text)
 
-        trgfile.replace(srcfile) # replace old file with the newly encoded file
+        #trgfile.replace(srcfile) # replace old file with the newly encoded file
+        # the below three lines don't work
+        default_storage.delete(srcfile)
+        f = default_storage.open(trgfile)
+        default_storage.save(srcfile, f)
+        """
 
     def get_content(self):
-        f = open(self.textfile.path, 'r', encoding='utf-8-sig')
+        #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
+        #f = default_storage.open(self.textfile.name, 'rb')
+        f = self.textfile.open('rb')
+        file_content = f.readlines()
         sentence = ""
         content = []
-        for line in f:
-            if line == "\n":
+        for line in file_content:
+            line = line.decode('utf-8')
+            if line == "\n" or line == "" or line == "\r\n":
                 if sentence != "":
                     content.append(sentence)
                     sentence = ""
             else:
-                sentence += line.replace('\n', ' ')
+                sentence += line.replace('\n', ' ').replace('\r', ' ')
         if sentence != "":
             content.append(sentence)
         f.close()
