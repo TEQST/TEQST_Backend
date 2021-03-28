@@ -222,7 +222,9 @@ class TextStatsSerializer(serializers.ModelSerializer):
         """
         text = obj
         stats = []
-        for speaker in text.shared_folder.speaker.all():
+        q1 = text.shared_folder.speaker.all()
+        q2 = user_models.CustomUser.objects.filter(textrecording__text=text)
+        for speaker in q1.union(q2):
             spk = {'name': speaker.username, 'finished': 0}
             if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
                 textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
@@ -269,7 +271,7 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     speakers = user_serializers.UserBasicSerializer(many=True, read_only=True, source='speaker')
     class Meta:
         model = models.SharedFolder
-        fields = ['id', 'name', 'speakers', 'speaker_ids']
+        fields = ['id', 'name', 'speakers', 'speaker_ids', 'public']
         read_only_fields = ['name', 'speakers']
         write_only_fields = ['speaker_ids']
         depth = 1
@@ -314,7 +316,9 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         """
         sf = obj
         stats = []
-        for speaker in sf.speaker.all():
+        q1 = sf.speaker.all()
+        q2 = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sf)
+        for speaker in q1.union(q2):
             spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
             for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
                 txt = {'title': text.title, 'finished': 0, 'total': text.sentence_count()}
@@ -349,6 +353,19 @@ class PublisherSerializer(serializers.ModelSerializer):
         for sf in models.SharedFolder.objects.filter(owner=pub, speaker=spk):
             info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
         return info
+
+class PublicFolderSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: SpkPublicFoldersView
+    for: list of public folders
+    """
+
+    path = serializers.CharField(read_only=True, source='get_readable_path')
+
+    class Meta:
+        model = models.SharedFolder
+        fields = ['id', 'name', 'path']
+        read_only_fields = ['id', 'name', 'path']
 
 
 

@@ -1,5 +1,6 @@
 from rest_framework import generics, mixins, response, status, views, exceptions, permissions as rf_permissions
 from django import http
+from django.db.models import Q
 from . import models, serializers
 from usermgmt import models as user_models, permissions
 
@@ -96,7 +97,7 @@ class SpkTextListView(generics.RetrieveAPIView):
     def get_object(self):
         sf = super().get_object()
         user = self.request.user
-        if user not in sf.speaker.all():
+        if user not in sf.speaker.all() and not sf.public:
             raise exceptions.NotFound("This sharedfolder is not shared with you.")
         return sf
 
@@ -131,7 +132,7 @@ class SpkTextDetailedView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return models.Text.objects.filter(shared_folder__speaker__id=user.id)
+        return models.Text.objects.filter(Q(shared_folder__speaker__id=user.id) | Q(shared_folder__public=True)).distinct()
 
 
 class SpkPublisherListView(generics.ListAPIView):
@@ -231,3 +232,11 @@ class PubTextStatsView(generics.RetrieveAPIView):
         if not models.Text.objects.filter(pk=text_id, shared_folder__owner=self.request.user.pk).exists():
             raise exceptions.NotFound('Invalid Text id')
         return models.Text.objects.get(pk=text_id)
+
+class SpkPublicFoldersView(generics.ListAPIView):
+    """
+    url: api/spk/publicfolders/
+    use: get a list of all public folders
+    """
+    queryset = models.SharedFolder.objects.filter(public=True)
+    serializer_class = serializers.PublicFolderSerializer

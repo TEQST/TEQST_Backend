@@ -29,4 +29,6 @@ urlpatterns = [
     path('pub/sharedfolders/<int:pk>/stats/', views.PubSharedFolderStatsView.as_view(), name='sharedfolder-stats'),
 
     path('pub/texts/<int:pk>/stats/', views.PubTextStatsView.as_view(), name='text-stats'),
+
+    path('spk/publicfolders/', views.SpkPublicFoldersView.as_view(), name='public-folders')
 ]
