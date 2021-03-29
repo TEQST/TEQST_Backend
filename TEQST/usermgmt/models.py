@@ -53,6 +53,9 @@ class CustomUser(auth_models.AbstractUser):
     country = models.CharField(max_length=50, null=True, blank=True)
     dark_mode = models.BooleanField(default=False, blank=True)
 
+    class Meta:
+        ordering = ['username']
+
     def is_publisher(self):
         p = auth_models.Group.objects.get(name='Publisher')
         return p in self.groups.all()

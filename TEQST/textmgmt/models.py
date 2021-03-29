@@ -16,6 +16,9 @@ class Folder(models.Model):
     owner = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE, related_name='folder')  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
 
+    class Meta:
+        ordering = ['name']
+
     # this method is useful for the shell and for the admin view
     def __str__(self):
         return self.name
@@ -61,6 +64,9 @@ class SharedFolder(Folder):
     speaker = models.ManyToManyField(auth.get_user_model(), related_name='sharedfolder', blank=True)
     listener = models.ManyToManyField(auth.get_user_model(), related_name='listenfolder', blank=True)
     public = models.BooleanField(default=False)
+
+    class Meta(SharedFolder.Meta):
+        pass
     
     def make_shared_folder(self):
         return self
@@ -178,6 +184,9 @@ class Text(models.Model):
     shared_folder = models.ForeignKey(SharedFolder, on_delete=models.CASCADE, related_name='text')
     textfile = models.FileField(upload_to=upload_path)
 
+    class Meta:
+        ordering = ['title']
+
     def __str__(self):
         return self.title
     
@@ -287,5 +296,4 @@ class Sentence(models.Model):
         return str(self.index) + ": " + self.content
 
     class Meta:
-
         ordering = ['text', 'index']
