@@ -31,6 +31,11 @@ class TextRecording(models.Model):
     # is the audiofile really needed?
     audiofile = models.FileField(upload_to=text_rec_upload_path, null=True, blank=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['speaker', 'text'], name='unique_trec'),
+        ]
+
     def active_sentence(self):
         sentence_num = SentenceRecording.objects.filter(recording=self).count() + 1
         # if a speaker is finished with a text this number is one higher than the number of sentences in the text
@@ -68,6 +73,11 @@ class SentenceRecording(models.Model):
     index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
     valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['recording', 'index']),
+        ]
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
