@@ -9,7 +9,7 @@ import wave
 class TextPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
-        queryset = text_models.Text.objects.filter(Q(shared_folder__speaker__id=user.id) | Q(shared_folder__public=True))
+        queryset = text_models.Text.objects.filter(Q(shared_folder__speaker__id=user.id) | Q(shared_folder__public=True)).distinct()
         return queryset
 
 
@@ -21,10 +21,11 @@ class TextRecordingSerializer(serializers.ModelSerializer):
 
     active_sentence = serializers.IntegerField(read_only=True)
     text = TextPKField()
+    sentences_status = serializers.SerializerMethodField()
 
     class Meta:
         model = models.TextRecording
-        fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence', 'rec_time_without_rep', 'rec_time_with_rep']
+        fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence', 'sentences_status', 'rec_time_without_rep', 'rec_time_with_rep']
         read_only_fields = ['speaker', 'active_sentence', 'rec_time_without_rep', 'rec_time_with_rep']
 
     def validate(self, data):
@@ -33,6 +34,13 @@ class TextRecordingSerializer(serializers.ModelSerializer):
         if data['TTS_permission'] is False and data['SR_permission'] is False:
             raise serializers.ValidationError("Either TTS or SR permission must be True")
         return super().validate(data)
+    
+    def get_sentences_status(self, obj):
+        tr = obj
+        status = []
+        for sr in tr.sentencerecording_set.all():
+            status.append({"index": sr.index, "status": sr.valid})
+        return status
 
 
 class RecordingPKField(serializers.PrimaryKeyRelatedField):
@@ -99,7 +107,8 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.SentenceRecording
-        fields = ['recording', 'audiofile', 'index']
+        fields = ['recording', 'audiofile', 'index', 'valid']
+        read_only_fields = ['valid']
         extra_kwargs = {'audiofile': {'write_only': True}}
 
 
@@ -113,8 +122,8 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.SentenceRecording
-        fields = ['recording', 'audiofile', 'index']
-        read_only_fields = ['recording', 'index']
+        fields = ['recording', 'audiofile', 'index', 'valid']
+        read_only_fields = ['recording', 'index', 'valid']
         extra_kwargs = {'audiofile': {'write_only': True}}
 
     # def check_audio_duration(self, duration: float, sentence: str):

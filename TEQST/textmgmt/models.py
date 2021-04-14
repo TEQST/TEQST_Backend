@@ -1,12 +1,14 @@
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.core.files import uploadedfile
 from django.core.files.storage import default_storage
 from django.contrib import auth
+from rest_framework import views
 from . import utils
 from usermgmt import models as user_models
-import os, zipfile, chardet
+import os, zipfile, chardet, zlib
 from pathlib import Path
+#from google.cloud.storage import Blob
 
 
 class Folder(models.Model):
@@ -57,6 +59,7 @@ class Folder(models.Model):
 
 class SharedFolder(Folder):
     speaker = models.ManyToManyField(auth.get_user_model(), related_name='sharedfolder', blank=True)
+    listener = models.ManyToManyField(auth.get_user_model(), related_name='listenfolder', blank=True)
     public = models.BooleanField(default=False)
     
     def make_shared_folder(self):
@@ -82,23 +85,74 @@ class SharedFolder(Folder):
         """
         path = Path(self.get_path())
         # not using with here will cause the file not to close and thus not to be created
-        with default_storage.open(str(path/'download.zip'), 'wb') as file:
-            zf = zipfile.ZipFile(file, 'w')
+        # with default_storage.open(str(path/'download.zip'), 'wb') as file:
+        #     zf = zipfile.ZipFile(file, 'w')  #, compression=zipfile.ZIP_DEFLATED, compresslevel=6)
 
-            # arcname is the name/path which the file will have inside the zip file
-            stm_file = default_storage.open(str(path/f'{self.name}.stm'), 'rb')
+        #     # arcname is the name/path which the file will have inside the zip file
+        #     with default_storage.open(str(path/f'{self.name}.stm'), 'rb') as stm_file:
+        #         zf.writestr(str(f'{self.name}.stm'), stm_file.read())  #, compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
+        #     #stm_file.close()
+        #     with default_storage.open(str(path/'log.txt'), 'rb') as log_file:
+        #         zf.writestr('log.txt', log_file.read())  #, compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
+        #     #log_file.close()
+        #     zf.close()
+        #     del zf
+
+        # #for file_to_zip in (path/'AudioData').glob('*'):
+        # for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
+        #     #if file_to_zip.is_file():
+        #     arcpath = f'AudioData/{file_to_zip}'
+        #     arc_file_content = None
+        #     with default_storage.open(str(path/'AudioData'/file_to_zip), 'rb') as arc_file:
+        #         arc_file_content = arc_file.read()
+            
+        #     my_file = default_storage.open(str(path/'download.zip'), 'rwb')
+        #     my_zf = zipfile.ZipFile(my_file, 'a')
+        #     my_zf.writestr(str(arcpath), arc_file_content)  #, compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
+        #     my_zf.close()
+        #     del my_zf
+        #     my_file.close()
+
+        #with default_storage.open(str(path/'download.zip'), 'wb') as file:
+        zf = zipfile.ZipFile("/tmp/download.zip", 'w')
+
+        # arcname is the name/path which the file will have inside the zip file
+        with default_storage.open(str(path/f'{self.name}.stm'), 'rb') as stm_file:
             zf.writestr(str(f'{self.name}.stm'), stm_file.read())
-            log_file = default_storage.open(str(path/'log.txt'), 'rb')
+        with default_storage.open(str(path/'log.txt'), 'rb') as log_file:
             zf.writestr('log.txt', log_file.read())
 
-            #for file_to_zip in (path/'AudioData').glob('*'):
-            for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
-                #if file_to_zip.is_file():
-                arcpath = f'AudioData/{file_to_zip}'
-                arc_file = default_storage.open(str(path/'AudioData'/file_to_zip), 'rb')
+        #for file_to_zip in (path/'AudioData').glob('*'):
+        for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
+            #if file_to_zip.is_file():
+            arcpath = f'AudioData/{file_to_zip}'
+            with default_storage.open(str(path/'AudioData'/file_to_zip), 'rb') as arc_file:
                 zf.writestr(str(arcpath), arc_file.read())
-            zf.close()
-        return str(path/'download.zip')
+        zf.close()
+
+        with default_storage.open(str(path/'download.zip'), 'wb') as ftw:
+            #fsize = os.stat("/tmp/download.zip").st_size
+            with open("/tmp/download.zip", 'rb') as tempfile:
+                # for i in range((fsize // 4194304) + 1):
+                #     chunk = tempfile.read(4194304)
+                #     ftw.write(chunk)
+                # cnt = 0
+                # while True:
+                #     cnt += 1
+                #     chunk = tempfile.read(4194304)
+                #     if chunk == '' or cnt > 2048:
+                #         break
+                #     ftw.write(chunk)
+                #for i in range(fsize // 4194304):
+                #    ftw.blob.upload_from_file(tempfile, size=4194304, content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
+                #ftw.blob.upload_from_file(tempfile, size=(fsize % 4194304), content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
+                ftw.blob.upload_from_file(tempfile, content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
+
+            # with default_storage.open(str(path/'res.txt'), 'wb') as res:
+            #     res.write("done with file copy")
+
+
+        return "/tmp/download.zip"
 
 
 
@@ -162,25 +216,76 @@ class Text(models.Model):
         default_storage.save(srcfile, f)
         """
 
-    def get_content(self):
-        #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
-        #f = default_storage.open(self.textfile.name, 'rb')
-        f = self.textfile.open('rb')
-        file_content = f.readlines()
-        sentence = ""
-        content = []
-        for line in file_content:
-            line = line.decode('utf-8')
-            if line == "\n" or line == "" or line == "\r\n":
+    def create_sentences(self):
+        with transaction.atomic():
+            if not self.sentences.exists():
+                #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
+                #f = default_storage.open(self.textfile.name, 'rb')
+                f = self.textfile.open('rb')
+                #file_content = f.readlines()
+
+                # it is not enough to detect the encoding from the first line
+                # it hast to be the entire file content
+                encoding = chardet.detect(f.read())['encoding']
+                f.seek(0)
+                file_content = f.readlines()
+
+                sentence = ""
+                content = []
+                for line in file_content:
+                    #line = line.decode('utf-8')
+                    line = line.decode(encoding)
+                    #line = line.decode('unicode_escape')
+                    if line == "\n" or line == "" or line == "\r\n":
+                        if sentence != "":
+                            content.append(sentence)
+                            sentence = ""
+                    else:
+                        sentence += line.replace('\n', ' ').replace('\r', ' ')
                 if sentence != "":
                     content.append(sentence)
-                    sentence = ""
-            else:
-                sentence += line.replace('\n', ' ').replace('\r', ' ')
-        if sentence != "":
-            content.append(sentence)
-        f.close()
+                f.close()
+
+                for i in range(len(content)):
+                    self.sentences.create(content=content[i], index=i + 1, word_count=content[i].strip().count(' ') + 1)
+
+    def get_content(self):
+        if not self.sentences.exists():
+            self.create_sentences()
+        content = []
+        for sentence in self.sentences.all():
+            content.append(sentence.content)
         return content
     
     def sentence_count(self):
-        return len(self.get_content())
+        if not self.sentences.exists():
+            self.create_sentences()
+        return self.sentences.count()
+
+
+    def word_count(self, sentence_limit=None):
+        if not self.sentences.exists():
+            self.create_sentences()
+        count = 0
+        if sentence_limit == None:
+            for sentence in self.sentences.all():
+                count += sentence.word_count
+        else:
+            for sentence in self.sentences.filter(index__lte=sentence_limit):
+                count += sentence.word_count
+        return count
+    
+
+
+class Sentence(models.Model):
+    text = models.ForeignKey(Text, on_delete=models.CASCADE, related_name='sentences', null=False, blank=False)
+    content = models.TextField(null=False, blank=False)
+    word_count = models.IntegerField(null=False, blank=False)
+    index = models.IntegerField(null=False, blank=False)
+
+    def __str__(self):
+        return str(self.index) + ": " + self.content
+
+    class Meta:
+
+        ordering = ['text', 'index']

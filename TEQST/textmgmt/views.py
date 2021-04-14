@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.core.files.storage import default_storage
 from . import models, serializers
 from usermgmt import models as user_models, permissions
+from pathlib import Path
 
 
 class PubFolderListView(generics.ListCreateAPIView):
@@ -27,7 +28,7 @@ class PubFolderListView(generics.ListCreateAPIView):
             return models.Folder.objects.filter(parent=self.request.query_params['parent'], owner=user.pk)
 
         return models.Folder.objects.filter(parent=None, owner=user.pk)  # parent=None means the folder is in the topmost layer
-    
+
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
@@ -61,6 +62,20 @@ class PubSharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
         return models.SharedFolder.objects.filter(owner=user.pk)
 
 
+class PubSharedFolderListenerView(generics.RetrieveUpdateAPIView):
+    """
+    url: api/pub/sharedfolders/:id/listeners/
+    use: retrieve and update the speakers of a shared folder
+    """
+    queryset = models.SharedFolder.objects.all()
+    serializer_class = serializers.SharedFolderListenerSerializer
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
+
+    def get_queryset(self):
+        user = self.request.user
+        return models.SharedFolder.objects.filter(owner=user.pk)
+
+
 class PubTextListView(generics.ListCreateAPIView):
     """
     url: api/pub/texts/?sharedfolder=123
@@ -80,7 +95,7 @@ class PubTextListView(generics.ListCreateAPIView):
             except ValueError:
                 raise exceptions.NotFound("Invalid sharedfolder id")
         raise exceptions.NotFound("No sharedfolder specified")
-    
+
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return serializers.TextFullSerializer
@@ -93,13 +108,13 @@ class SpkTextListView(generics.RetrieveAPIView):
     use: in speak tab: retrieve a sharedfolder with the texts it contains
     """
     queryset = models.SharedFolder.objects.all()
-    serializer_class = serializers.SharedFolderTextSerializer
+    serializer_class = serializers.SpkSharedFolderTextSerializer
 
     def get_object(self):
         sf = super().get_object()
         user = self.request.user
         if user not in sf.speaker.all() and not sf.public:
-            raise exceptions.NotFound("This sharedfolder is not shared with you.")
+            raise exceptions.NotFound("This sharedfolder is not shared with you as speaker.")
         return sf
 
 
@@ -142,11 +157,11 @@ class SpkPublisherListView(generics.ListAPIView):
     use: get list of publishers who own sharedfolders shared with request.user
     """
     queryset = user_models.CustomUser.objects.all()
-    serializer_class = serializers.PublisherSerializer
+    serializer_class = serializers.SpkPublisherSerializer
 
     def get_queryset(self):
         # does not check for is_publisher. This is not necessary
-        
+
         # possible alternative solution
         # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         # current code
@@ -163,7 +178,7 @@ class SpkPublisherDetailedView(generics.RetrieveAPIView):
     use: in speak tab: retrieve a publisher with their folders which they shared with request.user
     """
     queryset = user_models.CustomUser.objects.all()
-    serializer_class = serializers.PublisherSerializer
+    serializer_class = serializers.SpkPublisherSerializer
 
     def get_object(self):
         pub = super().get_object()
@@ -171,7 +186,7 @@ class SpkPublisherDetailedView(generics.RetrieveAPIView):
         for shf in user.sharedfolder.all():
             if pub == shf.owner:
                 return pub
-        raise exceptions.NotFound('This publisher has not shared any folders with you.')
+        raise exceptions.NotFound('This publisher has not shared any folders with you as speaker.')
 
 
 class SpeechDataDownloadView(views.APIView):
@@ -195,11 +210,17 @@ class SpeechDataDownloadView(views.APIView):
         if not instance.has_any_recordings():
             raise exceptions.ParseError("Nothing to download yet.")
         zip_path = instance.create_zip_for_download()
-        zipfile = default_storage.open(zip_path, 'rb')
-        resp = http.HttpResponse()
-        resp.write(zipfile.read())
-        zipfile.close()
-        resp['Content-Type'] = "application/zip"
+        
+        # zipfile = default_storage.open(zip_path, 'rb')
+        # resp = http.HttpResponse()
+        # resp.write(zipfile.read())
+        # zipfile.close()
+        # resp['Content-Type'] = "application/zip"
+        #resp = http.FileResponse(default_storage.open(zip_path, 'rb'), as_attachment=True, filename="download.zip")
+        #resp = http.FileResponse(open(zip_path, 'rb'), as_attachment=True, filename="download.zip")
+
+        resp = http.HttpResponse(status=status.HTTP_200_OK)
+        resp.write("file created")
         return resp
 
 
@@ -241,3 +262,102 @@ class SpkPublicFoldersView(generics.ListAPIView):
     """
     queryset = models.SharedFolder.objects.filter(public=True)
     serializer_class = serializers.PublicFolderSerializer
+
+
+class LstnPublisherListView(generics.ListAPIView):
+    """
+    url: api/lstn/publishers/
+    use: get list of publishers who own sharedfolders shared with request.user
+    """
+    queryset = user_models.CustomUser.objects.all()
+    serializer_class = serializers.LstnPublisherSerializer
+
+    def get_queryset(self):
+        # does not check for is_publisher. This is not necessary
+
+        # possible alternative solution
+        # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
+        # current code
+        pub_pks = []
+        user = self.request.user
+        for shf in user.listenfolder.all():
+            pub_pks.append(shf.owner.pk)
+        return user_models.CustomUser.objects.filter(pk__in = pub_pks)
+
+
+class LstnPublisherDetailedView(generics.RetrieveAPIView):
+    """
+    url: api/lstn/publishers/:id/
+    use: in speak tab: retrieve a publisher with their folders which they shared with request.user
+    """
+    queryset = user_models.CustomUser.objects.all()
+    serializer_class = serializers.LstnPublisherSerializer
+
+    def get_object(self):
+        pub = super().get_object()
+        user = self.request.user
+        for shf in user.listenfolder.all():
+            if pub == shf.owner:
+                return pub
+        raise exceptions.NotFound('This publisher has not shared any folders with you as listener.')
+
+
+class LstnTextListView(generics.RetrieveAPIView):
+    """
+    url: api/lstn/sharedfolders/:id/texts/
+    use: in listen tab: retrieve a sharedfolder with the texts it contains
+    """
+    queryset = models.SharedFolder.objects.all()
+    serializer_class = serializers.LstnSharedFolderTextSerializer
+
+    def get_object(self):
+        sf = super().get_object()
+        user = self.request.user
+        if user not in sf.listener.all():
+            raise exceptions.NotFound("This sharedfolder is not shared with you as listener.")
+        return sf
+
+
+class LstnTextDetailedView(generics.RetrieveAPIView):
+    """
+    url: api/lstn/texts/:id/
+    use: in listen tab: retrieve a text
+    """
+    queryset = models.Text.objects.all()
+    serializer_class = serializers.TextFullSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return models.Text.objects.filter(shared_folder__listener=user)
+
+
+class LstnSharedFolderStatsView(generics.RetrieveAPIView):
+    """
+    url: api/lstn/sharedfolders/:id/stats/
+    use: get statistics on how far the speakers of a publisher's shared folder are
+    """
+    queryset = models.SharedFolder.objects.all()
+    serializer_class = serializers.SharedFolderStatsSerializer
+    permission_classes = [rf_permissions.IsAuthenticated]
+
+    def get_object(self):
+        sf_id = self.kwargs['pk']
+        if not models.SharedFolder.objects.filter(pk=sf_id, listener=self.request.user).exists():
+            raise exceptions.NotFound("Invalid SharedFolder id")
+        return models.SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)
+
+
+class LstnTextStatsView(generics.RetrieveAPIView):
+    """
+    url: api/lstn/texts/:id/stats/
+    use: get statistics on how far the speakers are in a given text
+    """
+    queryset = models.Text.objects.all()
+    serializer_class = serializers.TextStatsSerializer
+    permission_classes = [rf_permissions.IsAuthenticated]
+
+    def get_object(self):
+        text_id = self.kwargs['pk']
+        if not models.Text.objects.filter(pk=text_id, shared_folder__listener=self.request.user).exists():
+            raise exceptions.NotFound('Invalid Text id')
+        return models.Text.objects.get(pk=text_id)

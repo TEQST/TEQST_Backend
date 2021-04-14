@@ -1,4 +1,5 @@
 from django.conf import settings
+from pathlib import Path
 
 LOCALIZATION_FOLDER = 'locale'
 

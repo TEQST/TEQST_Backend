@@ -6,6 +6,7 @@ from django.contrib import auth
 from textmgmt import models as text_models
 from . import storages
 import wave, io
+import librosa
 from pathlib import Path
 
 
@@ -57,12 +58,38 @@ class SentenceRecording(models.Model):
     """
     Acts as a 'component' of a TextRecording, that saves audio and information for each sentence in the text
     """
+    class Validity(models.TextChoices):
+        VALID = "VALID"
+        INVALID_START = "INVALID_START"
+        INVALID_END = "INVALID_END"
+        INVALID_START_END = "INVALID_START_END"
+
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
     index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
+    valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+
+        with default_storage.open(self.audiofile.name) as af:
+            y, sr = librosa.load(af, sr=None)
+        length = librosa.get_duration(y=y, sr=sr)
+        nonMuteSections = librosa.effects.split(y, 20)
+        if len(nonMuteSections) != 0:  # this test is is probably unnecessary
+            start_invalid = nonMuteSections[0][0] / sr < 0.3
+            end_invalid = nonMuteSections[-1][1] / sr > length - 0.2
+            if start_invalid and end_invalid:
+                self.valid = self.Validity.INVALID_START_END
+            else:
+                if start_invalid:
+                    self.valid = self.Validity.INVALID_START
+                elif end_invalid:
+                    self.valid = self.Validity.INVALID_END
+                else:
+                    self.valid = self.Validity.VALID
+            super().save()
+
         if self.recording.active_sentence() > self.recording.text.sentence_count():
             create_textrecording_stm(self.recording.id)
     
@@ -116,35 +143,39 @@ def create_textrecording_stm(trec_pk):
     wav_path = Path(trec.text.shared_folder.get_path())/'AudioData'/f'{wav_path_rel}.wav'
     if not default_storage.exists(str(wav_path)):
         default_storage.save(str(wav_path), empty_file)
-    wav_file = default_storage.open(str(wav_path), 'wb')
-    wav_full = wave.open(wav_file, 'wb') # wave does not yet support pathlib, therefore the string conversion
+    
+    #wav_file = default_storage.open(str(wav_path), 'wb')
+    with default_storage.open(str(wav_path), 'wb') as wav_file:
+        wav_full = wave.open(wav_file, 'wb') # wave does not yet support pathlib, therefore the string conversion
 
-    #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
-    for srec in srecs:
-        wav_audiofile = srec.audiofile.open('rb')
-        wav = wave.open(wav_audiofile, 'rb')
+        #Create .stm entries for each sentence-recording and concatenate the recording to the 'large' file
+        for srec in srecs:
+            #wav_audiofile = srec.audiofile.open('rb')
+            with srec.audiofile.open('rb') as wav_audiofile:
+                wav = wave.open(wav_audiofile, 'rb')
 
-        #On concatenating the first file: also copy all settings
-        if current_timestamp == 0:
-            wav_full.setparams(wav.getparams())
-        duration = wav.getnframes() / wav.getframerate()
+                #On concatenating the first file: also copy all settings
+                if current_timestamp == 0:
+                    wav_full.setparams(wav.getparams())
+                duration = wav.getnframes() / wav.getframerate()
 
-        stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
-            + wav_path_rel + ' ' + str(wav.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
-            + user_str + ' ' + sentences[srec.index - 1] + '\n'
-        stm_file.write(bytes(stm_entry, encoding='utf-8'))
+                stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
+                    + wav_path_rel + ' ' + str(wav.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
+                    + user_str + ' ' + sentences[srec.index - 1] + '\n'
+                stm_file.write(bytes(stm_entry, encoding='utf-8'))
 
-        current_timestamp += duration
+                current_timestamp += duration
 
-        #copy audio
-        wav_full.writeframesraw(wav.readframes(wav.getnframes()))
+                #copy audio
+                wav_full.writeframesraw(wav.readframes(wav.getnframes()))
 
-        #close sentence-recording file
-        wav.close()
+                #close sentence-recording file
+                wav.close()
 
-    #close files
+        #close files
+        wav_full.close()
     stm_file.close()
-    wav_full.close()
+    
 
     #concatenate all .stm files to include the last changes
     concat_stms(trec.text.shared_folder)
@@ -182,14 +213,15 @@ def format_timestamp(t):
 
 
 def log_contains_user(path, username):
-    logfile = default_storage.open(str(path), 'rb')
-    lines = logfile.readlines()
-    for line in lines:
-        line = line.decode('utf-8')
-        if line[:8] == 'username':
-            if line[10:] == username + '\n':
-                return True
-    logfile.close()
+    #logfile = default_storage.open(str(path), 'rb')
+    with default_storage.open(str(path), 'rb') as logfile:
+        lines = logfile.readlines()
+        for line in lines:
+            line = line.decode('utf-8')
+            if line[:8] == 'username':
+                if line[10:] == username + '\n':
+                    return True
+        logfile.close()
     return False
 
 

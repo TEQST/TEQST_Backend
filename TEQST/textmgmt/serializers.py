@@ -167,7 +167,9 @@ class TextFullSerializer(serializers.ModelSerializer):
         sf = sf.make_shared_folder()
         validated_data['shared_folder'] = sf
         if max_lines is None:
-            return super().create(validated_data)
+            return_obj = super().create(validated_data)
+            return_obj.create_sentences()
+            return return_obj
         else:  # max_lines is given
             textfile = validated_data['textfile']
             # type(textfile) is django.core.files.uploadedfile.InMemoryUploadedFile
@@ -178,6 +180,7 @@ class TextFullSerializer(serializers.ModelSerializer):
                 data['textfile'] = textfiles[i]
                 data['title'] = f'{validated_data["title"]}_{i + 1}'
                 return_obj = models.Text.objects.create(**data)
+                return_obj.create_sentences()
             # some object has to be returned, so it has been decided that the last partfile will be returned
             return return_obj
 
@@ -192,6 +195,30 @@ class TextBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Text
         fields = ['id', 'title']
+
+
+class TextProgressSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: SpkTextListView
+    through serializer: SharedFolderTextSerializer
+    for: retrieval of texts of a sharedfolder including information on progress of request.user
+    """
+    words_total = serializers.IntegerField(read_only=True, source='word_count')
+    words_finished = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Text
+        fields = ['id', 'title', 'words_total', 'words_finished']
+        read_only_fields = fields
+
+    def get_words_finished(self, obj: models.Text):
+        text = obj
+        user = self.context['request'].user
+        sentences_finished = 0
+        if rec_models.TextRecording.objects.filter(text=text, speaker=user).exists():
+            tr = rec_models.TextRecording.objects.get(text=text, speaker=user)
+            sentences_finished = tr.active_sentence() - 1
+        return text.word_count(sentences_finished)
 
 
 class TextStatsSerializer(serializers.ModelSerializer):
@@ -224,7 +251,7 @@ class TextStatsSerializer(serializers.ModelSerializer):
         stats = []
         q1 = text.shared_folder.speaker.all()
         q2 = user_models.CustomUser.objects.filter(textrecording__text=text)
-        for speaker in q1.union(q2):
+        for speaker in q1.union(q2).order_by('username'):
             spk = {'name': speaker.username, 'finished': 0}
             if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
                 textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
@@ -236,12 +263,12 @@ class TextStatsSerializer(serializers.ModelSerializer):
         return stats
 
 
-class SharedFolderTextSerializer(serializers.ModelSerializer):
+class SpkSharedFolderTextSerializer(serializers.ModelSerializer):
     """
     to be used by view: SpkTextListView
     for: retrieval of a sharedfolder with the texts it contains
     """
-    texts = TextBasicSerializer(read_only=True, many=True, source='text')
+    texts = TextProgressSerializer(read_only=True, many=True, source='text')
     path = serializers.CharField(read_only=True, source='get_readable_path')
     timestats = serializers.SerializerMethodField()
     
@@ -269,11 +296,28 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     """
     speaker_ids = serializers.PrimaryKeyRelatedField(queryset=user_models.CustomUser.objects.all(), many=True, allow_null=True, source='speaker', write_only=True)
     speakers = user_serializers.UserBasicSerializer(many=True, read_only=True, source='speaker')
+
     class Meta:
         model = models.SharedFolder
         fields = ['id', 'name', 'speakers', 'speaker_ids', 'public']
         read_only_fields = ['name', 'speakers']
         write_only_fields = ['speaker_ids']
+        depth = 1
+
+
+class SharedFolderListenerSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: PubSharedFolderListenerView
+    for: retrieval and update of the listeners of a shared folder
+    """
+    listener_ids = serializers.PrimaryKeyRelatedField(queryset=user_models.CustomUser.objects.all(), many=True, allow_null=True, source='listener', write_only=True)
+    listeners = user_serializers.UserBasicSerializer(many=True, read_only=True, source='listener')
+    
+    class Meta:
+        model = models.SharedFolder
+        fields = ['id', 'name', 'listeners', 'listener_ids']
+        read_only_fields = ['name', 'listeners']
+        write_only_fields = ['listener_ids']
         depth = 1
 
 
@@ -316,12 +360,18 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         """
         sf = obj
         stats = []
+
+        texts = []
+        for t in sf.text.all():
+            texts.append((t, t.title, t.sentence_count()))
+
         q1 = sf.speaker.all()
         q2 = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sf)
-        for speaker in q1.union(q2):
+        for speaker in q1.union(q2).order_by('username'):
             spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
-            for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
-                txt = {'title': text.title, 'finished': 0, 'total': text.sentence_count()}
+            #for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
+            for text, title, sentence_count in texts:
+                txt = {'title': title, 'finished': 0, 'total': sentence_count}
                 if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
                     textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
                     txt['finished'] = textrecording.active_sentence() - 1
@@ -334,7 +384,7 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         return stats
 
 
-class PublisherSerializer(serializers.ModelSerializer):
+class SpkPublisherSerializer(serializers.ModelSerializer):
     """
     to be used by view: SpkPublisherListView, SpkPublisherDetailedView
     for: retrieval of single publisher or list of publishers, who own sharedfolders (freedfolders) shared with request.user
@@ -368,5 +418,33 @@ class PublicFolderSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'name', 'path']
 
 
+class LstnPublisherSerializer(serializers.ModelSerializer):
+    """
+    to be used by view: LstnPublisherListView, LstnPublisherDetailedView
+    for: retrieval of single publisher or list of publishers, who own sharedfolders (freedfolders) shared with request.user
+    """
+    freedfolders = serializers.SerializerMethodField(read_only=True, method_name='get_freed_folders')
 
-        
+    class Meta:
+        model = user_models.CustomUser
+        fields = ['id', 'username', 'freedfolders']
+        read_only_fields = ['username']
+    
+    def get_freed_folders(self, obj):
+        pub = obj
+        lstn = self.context['request'].user
+        info = []
+        for sf in models.SharedFolder.objects.filter(owner=pub, listener=lstn):
+            info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
+        return info
+
+
+class LstnSharedFolderTextSerializer(serializers.ModelSerializer):
+
+    texts = TextBasicSerializer(read_only=True, many=True, source='text')
+    path = serializers.CharField(read_only=True, source='get_readable_path')
+    
+    class Meta:
+        model = models.SharedFolder
+        fields = ['id', 'name', 'owner', 'path', 'texts']
+        read_only_fields = ['name', 'owner']
