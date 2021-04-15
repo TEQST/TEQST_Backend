@@ -32,6 +32,7 @@ class TextRecording(models.Model):
     audiofile = models.FileField(upload_to=text_rec_upload_path, null=True, blank=True)
 
     class Meta:
+        ordering = ['text', 'speaker']
         constraints = [
             models.UniqueConstraint(fields=['speaker', 'text'], name='unique_trec'),
         ]
@@ -75,8 +76,9 @@ class SentenceRecording(models.Model):
     valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
 
     class Meta:
+        ordering = ['recording', 'index']
         constraints = [
-            models.UniqueConstraint(fields=['recording', 'index']),
+            models.UniqueConstraint(fields=['recording', 'index'], name='unique_srec'),
         ]
 
     def save(self, *args, **kwargs):
