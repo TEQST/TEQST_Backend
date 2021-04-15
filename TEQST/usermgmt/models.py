@@ -23,6 +23,9 @@ class Language(models.Model):
     right_to_left = models.BooleanField(default=False)
     localization_file = models.FileField(upload_to=utils.upload_path, null=True, blank=True, storage=storages.OverwriteStorage())
 
+    class Meta:
+        ordering = ['english_name']
+
     def __str__(self):
         return f'{self.english_name} ({self.native_name})'
 

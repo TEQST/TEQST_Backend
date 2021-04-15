@@ -17,9 +17,10 @@ class Folder(models.Model):
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
 
     class Meta:
-        ordering = ['owner','parent','name']
+        ordering = ['owner', 'name']
         constraints = [
-            models.UniqueConstraint(fields=['name','parent'], name='unique_folder'),
+            models.UniqueConstraint(fields=['name','parent'], name='unique_subfolder'),
+            models.UniqueConstraint(fields=['name'], condition=models.Q(parent=None), name='unique_folder'),
         ]
 
     # this method is useful for the shell and for the admin view
@@ -295,11 +296,11 @@ class Sentence(models.Model):
     word_count = models.IntegerField(null=False, blank=False)
     index = models.IntegerField(null=False, blank=False)
 
-    def __str__(self):
-        return str(self.index) + ": " + self.content
-
     class Meta:
         ordering = ['text', 'index']
         constraints = [
             models.UniqueConstraint(fields=['text', 'index'], name='unique_sentence'),
         ]
+
+    def __str__(self):
+        return str(self.index) + ": " + self.content
