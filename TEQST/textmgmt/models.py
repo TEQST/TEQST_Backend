@@ -1,12 +1,12 @@
 from django.db import models, transaction
 from django.conf import settings
-from django.core.files import uploadedfile
+from django.core.files import uploadedfile, base
 from django.core.files.storage import default_storage
 from django.contrib import auth
 from rest_framework import views
 from . import utils
 from usermgmt import models as user_models
-import os, zipfile, chardet, zlib
+import os, zipfile, chardet, zlib, re
 from pathlib import Path
 #from google.cloud.storage import Blob
 
@@ -58,16 +58,37 @@ class Folder(models.Model):
         sf = SharedFolder(folder_ptr=self, name=self.name, owner=self.owner, parent=self.parent)
         sf.save()
         # create actual folders and files:
-        sf_path = Path(sf.get_path())
-        logfile = uploadedfile.SimpleUploadedFile('', '')
-        default_storage.save(str(sf_path/'log.txt'), logfile)
+        #sf_path = Path(sf.get_path())
+        #logfile = uploadedfile.SimpleUploadedFile('', '')
+        #default_storage.save(str(sf_path/'log.txt'), logfile)
         return sf
+
+
+def stm_upload_path(instance, filename):
+    sf_path = instance.get_path()
+    title = re.sub(r"[\- ]", "_", instance.name)
+    title = title.lower()
+    return f'{sf_path}/{title}.stm'
+
+
+def log_upload_path(instance, filename):
+    sf_path = instance.get_path()
+    return f'{sf_path}/log.txt'
 
 
 class SharedFolder(Folder):
     speaker = models.ManyToManyField(auth.get_user_model(), related_name='sharedfolder', blank=True)
     listener = models.ManyToManyField(auth.get_user_model(), related_name='listenfolder', blank=True)
     public = models.BooleanField(default=False)
+
+    stmfile = models.FileField(upload_to=stm_upload_path, blank=True)
+    logfile = models.FileField(upload_to=log_upload_path, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.stmfile.save('name', base.ContentFile(''), save=False)
+            self.logfile.save('name', base.ContentFile(''), save=False)
+        super().save(*args, **kwargs)
     
     def make_shared_folder(self):
         return self

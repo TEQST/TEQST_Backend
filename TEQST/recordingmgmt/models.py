@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from django.core.files import uploadedfile
+from django.core.files import uploadedfile, base
 from django.core.files.storage import default_storage
 from django.contrib import auth
 from textmgmt import models as text_models
@@ -40,8 +40,14 @@ class TextRecording(models.Model):
     rec_time_without_rep = models.FloatField(default=0.0)
     rec_time_with_rep = models.FloatField(default=0.0)
     # is the audiofile really needed?
-    audiofile = models.FileField(upload_to=text_rec_upload_path, null=True, blank=True)
-    stmfile = models.FileField(upload_to=stm_upload_path, null=True, blank=True)
+    audiofile = models.FileField(upload_to=text_rec_upload_path, blank=True)
+    stmfile = models.FileField(upload_to=stm_upload_path, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.audiofile.save('name', base.ContentFile(''), save=False)
+            self.stmfile.save('name', base.ContentFile(''), save=False)
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ['text', 'speaker']
