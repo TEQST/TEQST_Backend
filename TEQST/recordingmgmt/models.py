@@ -7,7 +7,7 @@ from textmgmt import models as text_models
 from usermgmt import models as user_models
 from usermgmt.countries import COUNTRY_CHOICES
 from . import storages
-import wave, io, re
+import wave, io, re, os
 import librosa
 from pathlib import Path
 
@@ -61,13 +61,51 @@ class TextRecording(models.Model):
         return sentence_num
     
     def is_finished(self):
-        return SentenceRecording.objects.filter(recording=self).count() == self.text.sentence_count()
+        return self.srecs.count() >= self.text.sentence_count()
     
     def get_progress(self):
         """
         returns a tuple of (# sentences completed, # sentences in the text)
         """
         return (self.active_sentence() - 1, self.text.sentence_count())
+
+    def create_stm(self):
+        self.text.shared_folder.add_user_to_log(self.speaker)
+
+        #create string with encoded userdata
+        user_str = f'<{self.speaker.gender},{self.speaker.education},'
+        if self.SR_permission:
+            user_str += 'SR'
+        if self.TTS_permission:
+            user_str += 'TTS'
+        user_str += '>'
+        username = self.speaker.username
+        current_timestamp = 0
+        sentences = self.text.get_content()
+        wav_path_rel = os.path.basename(self.audiofile.name)
+
+        with self.stmfile.open('wb') as stm_file:
+            with wave.open(self.audiofile.open('wb'), 'wb') as wav_full:
+                for srec in self.srecs.all():
+                    with wave.open(srec.audiofile.open('rb'), 'rb') as wav_part:
+
+                        #On concatenating the first file: also copy all settings
+                        if current_timestamp == 0:
+                            wav_full.setparams(wav_part.getparams())
+                        duration = wav_part.getnframes() / wav_part.getframerate()
+
+                        stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
+                        + wav_path_rel + ' ' + str(wav_part.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
+                        + user_str + ' ' + sentences[srec.index - 1] + '\n'
+                    
+                        stm_file.write(bytes(stm_entry, encoding='utf-8'))
+
+                        current_timestamp += duration
+
+                        #copy audio
+                        wav_full.writeframesraw(wav_part.readframes(wav_part.getnframes()))
+
+
 
 
 def sentence_rec_upload_path(instance, filename):
@@ -88,7 +126,7 @@ class SentenceRecording(models.Model):
         INVALID_END = "INVALID_END"
         INVALID_START_END = "INVALID_START_END"
 
-    recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE)
+    recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE, related_name='srecs')
     index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
     valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
@@ -120,8 +158,8 @@ class SentenceRecording(models.Model):
                     self.valid = self.Validity.VALID
             super().save()
 
-        if self.recording.active_sentence() > self.recording.text.sentence_count():
-            create_textrecording_stm(self.recording.id)
+        if self.recording.is_finished():
+            self.recording.create_stm()
     
     def get_audio_length(self):
         audio_file = default_storage.open(self.audiofile, 'rb')
@@ -132,6 +170,7 @@ class SentenceRecording(models.Model):
         return duration
 
 
+#deprecated
 def create_textrecording_stm(trec_pk):
     """
     create stm and concatenated audio for one textrecording. These are created upon first completion of a text by a user, 
@@ -212,6 +251,7 @@ def create_textrecording_stm(trec_pk):
     concat_stms(trec.text.shared_folder)
 
 
+#deprecated
 def concat_stms(sharedfolder):
     """
     Concatenate all .stm files in the given sharedfolder to include all changes
@@ -257,6 +297,7 @@ def format_timestamp(t):
     return "{0:0>7}".format(int(round(t*100, 0)))
 
 
+#deprecated
 def log_contains_user(path, username):
     #logfile = default_storage.open(str(path), 'rb')
     with default_storage.open(str(path), 'rb') as logfile:
@@ -270,6 +311,7 @@ def log_contains_user(path, username):
     return False
 
 
+#deprecated
 def add_user_to_log(path, user):
     if log_contains_user(path, str(user.username)):
         return

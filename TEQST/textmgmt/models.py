@@ -111,7 +111,8 @@ class SharedFolder(Folder):
         """
         create zip file and return the path to the download.zip file
         """
-        path = Path(self.get_path())
+        #path = Path(self.get_path())
+
         # not using with here will cause the file not to close and thus not to be created
         # with default_storage.open(str(path/'download.zip'), 'wb') as file:
         #     zf = zipfile.ZipFile(file, 'w')  #, compression=zipfile.ZIP_DEFLATED, compresslevel=6)
@@ -142,25 +143,29 @@ class SharedFolder(Folder):
         #     my_file.close()
 
         #with default_storage.open(str(path/'download.zip'), 'wb') as file:
-        zf = zipfile.ZipFile("/tmp/download.zip", 'w')
+        f = default_storage.open(self.get_path()+'/download.zip', 'wb')
+        zf = zipfile.ZipFile(f, 'w')
 
         # arcname is the name/path which the file will have inside the zip file
-        with default_storage.open(str(path/f'{self.name}.stm'), 'rb') as stm_file:
-            zf.writestr(str(f'{self.name}.stm'), stm_file.read())
-        with default_storage.open(str(path/'log.txt'), 'rb') as log_file:
-            zf.writestr('log.txt', log_file.read())
+        with self.stmfile.open('rb') as stm_file:
+            zf.writestr(self.stmfile.name.replace(self.get_path()+'/', ''), stm_file.read())
+        with self.logfile.open('rb') as log_file:
+            zf.writestr(self.logfile.name.replace(self.get_path()+'/', ''), log_file.read())
 
         #for file_to_zip in (path/'AudioData').glob('*'):
-        for file_to_zip in default_storage.listdir(str(path/'AudioData'))[1]:
-            #if file_to_zip.is_file():
-            arcpath = f'AudioData/{file_to_zip}'
-            with default_storage.open(str(path/'AudioData'/file_to_zip), 'rb') as arc_file:
-                zf.writestr(str(arcpath), arc_file.read())
+        for text in self.text.all():
+            for trec in text.textrecording.all():
+                if trec.is_finished():
+                    with trec.stmfile.open('rb') as arc_file:
+                        zf.writestr(trec.stmfile.name.replace(self.get_path()+'/', ''), arc_file.read())
         zf.close()
+        f.close()
 
-        with default_storage.open(str(path/'download.zip'), 'wb') as ftw:
+        return self.get_path()+'/download.zip'
+
+        #with default_storage.open(str(path/'download.zip'), 'wb') as ftw:
             #fsize = os.stat("/tmp/download.zip").st_size
-            with open("/tmp/download.zip", 'rb') as tempfile:
+        #    with open("/tmp/download.zip", 'rb') as tempfile:
                 # for i in range((fsize // 4194304) + 1):
                 #     chunk = tempfile.read(4194304)
                 #     ftw.write(chunk)
@@ -174,13 +179,60 @@ class SharedFolder(Folder):
                 #for i in range(fsize // 4194304):
                 #    ftw.blob.upload_from_file(tempfile, size=4194304, content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
                 #ftw.blob.upload_from_file(tempfile, size=(fsize % 4194304), content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
-                ftw.blob.upload_from_file(tempfile, content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
+        #        ftw.blob.upload_from_file(tempfile, content_type=ftw.mime_type, predefined_acl=ftw._storage.default_acl)
 
             # with default_storage.open(str(path/'res.txt'), 'wb') as res:
             #     res.write("done with file copy")
 
 
-        return "/tmp/download.zip"
+        #return "/tmp/download.zip"
+
+    def concat_stms(self):
+        with self.stmfile.open('wb') as full:
+            with open(settings.BASE_DIR/'header.stm', 'rb') as header:
+                full.write(header.read())
+            for text in self.text.all():
+                text.apppend_stms(full)
+                
+
+    def log_contains_user(self, username):
+        with self.logfile.open('rb') as log:
+            lines = log.readlines()
+            for line in lines:
+                line = line.decode('utf-8')
+                if line[:8] == 'username':
+                    if line[10:] == username + '\n':
+                        return True
+        return False
+
+
+    def add_user_to_log(self, user):
+        if self.log_contains_user(str(user.username)):
+            return
+        #logfile = default_storage.open(str(path), 'ab')
+        file_content = b''
+        with self.logfile.open('rb') as log:
+            file_content = log.read()
+        with self.logfile.open('wb') as log:
+            # logfile.writelines(bytes(line + '\n', encoding='utf-8') for line in [
+            #     f'username: {user.username}',
+            #     f'birth_year: {user.birth_year}',
+            #     f'gender: {user.gender}',
+            #     f'education: {user.education}',
+            #     f'accent: {user.accent}',
+            #     f'country: {user.country}',
+            #     '#'
+            # ])
+            logfile_entry = 'username: ' + str(user.username) + '\n' \
+                            + 'email: ' + str(user.email) + '\n' \
+                            + 'date_joined: ' + str(user.date_joined) + '\n' \
+                            + 'birth_year: ' + str(user.birth_year) + '\n' \
+                            + 'gender: ' + str(user.gender) + '\n' \
+                            + 'education: ' + str(user.education) + '\n' \
+                            + 'accent: ' + str(user.accent) + '\n' \
+                            + 'country: ' + str(user.country) + '\n#\n'
+            file_content += bytes(logfile_entry, encoding='utf-8')
+            log.write(file_content)
 
 
 
@@ -296,7 +348,6 @@ class Text(models.Model):
             self.create_sentences()
         return self.sentences.count()
 
-
     def word_count(self, sentence_limit=None):
         if not self.sentences.exists():
             self.create_sentences()
@@ -309,6 +360,11 @@ class Text(models.Model):
                 count += sentence.word_count
         return count
     
+    def append_stms(self, file):
+        for trec in self.textrecordings.all():
+            if trec.is_finished():
+                with trec.stmfile.open('rb') as part:
+                    file.write(part.read)
 
 
 class Sentence(models.Model):

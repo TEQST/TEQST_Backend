@@ -38,7 +38,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
     def get_sentences_status(self, obj):
         tr = obj
         status = []
-        for sr in tr.sentencerecording_set.all():
+        for sr in tr.srecs.all():
             status.append({"index": sr.index, "status": sr.valid})
         return status
 
