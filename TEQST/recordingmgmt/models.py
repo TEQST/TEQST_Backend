@@ -7,24 +7,28 @@ from textmgmt import models as text_models
 from usermgmt import models as user_models
 from usermgmt.countries import COUNTRY_CHOICES
 from . import storages
-import wave, io, re, os
+import wave, io, re
 import librosa
 from pathlib import Path
+
+
+def get_normalized_filename(instance):
+    title = re.sub(r"[\- ]", "_", instance.text.title)
+    title = title.lower()
+    return f'{title}-usr{instance.speaker.id:04d}'
 
 
 #May be needed in a future version
 def text_rec_upload_path(instance, filename):
     sf_path = instance.text.shared_folder.get_path()
-    title = re.sub(r"[\- ]", "_", instance.text.title)
-    title = title.lower()
-    return f'{sf_path}/AudioData/{title}-usr{instance.speaker.id}.wav'
+    name = get_normalized_filename(instance)
+    return f'{sf_path}/AudioData/{name}.wav'
 
 
 def stm_upload_path(instance, filename):
     sf_path = instance.text.shared_folder.get_path()
-    title = re.sub(r"[\- ]", "_", instance.text.title)
-    title = title.lower()
-    return f'{sf_path}/STM/{title}-usr{instance.speaker.id}.stm'
+    name = get_normalized_filename(instance)
+    return f'{sf_path}/STM/{name}.stm'
 
 
 class TextRecording(models.Model):
@@ -82,7 +86,7 @@ class TextRecording(models.Model):
         username = self.speaker.username
         current_timestamp = 0
         sentences = self.text.get_content()
-        wav_path_rel = os.path.basename(self.audiofile.name)
+        wav_path_rel = Path(self.textrecording.name).stem
 
         with self.stmfile.open('wb') as stm_file:
             with wave.open(self.audiofile.open('wb'), 'wb') as wav_full:
