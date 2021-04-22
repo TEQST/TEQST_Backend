@@ -1,9 +1,17 @@
 from django.shortcuts import render
 from django import http
-from rest_framework import status, exceptions, response, generics, mixins, views, permissions as rf_permissions
+from rest_framework import status, exceptions, response, generics, mixins, views, decorators, permissions as rf_permissions
 from rest_framework.authtoken import views as token_views, models as token_models
-from . import permissions, models, serializers
+from . import permissions, models, serializers, countries
 import re
+
+
+@decorators.api_view()
+@decorators.permission_classes([])
+def country_list(request):
+    dict = {a: b for (a, b) in countries.COUNTRY_CHOICES}
+    return response.Response(dict)
+
 
 
 class PubUserListView(generics.ListAPIView):

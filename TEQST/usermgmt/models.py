@@ -1,7 +1,7 @@
 from django.db import models, transaction
 from django.contrib import auth
 from django.contrib.auth import models as auth_models
-from . import utils, storages
+from . import utils, storages, countries
 
 
 def get_english():
@@ -50,7 +50,7 @@ class CustomUser(auth_models.AbstractUser):
     # the accent field is for now just a charfield.
     accent = models.CharField(max_length=100, default=utils.ACCENT_DEFAULT, blank=True)
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
-    country = models.CharField(max_length=50, null=True, blank=True)
+    country = models.CharField(max_length=50, choices=countries.COUNTRY_CHOICES)
     dark_mode = models.BooleanField(default=False, blank=True)
 
     def is_publisher(self):
