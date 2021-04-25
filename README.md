@@ -7,7 +7,7 @@ python3 -m venv TEQST_Backend/venv
 #### Linux/MacOS
 source TEQST_Backend/venv/bin/activate
 #### Windows
-TEQST_Backend/venv/Scripts/activate.bat
+TEQST_Backend\venv\Scripts\activate.bat
 ### Install the dependencies
 pip3 install -r TEQST_Backend/requirements.txt
 ### Prepare the database models
