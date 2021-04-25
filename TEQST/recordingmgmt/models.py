@@ -4,6 +4,8 @@ from django.core.files import uploadedfile
 from django.core.files.storage import default_storage
 from django.contrib import auth
 from textmgmt import models as text_models
+from usermgmt import models as user_models
+from usermgmt.countries import COUNTRY_CHOICES
 from . import storages
 import wave, io
 import librosa
@@ -197,6 +199,20 @@ def concat_stms(sharedfolder):
     header_file = open(settings.BASE_DIR/'header.stm', 'rb')
     stm_file.write(header_file.read())
     header_file.close()
+
+    # header entries for country and accent
+    speakers = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sharedfolder)
+    countries = set([s.country for s in speakers])
+    accents = set([s.accent for s in speakers])
+    country_dict = dict(COUNTRY_CHOICES)
+    c_header = ';; CATEGORY "3" "COUNTRY" ""\n'
+    for country in countries:
+        c_header += f';; LABEL "{country}" "{country_dict[country]}" ""\n'
+    a_header = ';; CATEGORY "4" "ACCENT" ""\n'
+    for accent in accents:
+        a_header += f';; LABEL "{accent}" "{accent}" ""\n'
+    stm_file.write(bytes(c_header, encoding='utf-8'))
+    stm_file.write(bytes(a_header, encoding='utf-8'))
 
     #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
