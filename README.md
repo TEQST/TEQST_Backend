@@ -1,5 +1,7 @@
 # TEQST Backend Server
 
+This is the Backend for [TEQST](https://github.com/TEQST/TEQST)
+
 ## Setup
 ### Create a new virtual environment
 python3 -m venv TEQST_Backend/venv
