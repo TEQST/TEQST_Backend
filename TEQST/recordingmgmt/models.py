@@ -112,21 +112,22 @@ def create_textrecording_stm(trec_pk):
     """
     trec = TextRecording.objects.get(pk=trec_pk)
     srecs = SentenceRecording.objects.filter(recording=trec)
+    speaker = trec.speaker
 
     # update logfile
     logpath = Path(trec.text.shared_folder.get_path())/'log.txt'
     add_user_to_log(logpath, trec.speaker)
 
     #create string with encoded userdata
-    user_str = f'<{trec.speaker.gender},{trec.speaker.education},'
+    user_str = f'<{speaker.gender},{speaker.education},'
     if trec.SR_permission:
         user_str += 'SR'
     if trec.TTS_permission:
         user_str += 'TTS'
-    user_str += '>'
-    username = trec.speaker.username
+    user_str += f',{speaker.country},{speaker.accent}>'
+    username = speaker.username
     current_timestamp = 0
-    sentences = trec.text.get_content()
+    sentences = trec.text.get_content()  
 
     #Store an empty file at the location of the textrecording STM and wav file, so open has a file to work with
     empty_file = uploadedfile.SimpleUploadedFile('', '')
