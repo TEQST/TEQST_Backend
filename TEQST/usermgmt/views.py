@@ -12,6 +12,11 @@ def country_list(request):
     dict = {a: b for (a, b) in countries.COUNTRY_CHOICES}
     return response.Response(dict)
 
+@decorators.api_view()
+@decorators.permission_classes([])
+def accent_list(request):
+    list = models.CustomUser.objects.order_by().values_list('accent', flat=True).distinct()
+    return response.Response(list)
 
 
 class PubUserListView(generics.ListAPIView):
