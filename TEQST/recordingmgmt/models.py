@@ -262,11 +262,7 @@ def add_user_to_log(path, user):
         logfile_entry = 'username: ' + str(user.username) + '\n' \
                         + 'email: ' + str(user.email) + '\n' \
                         + 'date_joined: ' + str(user.date_joined) + '\n' \
-                        + 'birth_year: ' + str(user.birth_year) + '\n' \
-                        + 'gender: ' + str(user.gender) + '\n' \
-                        + 'education: ' + str(user.education) + '\n' \
-                        + 'accent: ' + str(user.accent) + '\n' \
-                        + 'country: ' + str(user.country) + '\n#\n'
+                        + 'birth_year: ' + str(user.birth_year) + '\n#\n'
         file_content += bytes(logfile_entry, encoding='utf-8')
         logfile.write(file_content)
         logfile.close()
