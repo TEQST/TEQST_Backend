@@ -1,7 +1,7 @@
 from django.db import models, transaction
 from django.contrib import auth
 from django.contrib.auth import models as auth_models
-from . import utils, storages
+from . import utils, storages, countries
 
 
 def get_english():
@@ -51,9 +51,9 @@ class CustomUser(auth_models.AbstractUser):
     education = models.CharField(max_length=50, choices=utils.EDU_CHOICES, default='N')
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     # the accent field is for now just a charfield.
-    accent = models.CharField(max_length=100, default=utils.ACCENT_DEFAULT, blank=True)
+    accent = models.CharField(max_length=50)
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
-    country = models.CharField(max_length=50, null=True, blank=True)
+    country = models.CharField(max_length=10, choices=countries.COUNTRY_CHOICES)
     dark_mode = models.BooleanField(default=False, blank=True)
 
     class Meta:

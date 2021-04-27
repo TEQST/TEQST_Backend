@@ -4,6 +4,8 @@ from django.core.files import uploadedfile
 from django.core.files.storage import default_storage
 from django.contrib import auth
 from textmgmt import models as text_models
+from usermgmt import models as user_models
+from usermgmt.countries import COUNTRY_CHOICES
 from . import storages
 import wave, io
 import librosa
@@ -122,21 +124,22 @@ def create_textrecording_stm(trec_pk):
     """
     trec = TextRecording.objects.get(pk=trec_pk)
     srecs = SentenceRecording.objects.filter(recording=trec)
+    speaker = trec.speaker
 
     # update logfile
     logpath = Path(trec.text.shared_folder.get_path())/'log.txt'
     add_user_to_log(logpath, trec.speaker)
 
     #create string with encoded userdata
-    user_str = f'<{trec.speaker.gender},{trec.speaker.education},'
+    user_str = f'<{speaker.gender},{speaker.education},'
     if trec.SR_permission:
         user_str += 'SR'
     if trec.TTS_permission:
         user_str += 'TTS'
-    user_str += '>'
-    username = trec.speaker.username
+    user_str += f',{speaker.country},{speaker.accent}>'
+    username = speaker.username
     current_timestamp = 0
-    sentences = trec.text.get_content()
+    sentences = trec.text.get_content()  
 
     #Store an empty file at the location of the textrecording STM and wav file, so open has a file to work with
     empty_file = uploadedfile.SimpleUploadedFile('', '')
@@ -210,6 +213,20 @@ def concat_stms(sharedfolder):
     stm_file.write(header_file.read())
     header_file.close()
 
+    # header entries for country and accent
+    speakers = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sharedfolder)
+    countries = set([s.country for s in speakers])
+    accents = set([s.accent for s in speakers])
+    country_dict = dict(COUNTRY_CHOICES)
+    c_header = ';; CATEGORY "3" "COUNTRY" ""\n'
+    for country in countries:
+        c_header += f';; LABEL "{country}" "{country_dict[country]}" ""\n'
+    a_header = ';; CATEGORY "4" "ACCENT" ""\n'
+    for accent in accents:
+        a_header += f';; LABEL "{accent}" "{accent}" ""\n'
+    stm_file.write(bytes(c_header, encoding='utf-8'))
+    stm_file.write(bytes(a_header, encoding='utf-8'))
+
     #concatenate all existing stm files
     for temp_stm_name in temp_stm_names:
         #temp_stm_file = default_storage.open(stm_path/temp_stm_name, 'r', encoding='utf8')
@@ -257,11 +274,7 @@ def add_user_to_log(path, user):
         logfile_entry = 'username: ' + str(user.username) + '\n' \
                         + 'email: ' + str(user.email) + '\n' \
                         + 'date_joined: ' + str(user.date_joined) + '\n' \
-                        + 'birth_year: ' + str(user.birth_year) + '\n' \
-                        + 'gender: ' + str(user.gender) + '\n' \
-                        + 'education: ' + str(user.education) + '\n' \
-                        + 'accent: ' + str(user.accent) + '\n' \
-                        + 'country: ' + str(user.country) + '\n#\n'
+                        + 'birth_year: ' + str(user.birth_year) + '\n#\n'
         file_content += bytes(logfile_entry, encoding='utf-8')
         logfile.write(file_content)
         logfile.close()
