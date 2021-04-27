@@ -16,6 +16,13 @@ class Folder(models.Model):
     owner = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE, related_name='folder')  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
 
+    class Meta:
+        ordering = ['owner', 'name']
+        constraints = [
+            models.UniqueConstraint(fields=['name','parent'], name='unique_subfolder'),
+            models.UniqueConstraint(fields=['name'], condition=models.Q(parent=None), name='unique_folder'),
+        ]
+
     # this method is useful for the shell and for the admin view
     def __str__(self):
         return self.name
@@ -178,6 +185,12 @@ class Text(models.Model):
     shared_folder = models.ForeignKey(SharedFolder, on_delete=models.CASCADE, related_name='text')
     textfile = models.FileField(upload_to=upload_path)
 
+    class Meta:
+        ordering = ['shared_folder','title']
+        constraints = [
+            models.UniqueConstraint(fields=['title','shared_folder'], name='unique_text'),
+        ]
+
     def __str__(self):
         return self.title
     
@@ -283,9 +296,11 @@ class Sentence(models.Model):
     word_count = models.IntegerField(null=False, blank=False)
     index = models.IntegerField(null=False, blank=False)
 
+    class Meta:
+        ordering = ['text', 'index']
+        constraints = [
+            models.UniqueConstraint(fields=['text', 'index'], name='unique_sentence'),
+        ]
+
     def __str__(self):
         return str(self.index) + ": " + self.content
-
-    class Meta:
-
-        ordering = ['text', 'index']

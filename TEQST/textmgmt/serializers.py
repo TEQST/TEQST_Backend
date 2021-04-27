@@ -249,8 +249,10 @@ class TextStatsSerializer(serializers.ModelSerializer):
         """
         text = obj
         stats = []
-        q1 = text.shared_folder.speaker.all()
-        q2 = user_models.CustomUser.objects.filter(textrecording__text=text)
+        #remove ordering from q1 and q2, so the union operation works
+        q1 = text.shared_folder.speaker.all().order_by()
+        q2 = user_models.CustomUser.objects.filter(textrecording__text=text).order_by()
+        #the union queryset has to be explicitly reordered
         for speaker in q1.union(q2).order_by('username'):
             spk = {'name': speaker.username, 'finished': 0}
             if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
@@ -365,8 +367,10 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         for t in sf.text.all():
             texts.append((t, t.title, t.sentence_count()))
 
-        q1 = sf.speaker.all()
-        q2 = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sf)
+        #remove ordering from q1 and q2, so the union operation works
+        q1 = sf.speaker.all().order_by()
+        q2 = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sf).order_by()
+        #the union queryset has to be explicitly reordered
         for speaker in q1.union(q2).order_by('username'):
             spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
             #for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
