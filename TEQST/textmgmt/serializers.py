@@ -100,10 +100,10 @@ class TextFullSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A text with the given title in the given folder already exists")
         return super().validate(data)
     
-    def validate_title(self, value):
-        if ' ' in value:
-            raise serializers.ValidationError("Text title can't contain a space character.")
-        return value
+#    def validate_title(self, value):
+#        if ' ' in value:
+#            raise serializers.ValidationError("Text title can't contain a space character.")
+#        return value
     
     def check_max_lines(self, max_lines: int, text_len: int):
         """
