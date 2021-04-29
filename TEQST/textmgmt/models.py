@@ -6,7 +6,6 @@ from django.contrib import auth
 from rest_framework import views
 from . import utils
 from usermgmt import models as user_models
-from usermgmt.countries import COUNTRY_CHOICES
 import os, zipfile, chardet, zlib, re
 from pathlib import Path
 #from google.cloud.storage import Blob
@@ -190,24 +189,14 @@ class SharedFolder(Folder):
 
     def concat_stms(self):
         with self.stmfile.open('wb') as full:
-            with open(settings.BASE_DIR/'header.stm', 'rb') as header:
-                full.write(header.read())
             
-            # header entries for country and accent
-            # TODO maybe it's alright if we put all existing countries + accents in here?
-            #       would lead to simplifications
-            speakers = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=self)
-            countries = set([s.country for s in speakers])
-            accents = set([s.accent for s in speakers])
-            country_dict = dict(COUNTRY_CHOICES)
-            c_header = ';; CATEGORY "3" "COUNTRY" ""\n'
-            for country in countries:
-                c_header += f';; LABEL "{country}" "{country_dict[country]}" ""\n'
-            a_header = ';; CATEGORY "4" "ACCENT" ""\n'
-            for accent in accents:
-                a_header += f';; LABEL "{accent}" "{accent}" ""\n'
-            full.write(bytes(c_header, encoding='utf-8'))
-            full.write(bytes(a_header, encoding='utf-8'))
+            speakers = set()
+            for text in self.text.all():
+                speakers = speakers.union(text.get_speakers())
+
+            headers = utils.create_headers(speakers)
+
+            full.write(bytes(headers, encoding='utf-8'))
 
             for text in self.text.all():
                 text.append_stms(full)
@@ -374,6 +363,16 @@ class Text(models.Model):
                 count += sentence.word_count
         return count
     
+    def get_speakers(self):
+        """
+        Get all speakers who have a finished recording of this text
+        """
+        speakers = set()
+        for trec in self.textrecording.all():
+            if trec.is_finished():
+                speakers.add(trec.speaker)
+        return speakers
+
     def append_stms(self, file):
         for trec in self.textrecording.all():
             if trec.is_finished():
