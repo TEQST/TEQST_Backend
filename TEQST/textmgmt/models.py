@@ -6,6 +6,7 @@ from django.contrib import auth
 from rest_framework import views
 from . import utils
 from usermgmt import models as user_models
+from usermgmt.countries import COUNTRY_CHOICES
 import os, zipfile, chardet, zlib, re
 from pathlib import Path
 #from google.cloud.storage import Blob
@@ -191,8 +192,25 @@ class SharedFolder(Folder):
         with self.stmfile.open('wb') as full:
             with open(settings.BASE_DIR/'header.stm', 'rb') as header:
                 full.write(header.read())
+            
+            # header entries for country and accent
+            # TODO maybe it's alright if we put all existing countries + accents in here?
+            #       would lead to simplifications
+            speakers = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=self)
+            countries = set([s.country for s in speakers])
+            accents = set([s.accent for s in speakers])
+            country_dict = dict(COUNTRY_CHOICES)
+            c_header = ';; CATEGORY "3" "COUNTRY" ""\n'
+            for country in countries:
+                c_header += f';; LABEL "{country}" "{country_dict[country]}" ""\n'
+            a_header = ';; CATEGORY "4" "ACCENT" ""\n'
+            for accent in accents:
+                a_header += f';; LABEL "{accent}" "{accent}" ""\n'
+            full.write(bytes(c_header, encoding='utf-8'))
+            full.write(bytes(a_header, encoding='utf-8'))
+
             for text in self.text.all():
-                text.apppend_stms(full)
+                text.append_stms(full)
                 
 
     def log_contains_user(self, username):
@@ -226,11 +244,7 @@ class SharedFolder(Folder):
             logfile_entry = 'username: ' + str(user.username) + '\n' \
                             + 'email: ' + str(user.email) + '\n' \
                             + 'date_joined: ' + str(user.date_joined) + '\n' \
-                            + 'birth_year: ' + str(user.birth_year) + '\n' \
-                            + 'gender: ' + str(user.gender) + '\n' \
-                            + 'education: ' + str(user.education) + '\n' \
-                            + 'accent: ' + str(user.accent) + '\n' \
-                            + 'country: ' + str(user.country) + '\n#\n'
+                            + 'birth_year: ' + str(user.birth_year) + '\n#\n'
             file_content += bytes(logfile_entry, encoding='utf-8')
             log.write(file_content)
 
@@ -361,10 +375,10 @@ class Text(models.Model):
         return count
     
     def append_stms(self, file):
-        for trec in self.textrecordings.all():
+        for trec in self.textrecording.all():
             if trec.is_finished():
                 with trec.stmfile.open('rb') as part:
-                    file.write(part.read)
+                    file.write(part.read())
 
 
 class Sentence(models.Model):

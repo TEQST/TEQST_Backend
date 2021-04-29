@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 def get_normalized_filename(instance):
-    title = re.sub(r"[\- ]", "_", instance.text.title)
+    title = re.sub(r"[\- \\\/]", "_", instance.text.title)
     title = title.lower()
     return f'{title}-usr{instance.speaker.id:04d}'
 
@@ -82,11 +82,11 @@ class TextRecording(models.Model):
             user_str += 'SR'
         if self.TTS_permission:
             user_str += 'TTS'
-        user_str += '>'
+        user_str += f',{self.speaker.country},{self.speaker.accent}>'
         username = self.speaker.username
         current_timestamp = 0
         sentences = self.text.get_content()
-        wav_path_rel = Path(self.textrecording.name).stem
+        wav_path_rel = Path(self.audiofile.name).stem
 
         with self.stmfile.open('wb') as stm_file:
             with wave.open(self.audiofile.open('wb'), 'wb') as wav_full:
@@ -108,6 +108,8 @@ class TextRecording(models.Model):
 
                         #copy audio
                         wav_full.writeframesraw(wav_part.readframes(wav_part.getnframes()))
+        
+        self.text.shared_folder.concat_stms()
 
 
 
