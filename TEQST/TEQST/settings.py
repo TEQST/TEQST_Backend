@@ -133,9 +133,7 @@ REST_FRAMEWORK = {
 }
 
 #CORS once again
-#CORS_ALLOWED_ORIGINS = [
-#    "https://i13pc108.ira.uka.de"
-#]
+#CORS_ALLOWED_ORIGINS = []
 
 
 #Leave this as far down in this file as possible. Only settings that rely on definitions in the localsettings file should go below this import
