@@ -19,7 +19,10 @@ class Folder(models.Model):
     class Meta:
         ordering = ['owner', 'name']
         constraints = [
-            models.UniqueConstraint(fields=['name','parent', 'owner'], name='unique_subfolder'),
+            # This constraint only applies to non-root folders (i.e. folders where parent != None)
+            # Because parent is a foreign key the constraint does not need to include the owner
+            models.UniqueConstraint(fields=['name','parent'], name='unique_subfolder'),
+            # This constraint only applies to root folders (i.e. folders with parent == None)
             models.UniqueConstraint(fields=['name', 'owner'], condition=models.Q(parent=None), name='unique_folder'),
         ]
 
