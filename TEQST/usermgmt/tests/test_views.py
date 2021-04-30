@@ -190,9 +190,7 @@ class TestRegistration(TestCase):
         user_data.pop('country')
         # test
         response = self.client.post(reverse("register"), data=user_data)
-        self.assertEqual(response.status_code, 201)
-        user = CustomUser.objects.get(username=user_data['username'])
-        self.assertEqual(user.country, None)
+        self.assertEqual(response.status_code, 400)
     
     def test_user_registration_accent_is_empty_string(self):
         # setup
@@ -200,9 +198,7 @@ class TestRegistration(TestCase):
         user_data['accent'] = ''
         # test
         response = self.client.post(reverse("register"), data=user_data)
-        self.assertEqual(response.status_code, 201)
-        user = CustomUser.objects.get(username=user_data['username'])
-        self.assertEqual(user.accent, 'Not specified')
+        self.assertEqual(response.status_code, 400)
 
 
 class TestAuthentication(TestCase):
@@ -585,9 +581,16 @@ class TestUser(TestCase):
         put_data.pop('country')
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 200)
-        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
-        self.assertEqual(user.country, USER_DATA_CORRECT_1['country'])
+        self.assertEqual(response.status_code, 400)
+    
+    def test_user_PUT_invalid_country(self):
+        # setup
+        put_data = USER_DATA_CORRECT_1.copy()
+        put_data.pop('username')
+        put_data['country'] = 'ABC'
+        # test
+        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
+        self.assertEqual(response.status_code, 400)
     
     def test_user_PUT_accent_is_empty_string(self):
         # setup
@@ -596,6 +599,4 @@ class TestUser(TestCase):
         put_data['accent'] = ''
         # test
         response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 200)
-        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
-        self.assertEqual(user.accent, 'Not specified')
+        self.assertEqual(response.status_code, 400)

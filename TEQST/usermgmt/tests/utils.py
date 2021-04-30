@@ -23,7 +23,7 @@ USER_DATA_CORRECT_2 = {"username": "ron",
                      "language_ids": ["en", "de"],
                      "accent": "German",
                      "menu_language_id": "de",
-                     "country": "USA"}
+                     "country": "DEU"}
 
 USER_DATA_CORRECT_3 = {"username": "hermione",
                      "password": "testing321",
