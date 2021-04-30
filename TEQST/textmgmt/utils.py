@@ -6,6 +6,9 @@ NAME_ID_SPLITTER = '__'
 
 
 def create_headers(speakers):
+    """
+    Creates all necessary stm headers for the given userlist
+    """
     genders = {s.gender for s in speakers}
     gender_dict = dict(GENDER_CHOICES)
     g_header = ';; CATEGORY "0" "SEX" ""\n'
