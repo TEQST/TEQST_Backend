@@ -19,8 +19,8 @@ class Folder(models.Model):
     class Meta:
         ordering = ['owner', 'name']
         constraints = [
-            models.UniqueConstraint(fields=['name','parent'], name='unique_subfolder'),
-            models.UniqueConstraint(fields=['name'], condition=models.Q(parent=None), name='unique_folder'),
+            models.UniqueConstraint(fields=['name','parent', 'owner'], name='unique_subfolder'),
+            models.UniqueConstraint(fields=['name', 'owner'], condition=models.Q(parent=None), name='unique_folder'),
         ]
 
     # this method is useful for the shell and for the admin view
