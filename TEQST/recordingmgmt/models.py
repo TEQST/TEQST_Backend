@@ -42,7 +42,7 @@ class TextRecording(models.Model):
 
     rec_time_without_rep = models.FloatField(default=0.0)
     rec_time_with_rep = models.FloatField(default=0.0)
-    # is the audiofile really needed?
+    
     audiofile = models.FileField(upload_to=text_rec_upload_path, blank=True)
     stmfile = models.FileField(upload_to=stm_upload_path, blank=True)
 
