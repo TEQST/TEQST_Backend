@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django import http
 from rest_framework import status, exceptions, response, generics, mixins, views, decorators, permissions as rf_permissions
 from rest_framework.authtoken import views as token_views, models as token_models
-from . import permissions, models, serializers, countries
+from . import permissions, models, serializers, countries, userstats
 import re
 
 
@@ -33,6 +33,24 @@ class PubUserListView(generics.ListAPIView):
             return models.CustomUser.objects.filter(username__startswith=name_pre)
         else:
             return models.CustomUser.objects.all()
+
+
+class PubSpeakerStatsView(views.APIView):
+    '''
+    '''
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
+
+    def get(self, request, *args, **kwargs):
+        delimiter = userstats.CSV_Delimiter.SEMICOLON
+        if 'delimiter' in self.request.query_params:
+            delim_inp = self.request.query_params['delimiter']
+            if delim_inp in [userstats.CSV_Delimiter.COMMA, userstats.CSV_Delimiter.SEMICOLON]:
+                delimiter = delim_inp
+        csvfile = userstats.create_user_stats(self.request.user, delimiter)
+        csvfile.seek(0)
+        resp = http.FileResponse(csvfile.read(), filename='stats.csv')
+        resp['Content-Type'] = "text/csv"
+        return resp
 
 
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):

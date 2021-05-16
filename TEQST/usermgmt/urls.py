@@ -7,6 +7,7 @@ urlpatterns = [
     path('users/', views.PubUserListView.as_view(), name="users"),
     path('users/checkname/', views.UsernameCheckView.as_view(), name="user-check"),
     path('user/', views.UserDetailedView.as_view(), name="user"),
+    path('pub/speakerstats/', views.PubSpeakerStatsView.as_view(), name="pub-speaker-stats"),
     path('langs/', views.LanguageListView.as_view(), name="langs"),
     path('countries/', views.country_list, name="countries"),
     path('accents/', views.accent_list, name="accents"),

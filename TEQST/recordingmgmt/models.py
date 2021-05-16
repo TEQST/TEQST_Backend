@@ -10,6 +10,7 @@ from . import storages
 import wave, io, re
 import librosa
 from pathlib import Path
+from datetime import date
 
 
 def get_normalized_filename(instance):
@@ -40,6 +41,8 @@ class TextRecording(models.Model):
     TTS_permission = models.BooleanField(default=True)
     SR_permission = models.BooleanField(default=True)
 
+    # This stores the last time a sentencerecording for this textrecording was created/updated
+    last_updated = models.DateTimeField(auto_now=True)
     rec_time_without_rep = models.FloatField(default=0.0)
     rec_time_with_rep = models.FloatField(default=0.0)
     
@@ -162,6 +165,8 @@ class SentenceRecording(models.Model):
                 else:
                     self.valid = self.Validity.VALID
             super().save()
+        # the followiing line ensures that the last_updated field of the textrecording is updated
+        self.recording.save()
 
         if self.recording.is_finished():
             self.recording.create_stm()
