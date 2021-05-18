@@ -37,6 +37,8 @@ class PubUserListView(generics.ListAPIView):
 
 class PubSpeakerStatsView(views.APIView):
     '''
+    url: /api/pub/speakerstats/
+    use: get a csv file with speaker statistics
     '''
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
 

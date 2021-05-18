@@ -22,10 +22,10 @@ def create_user_stats(pub, delimiter):
     """
     COUNTRIES = dict(COUNTRY_CHOICES)
     fieldnames = ['#', 'Username', 'E-Mail', 'Country', 
-                  'Total data time(TDT)[min]', 'Total time spend recording(TTSR)[min]', 'Last Change']
+                  'Total data time (TDT) [min]', 'Total time spend recording (TTSR) [min]', 'Last Change']
     sfs = text_models.SharedFolder.objects.filter(owner=pub)
     #sf_paths = [sf.get_path().strip(pub.username).rstrip(string.digits)[:-2] for sf in sfs]
-    sf_paths = [[sf.get_readable_path().strip(pub.username)+'[%]', 'TDT[min]', 'TTSR[min]'] for sf in sfs]
+    sf_paths = [[sf.get_readable_path().strip(pub.username)+' [%]', 'TDT [min]', 'TTSR [min]'] for sf in sfs]
     sf_text_count = [sf.text.count() for sf in sfs]
     fieldnames += sum(sf_paths, [])  # sum(list, []) flattens the list
     csvfile = io.StringIO("")
