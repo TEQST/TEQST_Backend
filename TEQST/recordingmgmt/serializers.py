@@ -1,6 +1,7 @@
 from django.core.files.storage import default_storage
 from rest_framework import serializers
 from django.db.models import Q
+from rest_framework.fields import IntegerField
 from . import models
 from textmgmt import models as text_models
 import wave
@@ -57,20 +58,23 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
     """
 
     recording = RecordingPKField()
+    index = IntegerField()
 
     def validate(self, data):
         try:
-            data['index']
+            index = data.pop('index')
+            text_recording = data['recording']
+            sentence = text_recording.text.sentences.get(index=index)
+            if models.SentenceRecording.objects.filter(sentence=sentence, recording=text_recording).exists():
+                raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
+            if index > text_recording.active_sentence():
+                raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
+            if text_recording.is_finished():
+                raise serializers.ValidationError("Text already finished. You can't add more Sentencerecordings.")
         except KeyError:
             raise serializers.ValidationError("No index provided")
-        if models.SentenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
-            raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
-        text_recording = models.TextRecording.objects.get(pk=data['recording'].pk)
-        if data['index'] > text_recording.active_sentence():
-            raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
-        if text_recording.is_finished():
-            raise serializers.ValidationError("Text already finished. You can't add more Sentencerecordings.")
         # type(data['audiofile']) is InMemoryUploadedFile
+        data['sentence'] = sentence
         return super().validate(data)
 
     def validate_index(self, value):
@@ -119,6 +123,7 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
     """
 
     recording = RecordingPKField(read_only=True)
+    index = IntegerField(read_only=True)
 
     class Meta:
         model = models.SentenceRecording
