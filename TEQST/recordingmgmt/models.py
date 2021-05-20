@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, utils
 from django.conf import settings
 from django.core.files import uploadedfile, base
 from django.core.files.storage import default_storage
@@ -147,6 +147,11 @@ class SentenceRecording(models.Model):
         ]
 
     def save(self, *args, **kwargs):
+        #This check can't be a db constraint, since those don't support cross-table lookups.
+        #Because of that, it is moved to the next closest spot.
+        if self.recording.text != self.sentence.text:
+            raise utils.IntegrityError('Text reference is ambiguos')
+
         super().save(*args, **kwargs)
 
         with default_storage.open(self.audiofile.name) as af:
@@ -182,4 +187,3 @@ class SentenceRecording(models.Model):
         wav.close()
         self.audiofile.close()
         return duration
-

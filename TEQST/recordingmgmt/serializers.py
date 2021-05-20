@@ -64,13 +64,13 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
         try:
             index = data.pop('index')
             text_recording = data['recording']
-            sentence = text_recording.text.sentences.get(index=index)
-            if models.SentenceRecording.objects.filter(sentence=sentence, recording=text_recording).exists():
-                raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
             if index > text_recording.active_sentence():
                 raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
             if text_recording.is_finished():
                 raise serializers.ValidationError("Text already finished. You can't add more Sentencerecordings.")
+            sentence = text_recording.text.sentences.get(index=index)
+            if models.SentenceRecording.objects.filter(sentence=sentence, recording=text_recording).exists():
+                raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
         except KeyError:
             raise serializers.ValidationError("No index provided")
         # type(data['audiofile']) is InMemoryUploadedFile
