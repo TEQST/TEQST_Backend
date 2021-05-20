@@ -1,6 +1,5 @@
-from django.shortcuts import render
 from django import http
-from rest_framework import status, exceptions, response, generics, mixins, views, decorators, permissions as rf_permissions
+from rest_framework import status, exceptions, response, generics, views, decorators, permissions as rf_permissions
 from rest_framework.authtoken import views as token_views, models as token_models
 from . import permissions, models, serializers, countries, userstats
 import re

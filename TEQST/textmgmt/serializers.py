@@ -1,10 +1,9 @@
 from rest_framework import serializers
-from django.conf import settings
 from . import models, utils
 from usermgmt import models as user_models, serializers as user_serializers
 from recordingmgmt import models as rec_models
 import django.core.files.uploadedfile as uploadedfile
-import random, string, chardet, io, math
+import chardet, math
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):

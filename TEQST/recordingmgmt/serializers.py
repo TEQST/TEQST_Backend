@@ -1,4 +1,3 @@
-from django.core.files.storage import default_storage
 from rest_framework import serializers
 from django.db.models import Q
 from . import models

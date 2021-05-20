@@ -2,7 +2,7 @@ from . import models as user_models
 from textmgmt import models as text_models
 from recordingmgmt import models as rec_models
 from .countries import COUNTRY_CHOICES
-import io, csv, string
+import io, csv
 
 class CSV_Delimiter:
     COMMA = ','
