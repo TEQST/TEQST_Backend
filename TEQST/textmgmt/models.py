@@ -38,6 +38,10 @@ class Folder(models.Model):
         #     sf.name = self.name
         #     sf.save()
 
+    #Used for permission checks
+    def is_owner(self, user):
+        return self.owner == user
+
     def get_parent_name(self):
         if self.parent == None:
             return None
@@ -92,6 +96,14 @@ class SharedFolder(Folder):
             self.stmfile.save('name', base.ContentFile(''), save=False)
             self.logfile.save('name', base.ContentFile(''), save=False)
         super().save(*args, **kwargs)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.public or self.speaker.filter(id=user.id).exists()
+
+    #Used for permission checks
+    def is_listener(self, user):
+        return self.listener.filter(id=user.id).exists()
     
     def make_shared_folder(self):
         return self
@@ -218,6 +230,18 @@ class Text(models.Model):
             if tr.is_finished():
                 return True
         return False
+
+    #Used for permission checks
+    def is_owner(self, user):
+        return self.shared_folder.is_owner(user)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.shared_folder.is_speaker(user)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.shared_folder.is_listener(user)
     
     def save(self, *args, **kwargs):
         #Now expects a proper sharedfolder instance

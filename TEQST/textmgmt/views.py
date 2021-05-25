@@ -40,12 +40,7 @@ class PubFolderDetailedView(generics.RetrieveDestroyAPIView):
     """
     queryset = models.Folder.objects.all()
     serializer_class = serializers.FolderDetailedSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
-
-    def get_queryset(self):
-        # This could exclude Folders which are SharedFolders. This view is only used with folders that aren't shared.
-        user = self.request.user
-        return models.Folder.objects.filter(owner=user.pk)
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
 
 class PubSharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
@@ -55,11 +50,7 @@ class PubSharedFolderSpeakerView(generics.RetrieveUpdateAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.SharedFolderSpeakerSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
-
-    def get_queryset(self):
-        user = self.request.user
-        return models.SharedFolder.objects.filter(owner=user.pk)
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
 
 class PubSharedFolderListenerView(generics.RetrieveUpdateAPIView):
@@ -69,11 +60,7 @@ class PubSharedFolderListenerView(generics.RetrieveUpdateAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.SharedFolderListenerSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
-
-    def get_queryset(self):
-        user = self.request.user
-        return models.SharedFolder.objects.filter(owner=user.pk)
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
 
 class PubTextListView(generics.ListCreateAPIView):
@@ -109,13 +96,7 @@ class SpkTextListView(generics.RetrieveAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.SpkSharedFolderTextSerializer
-
-    def get_object(self):
-        sf = super().get_object()
-        user = self.request.user
-        if user not in sf.speaker.all() and not sf.public:
-            raise exceptions.NotFound("This sharedfolder is not shared with you as speaker.")
-        return sf
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker]
 
 
 class PubTextDetailedView(generics.RetrieveDestroyAPIView):
@@ -125,11 +106,7 @@ class PubTextDetailedView(generics.RetrieveDestroyAPIView):
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextFullSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
-
-    def get_queryset(self):
-        user = self.request.user
-        return models.Text.objects.filter(shared_folder__owner=user.pk)
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
     # TODO maybe this method is not needed
     def get_serializer_class(self):
@@ -145,10 +122,7 @@ class SpkTextDetailedView(generics.RetrieveAPIView):
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextFullSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        return models.Text.objects.filter(Q(shared_folder__speaker__id=user.id) | Q(shared_folder__public=True)).distinct()
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker]
 
 
 class SpkPublisherListView(generics.ListAPIView):
@@ -165,10 +139,8 @@ class SpkPublisherListView(generics.ListAPIView):
         # possible alternative solution
         # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         # current code
-        pub_pks = []
         user = self.request.user
-        for shf in user.sharedfolder.all():
-            pub_pks.append(shf.owner.pk)
+        pub_pks = user.sharedfolder.all().values_list('owner', flat=True)
         return user_models.CustomUser.objects.filter(pk__in = pub_pks)
 
 
@@ -183,24 +155,19 @@ class SpkPublisherDetailedView(generics.RetrieveAPIView):
     def get_object(self):
         pub = super().get_object()
         user = self.request.user
-        for shf in user.sharedfolder.all():
-            if pub == shf.owner:
-                return pub
-        raise exceptions.NotFound('This publisher has not shared any folders with you as speaker.')
+        if user.sharedfolder.filter(owner=pub).exists():
+            return pub
+        raise exceptions.PermissionDenied('This publisher has not shared any folders with you as speaker.')
 
 
-class SpeechDataDownloadView(views.APIView):
+class SpeechDataDownloadView(generics.RetrieveAPIView):
     """
     url: api/download/:id/
     use: Download of speechdata for a given SharedFolder as zip file
     """
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
-
-    def get_object(self):
-        sf_id = self.kwargs['sf']
-        if not models.SharedFolder.objects.filter(pk=sf_id, owner=self.request.user.pk).exists():
-            raise exceptions.NotFound("Invalid SharedFolder id")
-        return models.SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)
+    queryset = models.SharedFolder.objects.all()
+    serializer_class = serializers.SpkSharedFolderTextSerializer #Any serializer that identifies SharedFolders would be possible here
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
     def get(self, request, *args, **kwargs):
         """
@@ -231,13 +198,7 @@ class PubSharedFolderStatsView(generics.RetrieveAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.SharedFolderStatsSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
-
-    def get_object(self):
-        sf_id = self.kwargs['pk']
-        if not models.SharedFolder.objects.filter(pk=sf_id, owner=self.request.user.pk).exists():
-            raise exceptions.NotFound("Invalid SharedFolder id")
-        return models.SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
 
 class PubTextStatsView(generics.RetrieveAPIView):
@@ -247,13 +208,8 @@ class PubTextStatsView(generics.RetrieveAPIView):
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextStatsSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
-    def get_object(self):
-        text_id = self.kwargs['pk']
-        if not models.Text.objects.filter(pk=text_id, shared_folder__owner=self.request.user.pk).exists():
-            raise exceptions.NotFound('Invalid Text id')
-        return models.Text.objects.get(pk=text_id)
 
 class SpkPublicFoldersView(generics.ListAPIView):
     """
@@ -278,10 +234,8 @@ class LstnPublisherListView(generics.ListAPIView):
         # possible alternative solution
         # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         # current code
-        pub_pks = []
         user = self.request.user
-        for shf in user.listenfolder.all():
-            pub_pks.append(shf.owner.pk)
+        pub_pks = user.listenfolder.all().values_list('owner', flat=True)
         return user_models.CustomUser.objects.filter(pk__in = pub_pks)
 
 
@@ -296,10 +250,9 @@ class LstnPublisherDetailedView(generics.RetrieveAPIView):
     def get_object(self):
         pub = super().get_object()
         user = self.request.user
-        for shf in user.listenfolder.all():
-            if pub == shf.owner:
-                return pub
-        raise exceptions.NotFound('This publisher has not shared any folders with you as listener.')
+        if user.listenfolder.filter(owner=pub).exists():
+            return pub
+        raise exceptions.PermissionDenied('This publisher has not shared any folders with you as listener.')
 
 
 class LstnTextListView(generics.RetrieveAPIView):
@@ -309,13 +262,7 @@ class LstnTextListView(generics.RetrieveAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.LstnSharedFolderTextSerializer
-
-    def get_object(self):
-        sf = super().get_object()
-        user = self.request.user
-        if user not in sf.listener.all():
-            raise exceptions.NotFound("This sharedfolder is not shared with you as listener.")
-        return sf
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
 
 
 class LstnTextDetailedView(generics.RetrieveAPIView):
@@ -325,10 +272,7 @@ class LstnTextDetailedView(generics.RetrieveAPIView):
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextFullSerializer
-
-    def get_queryset(self):
-        user = self.request.user
-        return models.Text.objects.filter(shared_folder__listener=user)
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
 
 
 class LstnSharedFolderStatsView(generics.RetrieveAPIView):
@@ -338,13 +282,7 @@ class LstnSharedFolderStatsView(generics.RetrieveAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.SharedFolderStatsSerializer
-    permission_classes = [rf_permissions.IsAuthenticated]
-
-    def get_object(self):
-        sf_id = self.kwargs['pk']
-        if not models.SharedFolder.objects.filter(pk=sf_id, listener=self.request.user).exists():
-            raise exceptions.NotFound("Invalid SharedFolder id")
-        return models.SharedFolder.objects.get(pk=sf_id, owner=self.request.user.pk)
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
 
 
 class LstnTextStatsView(generics.RetrieveAPIView):
@@ -354,10 +292,4 @@ class LstnTextStatsView(generics.RetrieveAPIView):
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextStatsSerializer
-    permission_classes = [rf_permissions.IsAuthenticated]
-
-    def get_object(self):
-        text_id = self.kwargs['pk']
-        if not models.Text.objects.filter(pk=text_id, shared_folder__listener=self.request.user).exists():
-            raise exceptions.NotFound('Invalid Text id')
-        return models.Text.objects.get(pk=text_id)
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
