@@ -89,8 +89,8 @@ class SharedFolder(Folder):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            self.stmfile.save('name', base.ContentFile(''), save=False)
-            self.logfile.save('name', base.ContentFile(''), save=False)
+            self.stmfile.save('name', base.ContentFile(b''), save=False)
+            self.logfile.save('name', base.ContentFile(b''), save=False)
         super().save(*args, **kwargs)
     
     def make_shared_folder(self):

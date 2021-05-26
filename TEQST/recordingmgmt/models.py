@@ -52,8 +52,8 @@ class TextRecording(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            self.audiofile.save('name', base.ContentFile(''), save=False)
-            self.stmfile.save('name', base.ContentFile(''), save=False)
+            self.audiofile.save('name', base.ContentFile(b''), save=False)
+            self.stmfile.save('name', base.ContentFile(b''), save=False)
         super().save(*args, **kwargs)
 
     class Meta:
