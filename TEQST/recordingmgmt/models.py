@@ -1,17 +1,13 @@
 from django.db import models, utils
-from django.conf import settings
-from django.core.files import uploadedfile, base
+from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
 from textmgmt import models as text_models
-from usermgmt import models as user_models
-from usermgmt.countries import COUNTRY_CHOICES
 from . import storages
 from .utils import format_timestamp
-import wave, io, re
+import wave, re
 import librosa
 from pathlib import Path
-from datetime import date
 
 
 def get_normalized_filename(instance):
@@ -52,8 +48,8 @@ class TextRecording(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            self.audiofile.save('name', base.ContentFile(''), save=False)
-            self.stmfile.save('name', base.ContentFile(''), save=False)
+            self.audiofile.save('name', base.ContentFile(b''), save=False)
+            self.stmfile.save('name', base.ContentFile(b''), save=False)
         super().save(*args, **kwargs)
 
     class Meta:

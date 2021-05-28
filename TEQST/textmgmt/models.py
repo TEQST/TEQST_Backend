@@ -1,12 +1,10 @@
 from django.db import models, transaction
-from django.conf import settings
-from django.core.files import uploadedfile, base
+from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
-from rest_framework import views
 from . import utils
 from usermgmt import models as user_models
-import os, zipfile, chardet, zlib, re
+import zipfile, chardet, re
 from pathlib import Path
 #from google.cloud.storage import Blob
 
@@ -89,8 +87,8 @@ class SharedFolder(Folder):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            self.stmfile.save('name', base.ContentFile(''), save=False)
-            self.logfile.save('name', base.ContentFile(''), save=False)
+            self.stmfile.save('name', base.ContentFile(b''), save=False)
+            self.logfile.save('name', base.ContentFile(b''), save=False)
         super().save(*args, **kwargs)
     
     def make_shared_folder(self):
