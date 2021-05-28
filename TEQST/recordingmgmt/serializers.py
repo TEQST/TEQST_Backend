@@ -58,6 +58,8 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
     """
 
     recording = RecordingPKField()
+
+    #When serializing a model, this field accesses the SentenceRecording index method
     index = IntegerField()
 
     def validate(self, data):
@@ -123,6 +125,8 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
     """
 
     recording = RecordingPKField(read_only=True)
+
+    #When serializing a model, this field accesses the SentenceRecording index method
     index = IntegerField(read_only=True)
 
     class Meta:
