@@ -1,5 +1,5 @@
 from django.core.files import storage
-import os, datetime
+import datetime
 from pathlib import Path
 
 

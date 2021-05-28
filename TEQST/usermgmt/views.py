@@ -1,6 +1,5 @@
-from django.shortcuts import render
 from django import http
-from rest_framework import status, exceptions, response, generics, mixins, views, decorators, permissions as rf_permissions
+from rest_framework import status, exceptions, response, generics, views, decorators, permissions as rf_permissions
 from rest_framework.authtoken import views as token_views, models as token_models
 from . import permissions, models, serializers, countries, userstats
 import re
@@ -12,11 +11,31 @@ def country_list(request):
     dict = {a: b for (a, b) in countries.COUNTRY_CHOICES}
     return response.Response(dict)
 
+
 @decorators.api_view()
 @decorators.permission_classes([])
 def accent_list(request):
     list = models.CustomUser.objects.order_by().values_list('accent', flat=True).distinct()
     return response.Response(list)
+
+
+@decorators.api_view()
+@decorators.permission_classes([rf_permissions.IsAuthenticated, permissions.IsPublisher])
+def pub_speaker_stats(request):
+    '''
+    url: /api/pub/speakerstats/
+    use: get a csv file with speaker statistics
+    '''
+    delimiter = userstats.CSV_Delimiter.SEMICOLON
+    if 'delimiter' in request.query_params:
+        delim_inp = request.query_params['delimiter']
+        if delim_inp in [userstats.CSV_Delimiter.COMMA, userstats.CSV_Delimiter.SEMICOLON]:
+            delimiter = delim_inp
+    csvfile = userstats.create_user_stats(request.user, delimiter)
+    csvfile.seek(0)
+    resp = http.FileResponse(csvfile.read(), filename='stats.csv')
+    resp['Content-Type'] = "text/csv"
+    return resp
 
 
 class PubUserListView(generics.ListAPIView):
@@ -35,26 +54,6 @@ class PubUserListView(generics.ListAPIView):
             return models.CustomUser.objects.all()
 
 
-class PubSpeakerStatsView(views.APIView):
-    '''
-    url: /api/pub/speakerstats/
-    use: get a csv file with speaker statistics
-    '''
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
-
-    def get(self, request, *args, **kwargs):
-        delimiter = userstats.CSV_Delimiter.SEMICOLON
-        if 'delimiter' in self.request.query_params:
-            delim_inp = self.request.query_params['delimiter']
-            if delim_inp in [userstats.CSV_Delimiter.COMMA, userstats.CSV_Delimiter.SEMICOLON]:
-                delimiter = delim_inp
-        csvfile = userstats.create_user_stats(self.request.user, delimiter)
-        csvfile.seek(0)
-        resp = http.FileResponse(csvfile.read(), filename='stats.csv')
-        resp['Content-Type'] = "text/csv"
-        return resp
-
-
 class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
     '''
     Is used by all users to retrieve and update their data
@@ -64,6 +63,7 @@ class UserDetailedView(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
         return self.request.user
 
+
 class LanguageListView(generics.ListAPIView):
     '''
     Is used to retrieve a list of all languages
@@ -72,6 +72,7 @@ class LanguageListView(generics.ListAPIView):
     queryset = models.Language.objects.all()
     serializer_class = serializers.LanguageSerializer
     permission_classes = []
+
 
 class MenuLanguageView(generics.RetrieveAPIView):
 
@@ -99,8 +100,7 @@ class MenuLanguageView(generics.RetrieveAPIView):
         response.write(f.read())
         response['Content-Type'] = 'application/octet-stream'
         return response
-
-    
+   
 
 class UserRegisterView(generics.CreateAPIView):
     '''
@@ -112,6 +112,8 @@ class UserRegisterView(generics.CreateAPIView):
     permission_classes = []
 
 
+#TODO maybe redo this view since the current parsing of the response of the superclass looks odd.
+#   Maybe just copy that bit from the superclass?
 class GetAuthToken(token_views.ObtainAuthToken):
     """
     This is the view used to log in a user (get his Authentication Token)
@@ -126,25 +128,18 @@ class GetAuthToken(token_views.ObtainAuthToken):
         return response.Response({'token': token.key, 'user': user_serializer.data})
 
 
-class LogoutView(views.APIView):
-    '''
-    Is used to log out a user (make his Authentication Token invalid)
-    '''
-    def post(self, request, *args, **kwargs):
-        token = request.auth 
-        token.delete()
-        return response.Response('Logout successful!', status=status.HTTP_200_OK)
+@decorators.api_view(['POST'])
+def logout(request):
+    token = request.auth 
+    token.delete()
+    return response.Response('Logout successful!', status=status.HTTP_200_OK)
 
 
-class UsernameCheckView(views.APIView):
-    '''
-    Is used to check if a username is available
-    '''
-    permission_classes = []
-
-    def get(self, request, *args, **kwargs):
-        if not 'username' in self.request.query_params:
-            raise exceptions.NotFound('no username specified')
-        username = self.request.query_params['username']
-        available = not models.CustomUser.objects.filter(username=username).exists()
-        return response.Response({'available': available}, status=status.HTTP_200_OK)
+@decorators.api_view()
+@decorators.permission_classes([])
+def check_username(request):
+    if not 'username' in request.query_params:
+        raise exceptions.NotFound('no username specified')
+    username = request.query_params['username']
+    available = not models.CustomUser.objects.filter(username=username).exists()
+    return response.Response({'available': available}, status=status.HTTP_200_OK)

@@ -1,12 +1,10 @@
 from django.db import models, transaction
-from django.conf import settings
-from django.core.files import uploadedfile, base
+from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
-from rest_framework import views
 from . import utils
 from usermgmt import models as user_models
-import os, zipfile, chardet, zlib, re
+import zipfile, chardet, re
 from pathlib import Path
 #from google.cloud.storage import Blob
 
