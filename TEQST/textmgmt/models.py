@@ -136,7 +136,7 @@ class SharedFolder(Folder):
         #return "/tmp/download.zip"
 
     def concat_stms(self):
-        with self.stmfile.open('wb') as full:
+        with default_storage.open(self.stmfile.name, 'wb') as full:
             
             speakers = set()
             for text in self.text.all():
@@ -165,13 +165,14 @@ class SharedFolder(Folder):
         file_content = b''
         with self.logfile.open('rb') as log:
             file_content = log.read()
-        with self.logfile.open('wb') as log:
-            logfile_entry = 'username: ' + str(user.username) + '\n' \
-                            + 'email: ' + str(user.email) + '\n' \
-                            + 'date_joined: ' + str(user.date_joined) + '\n' \
-                            + 'birth_year: ' + str(user.birth_year) + '\n#\n'
-            file_content += bytes(logfile_entry, encoding='utf-8')
-            log.write(file_content)
+        
+        logfile_entry = 'username: ' + str(user.username) + '\n' \
+                        + 'email: ' + str(user.email) + '\n' \
+                        + 'date_joined: ' + str(user.date_joined) + '\n' \
+                        + 'birth_year: ' + str(user.birth_year) + '\n#\n'
+        file_content += bytes(logfile_entry, encoding='utf-8')
+        with default_storage.open(self.logfile.name, 'wb') as logw:
+            logw.write(file_content)
 
 
 

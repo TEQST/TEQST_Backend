@@ -87,10 +87,12 @@ class TextRecording(models.Model):
         sentences = self.text.get_content()
         wav_path_rel = Path(self.audiofile.name).stem
 
-        with self.stmfile.open('wb') as stm_file:
-            with wave.open(self.audiofile.open('wb'), 'wb') as wav_full:
+        with default_storage.open(self.stmfile.name, 'wb') as stm_file:
+            with default_storage.open(self.audiofile.name, 'wb') as audio_full:
+                wav_full = wave.open(audio_full, 'wb')
                 for srec in self.srecs.all():
-                    with wave.open(srec.audiofile.open('rb'), 'rb') as wav_part:
+                    with srec.audiofile.open('rb') as srec_audio:
+                        wav_part = wave.open(srec_audio, 'rb')
 
                         #On concatenating the first file: also copy all settings
                         if current_timestamp == 0:
@@ -107,6 +109,8 @@ class TextRecording(models.Model):
 
                         #copy audio
                         wav_full.writeframesraw(wav_part.readframes(wav_part.getnframes()))
+                        wav_part.close()
+                wav_full.close()
         
         self.text.shared_folder.concat_stms()
 
