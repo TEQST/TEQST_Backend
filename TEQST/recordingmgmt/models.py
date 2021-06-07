@@ -87,8 +87,12 @@ class TextRecording(models.Model):
         sentences = self.text.get_content()
         wav_path_rel = Path(self.audiofile.name).stem
 
+        # accessing files from their FileFields in write mode under the use of the GoogleCloudStorage from django-storages
+        # causes errors. Opening files in write mode from the storage works.
         with default_storage.open(self.stmfile.name, 'wb') as stm_file:
             with default_storage.open(self.audiofile.name, 'wb') as audio_full:
+                # since the wave library internally uses python's standard open() method to open files
+                # it needs to be handed an already opened file when working with Google Cloud storage
                 wav_full = wave.open(audio_full, 'wb')
                 for srec in self.srecs.all():
                     with srec.audiofile.open('rb') as srec_audio:

@@ -136,6 +136,8 @@ class SharedFolder(Folder):
         #return "/tmp/download.zip"
 
     def concat_stms(self):
+        # accessing files from their FileFields in write mode under the use of the GoogleCloudStorage from django-storages
+        # causes errors. Opening files in write mode from the storage works.
         with default_storage.open(self.stmfile.name, 'wb') as full:
             
             speakers = set()
@@ -171,6 +173,8 @@ class SharedFolder(Folder):
                         + 'date_joined: ' + str(user.date_joined) + '\n' \
                         + 'birth_year: ' + str(user.birth_year) + '\n#\n'
         file_content += bytes(logfile_entry, encoding='utf-8')
+        # accessing files from their FileFields in write mode under the use of the GoogleCloudStorage from django-storages
+        # causes errors. Opening files in write mode from the storage works.
         with default_storage.open(self.logfile.name, 'wb') as logw:
             logw.write(file_content)
 
