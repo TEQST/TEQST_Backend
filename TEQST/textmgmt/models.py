@@ -240,7 +240,7 @@ class Text(models.Model):
         return self.shared_folder.is_speaker(user)
 
     #Used for permission checks
-    def is_speaker(self, user):
+    def is_listener(self, user):
         return self.shared_folder.is_listener(user)
     
     def save(self, *args, **kwargs):

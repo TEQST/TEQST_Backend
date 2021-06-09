@@ -32,4 +32,16 @@ class IsListener(permissions.BasePermission):
     message = 'You are not a listener of this object'
 
     def has_object_permission(self, request, view, obj):
-        return obj.listener(request.user)
+        return obj.is_listener(request.user)
+
+
+class ReadOnly(permissions.BasePermission):
+
+    message = 'You are only allowed read access on this object'
+
+    def has_permission(self, request, view):
+        return request.method in permissions.SAFE_METHODS
+
+
+    def has_object_permission(self, request, view, obj):
+        return request.method in permissions.SAFE_METHODS

@@ -62,6 +62,18 @@ class TextRecording(models.Model):
             models.UniqueConstraint(fields=['speaker', 'text'], name='unique_trec'),
         ]
 
+    #Used for permission checks
+    def is_owner(self, user):
+        return self.text.is_owner(user)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.speaker == user
+
+    #Used for permission checks
+    def is_listener(self, user):
+        return self.text.is_listener(user)
+
     def active_sentence(self):
         sentence_num = SentenceRecording.objects.filter(recording=self).count() + 1
         # if a speaker is finished with a text this number is one higher than the number of sentences in the text
@@ -171,6 +183,18 @@ class SentenceRecording(models.Model):
 
         if self.recording.is_finished():
             self.recording.create_stm()
+
+    #Used for permission checks
+    def is_owner(self, user):
+        return self.recording.is_owner(user)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.recording.is_speaker(user)
+
+    #Used for permission checks
+    def is_listener(self, user):
+        return self.recording.is_listener(user)
     
     def get_audio_length(self):
         audio_file = default_storage.open(self.audiofile, 'rb')

@@ -1,7 +1,9 @@
-from rest_framework import generics, mixins, status, exceptions, response
+from rest_framework import generics, mixins, status, exceptions, response, permissions as rf_permissions
+from django.core import exceptions as core_exceptions
 from django.db.models import Q
 from . import serializers, models
 from textmgmt import models as text_models
+from usermgmt import permissions
 
 from django.http import HttpResponse
 from pathlib import Path
@@ -58,27 +60,18 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
     """
     queryset = models.SentenceRecording.objects.all()
     serializer_class = serializers.SentenceRecordingUpdateSerializer
-
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | (permissions.ReadOnly & (permissions.IsOwner | permissions.IsListener) ) ]
     def get_object(self):
-        # the sentencerecording is uniquely defined by a textrecording id (rec) and the index of the sentence within that textrecording (index)
-        # rec is part of the core url string
-        rec = self.kwargs['rec']
-        if not models.TextRecording.objects.filter(pk=rec, speaker=self.request.user).exists():
-            if self.request.method == 'GET':
-                if not models.TextRecording.objects.filter(pk=rec, text__shared_folder__owner=self.request.user).exists():
-                    if not models.TextRecording.objects.filter(pk=rec, text__shared_folder__listener=self.request.user).exists():
-                        raise exceptions.NotFound("Invalid Textrecording id")
-            else:
-                raise exceptions.NotFound("Invalid Textrecording id")
-        # index is a query parameter
-        if 'index' in self.request.query_params:
-            try:
-                if not models.SentenceRecording.objects.filter(recording__id=rec, index=self.request.query_params['index']).exists():
-                    raise exceptions.NotFound("Invalid index")
-                return models.SentenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
-            except ValueError:
-                raise exceptions.NotFound("Invalid index")
-        raise exceptions.NotFound("No index specified")
+        try:
+            trec = models.TextRecording.objects.get(id=self.kwargs['rec'])
+            self.check_object_permissions(self.request, trec)
+            if not 'index' in self.request.query_params:
+                raise exceptions.NotFound('No index specified')
+            srec = trec.srecs.get(index=self.request.query_params['index'])
+            self.check_object_permissions(self.request, srec)
+            return srec
+        except (core_exceptions.ObjectDoesNotExist, core_exceptions.MultipleObjectsReturned):
+            raise exceptions.NotFound('Invalid recording specified')
 
     def get(self, request, *args, **kwargs):
         """
@@ -100,25 +93,17 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     """
     queryset = models.SentenceRecording.objects.all()
     serializer_class = serializers.SentenceRecordingUpdateSerializer
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | (permissions.ReadOnly & (permissions.IsOwner | permissions.IsListener) ) ]
 
     def get_object(self):
-        # the sentencerecording is uniquely defined by a textrecording id (tr_id) and the index of the sentence within that textrecording (index)
-        # tr_id is part of the core url string
-        tr_id = self.kwargs['tr_id']
-        if not models.TextRecording.objects.filter(pk=tr_id, speaker=self.request.user).exists():
-            if self.request.method == 'GET':
-                if not models.TextRecording.objects.filter(pk=tr_id, text__shared_folder__owner=self.request.user).exists():
-                    if not models.TextRecording.objects.filter(pk=tr_id, text__shared_folder__listener=self.request.user).exists():
-                        raise exceptions.NotFound("Invalid Textrecording id")
-            else:
-                raise exceptions.NotFound("Invalid Textrecording id")
-        # index is the other part or the url
-        index = self.kwargs['index']
-        if not models.SentenceRecording.objects.filter(recording__id=tr_id, index=index).exists():
-            raise exceptions.NotFound("Invalid index")
-        return models.SentenceRecording.objects.get(recording__id=tr_id, index=index)
-
-        
+        try:
+            trec = models.TextRecording.objects.get(id=self.kwargs['tr_id'])
+            self.check_object_permissions(self.request, trec)
+            srec = trec.srecs.get(index=self.kwargs['index'])
+            self.check_object_permissions(self.request, srec)
+            return srec
+        except (core_exceptions.ObjectDoesNotExist, core_exceptions.MultipleObjectsReturned):
+            raise exceptions.NotFound('Invalid recording specified')
 
     def get(self, request, *args, **kwargs):
         """
