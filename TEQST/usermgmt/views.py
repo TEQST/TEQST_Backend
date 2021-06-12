@@ -1,6 +1,7 @@
 from django import http
-from rest_framework import status, exceptions, response, generics, views, decorators, permissions as rf_permissions
-from rest_framework.authtoken import views as token_views, models as token_models
+from django.contrib import auth
+from rest_framework import status, exceptions, response, generics, decorators, permissions as rf_permissions
+from rest_framework.authtoken import models as token_models
 from . import permissions, models, serializers, countries, userstats
 import re
 
@@ -112,20 +113,20 @@ class UserRegisterView(generics.CreateAPIView):
     permission_classes = []
 
 
-#TODO maybe redo this view since the current parsing of the response of the superclass looks odd.
-#   Maybe just copy that bit from the superclass?
-class GetAuthToken(token_views.ObtainAuthToken):
-    """
-    This is the view used to log in a user (get his Authentication Token)
-    """
-    permission_classes = []
-
-    def post(self, request, *args, **kwargs):
-        resp = super(GetAuthToken, self).post(request, *args, **kwargs)
-        token = token_models.Token.objects.get(key=resp.data['token'])
-        user = models.CustomUser.objects.get(id=token.user_id)
+@decorators.api_view(['POST'])
+@decorators.permission_classes([])
+def login(request):
+    try:
+        username = request.data['username']
+        password = request.data['password']
+        user = auth.authenticate(username=username, password=password)
+        if not user:
+            raise exceptions.NotAuthenticated('Invalid credentials')
+        token, created = token_models.Token.objects.get_or_create(user=user)
         user_serializer = serializers.UserFullSerializer(user, many=False)
-        return response.Response({'token': token.key, 'user': user_serializer.data})
+        return response.Response({'token': token.key, 'created': created, 'user': user_serializer.data}, status=status.HTTP_200_OK)
+    except KeyError:
+        raise exceptions.NotAuthenticated('No credentials provided')
 
 
 @decorators.api_view(['POST'])
