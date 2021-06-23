@@ -35,7 +35,7 @@ class UserFullSerializer(serializers.ModelSerializer):
     class Meta():
         model = models.CustomUser
         fields = ['id', 'username', 'email', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'accent', 'country', 'dark_mode', 'is_publisher', 'is_listener']
-        read_only_fields = ['id', 'username']
+        read_only_fields = ['id', 'username', 'education', 'gender', 'accent', 'country']
 
     #checks if the given birth_year is in a certain "valid" range, is called automatically by the drf
     def validate_birth_year(self, value):
