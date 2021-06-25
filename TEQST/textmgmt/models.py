@@ -264,14 +264,16 @@ class Text(models.Model):
                 content = []
                 for line in file_content:
                     #line = line.decode('utf-8')
-                    line = line.decode(encoding)
+                    line = line.decode(encoding).strip()
                     #line = line.decode('unicode_escape')
-                    if line == "\n" or line == "" or line == "\r\n":
+                    if line == "":
                         if sentence != "":
                             content.append(sentence)
                             sentence = ""
                     else:
-                        sentence += line.replace('\n', ' ').replace('\r', ' ')
+                        if sentence != "":
+                            sentence += ' '
+                        sentence += line
                 if sentence != "":
                     content.append(sentence)
                 f.close()
