@@ -14,6 +14,9 @@ debug.py
 localsettings.py
 venv/
 
+# room for various configurations
+conf/
+
 # google cloud setup
 .gcloudignore
 app.yaml

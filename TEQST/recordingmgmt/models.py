@@ -1,17 +1,13 @@
 from django.db import models
-from django.conf import settings
-from django.core.files import uploadedfile, base
+from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
 from textmgmt import models as text_models
-from usermgmt import models as user_models
-from usermgmt.countries import COUNTRY_CHOICES
 from . import storages
 from .utils import format_timestamp
-import wave, io, re
+import wave, re
 import librosa
 from pathlib import Path
-from datetime import date
 
 
 def get_normalized_filename(instance):
@@ -52,8 +48,8 @@ class TextRecording(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            self.audiofile.save('name', base.ContentFile(''), save=False)
-            self.stmfile.save('name', base.ContentFile(''), save=False)
+            self.audiofile.save('name', base.ContentFile(b''), save=False)
+            self.stmfile.save('name', base.ContentFile(b''), save=False)
         super().save(*args, **kwargs)
 
     class Meta:
@@ -91,10 +87,16 @@ class TextRecording(models.Model):
         sentences = self.text.get_content()
         wav_path_rel = Path(self.audiofile.name).stem
 
-        with self.stmfile.open('wb') as stm_file:
-            with wave.open(self.audiofile.open('wb'), 'wb') as wav_full:
+        # accessing files from their FileFields in write mode under the use of the GoogleCloudStorage from django-storages
+        # causes errors. Opening files in write mode from the storage works.
+        with default_storage.open(self.stmfile.name, 'wb') as stm_file:
+            with default_storage.open(self.audiofile.name, 'wb') as audio_full:
+                # since the wave library internally uses python's standard open() method to open files
+                # it needs to be handed an already opened file when working with Google Cloud storage
+                wav_full = wave.open(audio_full, 'wb')
                 for srec in self.srecs.all():
-                    with wave.open(srec.audiofile.open('rb'), 'rb') as wav_part:
+                    with srec.audiofile.open('rb') as srec_audio:
+                        wav_part = wave.open(srec_audio, 'rb')
 
                         #On concatenating the first file: also copy all settings
                         if current_timestamp == 0:
@@ -111,6 +113,8 @@ class TextRecording(models.Model):
 
                         #copy audio
                         wav_full.writeframesraw(wav_part.readframes(wav_part.getnframes()))
+                        wav_part.close()
+                wav_full.close()
         
         self.text.shared_folder.concat_stms()
 

@@ -1,4 +1,3 @@
-from django.core.files.storage import default_storage
 from rest_framework import serializers
 from django.db.models import Q
 from . import models
@@ -26,7 +25,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TextRecording
         fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence', 'sentences_status', 'rec_time_without_rep', 'rec_time_with_rep']
-        read_only_fields = ['speaker', 'active_sentence', 'rec_time_without_rep', 'rec_time_with_rep']
+        read_only_fields = ['speaker', 'rec_time_without_rep', 'rec_time_with_rep']
 
     def validate(self, data):
         if models.TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():

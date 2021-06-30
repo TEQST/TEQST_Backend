@@ -1,12 +1,10 @@
 from django.db import models, transaction
-from django.conf import settings
-from django.core.files import uploadedfile, base
+from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
-from rest_framework import views
 from . import utils
 from usermgmt import models as user_models
-import os, zipfile, chardet, zlib, re
+import zipfile, chardet, re
 from pathlib import Path
 #from google.cloud.storage import Blob
 
@@ -89,8 +87,8 @@ class SharedFolder(Folder):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            self.stmfile.save('name', base.ContentFile(''), save=False)
-            self.logfile.save('name', base.ContentFile(''), save=False)
+            self.stmfile.save('name', base.ContentFile(b''), save=False)
+            self.logfile.save('name', base.ContentFile(b''), save=False)
         super().save(*args, **kwargs)
     
     def make_shared_folder(self):
@@ -138,7 +136,9 @@ class SharedFolder(Folder):
         #return "/tmp/download.zip"
 
     def concat_stms(self):
-        with self.stmfile.open('wb') as full:
+        # accessing files from their FileFields in write mode under the use of the GoogleCloudStorage from django-storages
+        # causes errors. Opening files in write mode from the storage works.
+        with default_storage.open(self.stmfile.name, 'wb') as full:
             
             speakers = set()
             for text in self.text.all():
@@ -167,13 +167,16 @@ class SharedFolder(Folder):
         file_content = b''
         with self.logfile.open('rb') as log:
             file_content = log.read()
-        with self.logfile.open('wb') as log:
-            logfile_entry = 'username: ' + str(user.username) + '\n' \
-                            + 'email: ' + str(user.email) + '\n' \
-                            + 'date_joined: ' + str(user.date_joined) + '\n' \
-                            + 'birth_year: ' + str(user.birth_year) + '\n#\n'
-            file_content += bytes(logfile_entry, encoding='utf-8')
-            log.write(file_content)
+        
+        logfile_entry = 'username: ' + str(user.username) + '\n' \
+                        + 'email: ' + str(user.email) + '\n' \
+                        + 'date_joined: ' + str(user.date_joined) + '\n' \
+                        + 'birth_year: ' + str(user.birth_year) + '\n#\n'
+        file_content += bytes(logfile_entry, encoding='utf-8')
+        # accessing files from their FileFields in write mode under the use of the GoogleCloudStorage from django-storages
+        # causes errors. Opening files in write mode from the storage works.
+        with default_storage.open(self.logfile.name, 'wb') as logw:
+            logw.write(file_content)
 
 
 
@@ -261,14 +264,16 @@ class Text(models.Model):
                 content = []
                 for line in file_content:
                     #line = line.decode('utf-8')
-                    line = line.decode(encoding)
+                    line = line.decode(encoding).strip()
                     #line = line.decode('unicode_escape')
-                    if line == "\n" or line == "" or line == "\r\n":
+                    if line == "":
                         if sentence != "":
                             content.append(sentence)
                             sentence = ""
                     else:
-                        sentence += line.replace('\n', ' ').replace('\r', ' ')
+                        if sentence != "":
+                            sentence += ' '
+                        sentence += line
                 if sentence != "":
                     content.append(sentence)
                 f.close()
