@@ -1,10 +1,28 @@
-from rest_framework import generics, status, views, exceptions, permissions as rf_permissions
+from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions
 from django import http
 from django.db.models import Q
 from django.core.files.storage import default_storage
 from . import models, serializers
 from usermgmt import models as user_models, permissions
 from pathlib import Path
+
+
+@decorators.api_view(['POST'])
+@decorators.permission_classes([rf_permissions.IsAuthenticated, permissions.IsPublisher])
+def multi_delete_folders(request):
+    result, _ = request.user.folder.filter(id__in=request.data).delete()
+    if result == 0:
+        raise exceptions.NotFound('No folders matched your list of ids')
+    return response.Response(status=204)
+
+
+@decorators.api_view(['POST'])
+@decorators.permission_classes([rf_permissions.IsAuthenticated, permissions.IsPublisher])
+def multi_delete_texts(request):
+    result, _ = models.Text.objects.filter(shared_folder__owner=request.user, id__in=request.data).delete()
+    if result == 0:
+        raise exceptions.NotFound('No texts matched your list of ids')
+    return response.Response(status=204)
 
 
 class PubFolderListView(generics.ListCreateAPIView):
