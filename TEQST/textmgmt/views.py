@@ -234,11 +234,11 @@ class SpeechDataDownloadView(views.APIView):
         # resp.write(zipfile.read())
         # zipfile.close()
         # resp['Content-Type'] = "application/zip"
-        #resp = http.FileResponse(default_storage.open(zip_path, 'rb'), as_attachment=True, filename="download.zip")
+        resp = http.FileResponse(default_storage.open(zip_path, 'rb'), as_attachment=True, filename="download.zip")
         #resp = http.FileResponse(open(zip_path, 'rb'), as_attachment=True, filename="download.zip")
 
-        resp = http.HttpResponse(status=status.HTTP_200_OK)
-        resp.write("file created")
+        # resp = http.HttpResponse(status=status.HTTP_200_OK)
+        # resp.write("file created")
         return resp
 
 

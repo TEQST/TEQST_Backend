@@ -113,7 +113,7 @@ class SharedFolder(Folder):
         create zip file and return the path to the download.zip file
         """
 
-        return "/tmp/download.zip"
+        #return "/tmp/download.zip"
 
         with default_storage.open(self.get_path()+'/download.zip', 'wb') as f:
             with zipfile.ZipFile(f, 'w') as zf:
