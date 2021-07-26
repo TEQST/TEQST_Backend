@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path
 from . import views
 
 urlpatterns = [
@@ -7,6 +7,8 @@ urlpatterns = [
     path('folders/', views.PubFolderListView.as_view(), name='folders'),
     # pub/folders/<int:pk>/
     path('folders/<int:pk>/', views.PubFolderDetailedView.as_view(), name='folder-detail'),
+
+    path('pub/folders/delete/', views.multi_delete_folders, name='folder-delete'),
     # spk/publishers/
     path('publishers/', views.SpkPublisherListView.as_view(), name='publishers'),
     # spk/publishers/<int:pk>/
@@ -23,6 +25,8 @@ urlpatterns = [
     path('pub/sharedfolders/<int:pk>/listeners/', views.PubSharedFolderListenerView.as_view(), name='sharedfolder-listeners'),
     # pub/texts/<int:pk>/
     path('pub/texts/<int:pk>/', views.PubTextDetailedView.as_view(), name='pub-text-detail'),
+
+    path('pub/texts/delete/', views.multi_delete_texts, name='text-delete'),
     # spk/texts/<int:pk>/
     path('spk/texts/<int:pk>/', views.SpkTextDetailedView.as_view(), name='spk-text-detail'),
     # pub/sharedfolders/<int:pk>/download/

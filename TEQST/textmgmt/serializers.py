@@ -1,10 +1,9 @@
 from rest_framework import serializers
-from django.conf import settings
 from . import models, utils
 from usermgmt import models as user_models, serializers as user_serializers
 from recordingmgmt import models as rec_models
 import django.core.files.uploadedfile as uploadedfile
-import random, string, chardet, io, math
+import chardet, math
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
@@ -26,7 +25,7 @@ class FolderFullSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Folder
         fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder']
-        read_only_fields = ['owner', 'is_sharedfolder']
+        read_only_fields = ['owner']
     
     def validate_name(self, value):
         """
@@ -54,7 +53,7 @@ class FolderBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Folder
         fields = ['id', 'name', 'is_sharedfolder']
-        read_only_fields = ['name', 'is_sharedfolder']
+        read_only_fields = ['name']
 
 class FolderDetailedSerializer(serializers.ModelSerializer):
     """
@@ -92,7 +91,7 @@ class TextFullSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Text
         fields = ['id', 'title', 'language', 'is_right_to_left', 'shared_folder', 'content', 'textfile', 'max_lines']
-        read_only_fields = ['is_right_to_left', 'content']
+        read_only_fields = ['is_right_to_left']
         extra_kwargs = {'textfile': {'write_only': True}}
 
     def validate(self, data):
@@ -300,8 +299,7 @@ class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.SharedFolder
         fields = ['id', 'name', 'speakers', 'speaker_ids', 'public']
-        read_only_fields = ['name', 'speakers']
-        write_only_fields = ['speaker_ids']
+        read_only_fields = ['name']
         depth = 1
 
 
@@ -316,8 +314,7 @@ class SharedFolderListenerSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.SharedFolder
         fields = ['id', 'name', 'listeners', 'listener_ids']
-        read_only_fields = ['name', 'listeners']
-        write_only_fields = ['listener_ids']
+        read_only_fields = ['name']
         depth = 1
 
 
@@ -417,7 +414,7 @@ class PublicFolderSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.SharedFolder
         fields = ['id', 'name', 'path']
-        read_only_fields = ['id', 'name', 'path']
+        read_only_fields = ['id', 'name']
 
 
 class LstnPublisherSerializer(serializers.ModelSerializer):

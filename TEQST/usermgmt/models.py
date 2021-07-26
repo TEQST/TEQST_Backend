@@ -46,9 +46,9 @@ class CustomUser(auth_models.AbstractUser):
     """
     Custom User Model which represents a TEQST user
     """
-    gender = models.CharField(max_length=20, choices=utils.GENDER_CHOICES, default='N')
+    gender = models.CharField(max_length=20, choices=utils.GENDER_CHOICES)
     birth_year = models.IntegerField()
-    education = models.CharField(max_length=50, choices=utils.EDU_CHOICES, default='N')
+    education = models.CharField(max_length=50, choices=utils.EDU_CHOICES)
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     # the accent field is for now just a charfield.
     accent = models.CharField(max_length=50)

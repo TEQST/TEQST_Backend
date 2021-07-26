@@ -1,4 +1,4 @@
-from rest_framework import generics, mixins, status, exceptions, response
+from rest_framework import generics, status, exceptions, response
 from django.db.models import Q
 from . import serializers, models
 from textmgmt import models as text_models

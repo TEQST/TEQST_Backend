@@ -2,7 +2,8 @@ from . import models as user_models
 from textmgmt import models as text_models
 from recordingmgmt import models as rec_models
 from .countries import COUNTRY_CHOICES
-import io, csv, string
+from django.db.models import Sum
+import io, csv
 
 class CSV_Delimiter:
     COMMA = ','
@@ -22,10 +23,10 @@ def create_user_stats(pub, delimiter):
     """
     COUNTRIES = dict(COUNTRY_CHOICES)
     fieldnames = ['#', 'Username', 'E-Mail', 'Country', 
-                  'Total data time(TDT)[min]', 'Total time spend recording(TTSR)[min]', 'Last Change']
+                  'Total data time (TDT) [min]', 'Total time spend recording (TTSR) [min]', 'Last Change']
     sfs = text_models.SharedFolder.objects.filter(owner=pub)
     #sf_paths = [sf.get_path().strip(pub.username).rstrip(string.digits)[:-2] for sf in sfs]
-    sf_paths = [[sf.get_readable_path().strip(pub.username)+'[%]', 'TDT[min]', 'TTSR[min]'] for sf in sfs]
+    sf_paths = [[sf.get_readable_path().strip(pub.username)+' [%]', 'TDT [min]', 'TTSR [min]'] for sf in sfs]
     sf_text_count = [sf.text.count() for sf in sfs]
     fieldnames += sum(sf_paths, [])  # sum(list, []) flattens the list
     csvfile = io.StringIO("")
@@ -36,23 +37,32 @@ def create_user_stats(pub, delimiter):
     
     csvwriter.writerow(fieldnames)
     for i, user in enumerate(users):
-        #row = {'#': i+1, 'Username': user.username, 'E-Mail': user.email, 'Country': COUNTRIES[user.country]}
         row = [i+1, user.username, user.email, COUNTRIES[user.country]]
         user_trs = rec_models.TextRecording.objects.filter(speaker=user, text__shared_folder__owner=pub)
         # Total data recording time
-        row.append(round(sum([tr.rec_time_without_rep for tr in user_trs]) / 60, 2))
+        rtwor = user_trs.aggregate(rtwor_sum=Sum('rec_time_without_rep'))['rtwor_sum']
+        rtwor = 0 if rtwor == None else rtwor
+        row.append("{:.3f}".format(rtwor / 60))
         # Total time spend recording (incl rerecordings)
-        row.append(round(sum([tr.rec_time_with_rep for tr in user_trs]) / 60, 2))
+        rtwr = user_trs.aggregate(rtwr_sum=Sum('rec_time_with_rep'))['rtwr_sum']
+        rtwr = 0 if rtwr == None else rtwr
+        row.append("{:.3f}".format(rtwr / 60))
         # Last Change
+        # SQLite does not support aggregation on date/time fields, hence it is not used here.
+        # See https://docs.djangoproject.com/en/3.2/ref/models/querysets/#aggregation-functions
         row.append(max([tr.last_updated for tr in user_trs]))
         # SharedFolder-specific stats
         for j, sf in enumerate(sfs):
             sf_trs = user_trs.filter(text__shared_folder=sf)
-            progress = round(len(list(filter(lambda tr: tr.is_finished(), sf_trs))) / sf_text_count[j] * 100, 2)
+            progress = "{:.3f}".format(len(list(filter(lambda tr: tr.is_finished(), sf_trs))) / sf_text_count[j] * 100)
             # text progress (only fully finished texts)
             row.append(progress)
             # TDT and TTSR
-            row.append(round(sum([tr.rec_time_without_rep for tr in sf_trs]) / 60, 2))
-            row.append(round(sum([tr.rec_time_with_rep for tr in sf_trs]) / 60, 2))
+            rtwor = sf_trs.aggregate(rtwor_sum=Sum('rec_time_without_rep'))['rtwor_sum']
+            rtwor = 0 if rtwor == None else rtwor
+            row.append("{:.3f}".format(rtwor / 60))
+            rtwr = sf_trs.aggregate(rtwr_sum=Sum('rec_time_with_rep'))['rtwr_sum']
+            rtwr = 0 if rtwr == None else rtwr
+            row.append("{:.3f}".format(rtwr / 60))
         csvwriter.writerow(row)
     return csvfile
