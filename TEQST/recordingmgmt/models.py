@@ -143,6 +143,7 @@ class SentenceRecording(models.Model):
     index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
     valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
+    length = models.FloatField(default=0.0)
 
     class Meta:
         ordering = ['recording', 'index']
@@ -151,26 +152,23 @@ class SentenceRecording(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
+        old_length: float
+        creating = True
+        if not self._state.adding:
+            creating = False
+            old_length = self.length
+        super().save(*args, **kwargs)  # need to save once to have the audiofile on disk
+        self.valid, self.length = self.get_audio_info()
+        super().save()
 
-        with default_storage.open(self.audiofile.name) as af:
-            y, sr = librosa.load(af, sr=None)
-        length = librosa.get_duration(y=y, sr=sr)
-        nonMuteSections = librosa.effects.split(y, 20)
-        if len(nonMuteSections) != 0:  # this test is is probably unnecessary
-            start_invalid = nonMuteSections[0][0] / sr < 0.3
-            end_invalid = nonMuteSections[-1][1] / sr > length - 0.2
-            if start_invalid and end_invalid:
-                self.valid = self.Validity.INVALID_START_END
-            else:
-                if start_invalid:
-                    self.valid = self.Validity.INVALID_START
-                elif end_invalid:
-                    self.valid = self.Validity.INVALID_END
-                else:
-                    self.valid = self.Validity.VALID
-            super().save()
-        # the followiing line ensures that the last_updated field of the textrecording is updated
+        # update recording times
+        self.recording.rec_time_without_rep += self.length
+        self.recording.rec_time_without_rep -= old_length
+        self.recording.rec_time_with_rep += self.length
+        # the following line does two things:
+        # 1. It saves the recording time updates
+        # 2. It ensures that the last_updated field of the textrecording is updated
+        #    (always happens on a call to the save method)
         self.recording.save()
 
         if self.recording.is_finished():
@@ -183,4 +181,38 @@ class SentenceRecording(models.Model):
         wav.close()
         self.audiofile.close()
         return duration
+    
+    def get_audio_info(self):
+        """
+        returns audio info in the form of a tuple [Validity, Length].
+        Validity as a value of the Validity Enum
+        e.g. [self.Validity.VALID, 5.34]
+        """
+        # TODO create temporary wav file
+        # using ffmpeg command "ffmpeg -i input.opus -vn output.wav"
 
+        with default_storage.open(self.audiofile.name) as af:  # TODO open the temp file, not self.audiofile
+            y, sr = librosa.load(af, sr=None)
+        length = librosa.get_duration(y=y, sr=sr)
+        nonMuteSections = librosa.effects.split(y, 20)
+        validity: self.Validity
+        info = ()
+        if len(nonMuteSections) != 0:  # this test is is probably unnecessary
+            start_invalid = nonMuteSections[0][0] / sr < 0.3
+            end_invalid = nonMuteSections[-1][1] / sr > length - 0.2
+            if start_invalid and end_invalid:
+                validity = self.Validity.INVALID_START_END
+            else:
+                if start_invalid:
+                    validity = self.Validity.INVALID_START
+                elif end_invalid:
+                    validity = self.Validity.INVALID_END
+                else:
+                    validity = self.Validity.VALID
+            info = (validity, length)
+        else:
+            info = (self.Validity.VALID, length)  # does this make sense if len(nonMuteSection) != 0 ?
+
+        # TODO delete temporary file
+
+        return info

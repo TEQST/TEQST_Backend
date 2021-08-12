@@ -84,25 +84,25 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
     #         raise serializers.ValidationError("Recording is too short")
 
 
-    def create(self, validated_data):
-        # type(validated_data['audiofile']) is InMemoryUploadedFile
-        wav_file = validated_data['audiofile'].open('rb')
-        wav = wave.open(wav_file, 'rb')
-        duration = wav.getnframes() / wav.getframerate()
-        wav.close()
-        # print('DURATION:', duration)
-        textrecording = validated_data['recording']
+    # def create(self, validated_data):
+    #     # type(validated_data['audiofile']) is InMemoryUploadedFile
+    #     wav_file = validated_data['audiofile'].open('rb')
+    #     wav = wave.open(wav_file, 'rb')
+    #     duration = wav.getnframes() / wav.getframerate()
+    #     wav.close()
+    #     # print('DURATION:', duration)
+    #     textrecording = validated_data['recording']
 
-        # sentence = textrecording.text.get_content()[validated_data['index'] - 1]
-        # self.check_audio_duration(duration, sentence)
+    #     # sentence = textrecording.text.get_content()[validated_data['index'] - 1]
+    #     # self.check_audio_duration(duration, sentence)
 
-        obj = super().create(validated_data)
+    #     obj = super().create(validated_data)
 
-        textrecording.rec_time_without_rep += duration
-        textrecording.rec_time_with_rep += duration
-        textrecording.save()
+    #     textrecording.rec_time_without_rep += duration
+    #     textrecording.rec_time_with_rep += duration
+    #     textrecording.save()
 
-        return obj
+    #     return obj
 
     class Meta:
         model = models.SentenceRecording
@@ -131,29 +131,29 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
     #     elif duration < len(sentence) / 40:
     #         raise serializers.ValidationError("Recording is too short")
 
-    def update(self, instance, validated_data):
-        wav_file = validated_data['audiofile'].open('rb')
-        wav = wave.open(wav_file, 'rb')
-        duration = wav.getnframes() / wav.getframerate()
-        wav.close()
-        # print('DURATION:', duration)
-        wav_file_old = instance.audiofile.open('rb')
-        wav_old = wave.open(wav_file_old, 'rb')
-        duration_old = wav_old.getnframes() / wav_old.getframerate()
-        wav_old.close()
-        instance.audiofile.close()  # refer to the wave docs: the caller must close the file, this is not done by wave.close()
-        # print('DURATION OLD:', duration_old)
-        textrecording = instance.recording
+    # def update(self, instance, validated_data):
+    #     wav_file = validated_data['audiofile'].open('rb')
+    #     wav = wave.open(wav_file, 'rb')
+    #     duration = wav.getnframes() / wav.getframerate()
+    #     wav.close()
+    #     # print('DURATION:', duration)
+    #     wav_file_old = instance.audiofile.open('rb')
+    #     wav_old = wave.open(wav_file_old, 'rb')
+    #     duration_old = wav_old.getnframes() / wav_old.getframerate()
+    #     wav_old.close()
+    #     instance.audiofile.close()  # refer to the wave docs: the caller must close the file, this is not done by wave.close()
+    #     # print('DURATION OLD:', duration_old)
+    #     textrecording = instance.recording
 
-        # TODO uncomment this and get the index (XXXX) if it is clear which view is used for this
-        #sentence = textrecording.text.get_content()[XXXX - 1]
-        #self.check_audio_duration(duration, sentence)
+    #     # TODO uncomment this and get the index (XXXX) if it is clear which view is used for this
+    #     #sentence = textrecording.text.get_content()[XXXX - 1]
+    #     #self.check_audio_duration(duration, sentence)
 
-        obj = super().update(instance, validated_data)
+    #     obj = super().update(instance, validated_data)
 
-        textrecording.rec_time_without_rep += duration
-        textrecording.rec_time_without_rep -= duration_old
-        textrecording.rec_time_with_rep += duration
-        textrecording.save()
+    #     textrecording.rec_time_without_rep += duration
+    #     textrecording.rec_time_without_rep -= duration_old
+    #     textrecording.rec_time_with_rep += duration
+    #     textrecording.save()
 
-        return obj
+    #     return obj
