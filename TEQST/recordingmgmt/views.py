@@ -73,9 +73,9 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         # index is a query parameter
         if 'index' in self.request.query_params:
             try:
-                if not models.SentenceRecording.objects.filter(recording__id=rec, index=self.request.query_params['index']).exists():
+                if not models.SentenceRecording.objects.filter(recording__id=rec, sentence__index=self.request.query_params['index']).exists():
                     raise exceptions.NotFound("Invalid index")
-                return models.SentenceRecording.objects.get(recording__id=rec, index=self.request.query_params['index'])
+                return models.SentenceRecording.objects.get(recording__id=rec, sentence__index=self.request.query_params['index'])
             except ValueError:
                 raise exceptions.NotFound("Invalid index")
         raise exceptions.NotFound("No index specified")
@@ -114,9 +114,9 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
                 raise exceptions.NotFound("Invalid Textrecording id")
         # index is the other part or the url
         index = self.kwargs['index']
-        if not models.SentenceRecording.objects.filter(recording__id=tr_id, index=index).exists():
+        if not models.SentenceRecording.objects.filter(recording__id=tr_id, sentence__index=index).exists():
             raise exceptions.NotFound("Invalid index")
-        return models.SentenceRecording.objects.get(recording__id=tr_id, index=index)
+        return models.SentenceRecording.objects.get(recording__id=tr_id, sentence__index=index)
 
         
 

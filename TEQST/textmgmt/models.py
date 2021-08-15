@@ -227,6 +227,9 @@ class Text(models.Model):
         #Parsing a folder to sharedfolder is done in serializer or has to be done manually when working via shell
         #self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
+        if not self.sentences.exists():
+            self.create_sentences()
+        
         """
         # change encoding of uploaded file to utf-8
         srcfile_path_str = self.textfile.name
@@ -282,21 +285,15 @@ class Text(models.Model):
                     self.sentences.create(content=content[i], index=i + 1, word_count=content[i].strip().count(' ') + 1)
 
     def get_content(self):
-        if not self.sentences.exists():
-            self.create_sentences()
         content = []
         for sentence in self.sentences.all():
             content.append(sentence.content)
         return content
     
     def sentence_count(self):
-        if not self.sentences.exists():
-            self.create_sentences()
         return self.sentences.count()
 
     def word_count(self, sentence_limit=None):
-        if not self.sentences.exists():
-            self.create_sentences()
         count = 0
         if sentence_limit == None:
             for sentence in self.sentences.all():
@@ -336,4 +333,4 @@ class Sentence(models.Model):
         ]
 
     def __str__(self):
-        return str(self.index) + ": " + self.content
+        return self.text.title + " (" + str(self.index) + "): " + self.content

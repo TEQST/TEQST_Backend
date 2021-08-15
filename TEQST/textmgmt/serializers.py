@@ -167,7 +167,6 @@ class TextFullSerializer(serializers.ModelSerializer):
         validated_data['shared_folder'] = sf
         if max_lines is None:
             return_obj = super().create(validated_data)
-            return_obj.create_sentences()
             return return_obj
         else:  # max_lines is given
             textfile = validated_data['textfile']
@@ -179,7 +178,6 @@ class TextFullSerializer(serializers.ModelSerializer):
                 data['textfile'] = textfiles[i]
                 data['title'] = f'{validated_data["title"]}_{i + 1}'
                 return_obj = models.Text.objects.create(**data)
-                return_obj.create_sentences()
             # some object has to be returned, so it has been decided that the last partfile will be returned
             return return_obj
 
