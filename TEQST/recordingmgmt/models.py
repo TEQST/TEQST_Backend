@@ -1,17 +1,13 @@
-from django.db import models
-from django.conf import settings
-from django.core.files import uploadedfile, base
+from django.db import models, utils
+from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
 from textmgmt import models as text_models
-from usermgmt import models as user_models
-from usermgmt.countries import COUNTRY_CHOICES
 from . import storages
 from .utils import format_timestamp
-import wave, io, re
+import wave, re
 import librosa
 from pathlib import Path
-from datetime import date
 
 
 def get_normalized_filename(instance):
@@ -52,8 +48,8 @@ class TextRecording(models.Model):
 
     def save(self, *args, **kwargs):
         if self._state.adding:
-            self.audiofile.save('name', base.ContentFile(''), save=False)
-            self.stmfile.save('name', base.ContentFile(''), save=False)
+            self.audiofile.save('name', base.ContentFile(b''), save=False)
+            self.stmfile.save('name', base.ContentFile(b''), save=False)
         super().save(*args, **kwargs)
 
     class Meta:
@@ -75,7 +71,7 @@ class TextRecording(models.Model):
         return self.text.is_listener(user)
 
     def active_sentence(self):
-        sentence_num = SentenceRecording.objects.filter(recording=self).count() + 1
+        sentence_num = self.srecs.count() + 1
         # if a speaker is finished with a text this number is one higher than the number of sentences in the text
         return sentence_num
     
@@ -103,10 +99,16 @@ class TextRecording(models.Model):
         sentences = self.text.get_content()
         wav_path_rel = Path(self.audiofile.name).stem
 
-        with self.stmfile.open('wb') as stm_file:
-            with wave.open(self.audiofile.open('wb'), 'wb') as wav_full:
+        # accessing files from their FileFields in write mode under the use of the GoogleCloudStorage from django-storages
+        # causes errors. Opening files in write mode from the storage works.
+        with default_storage.open(self.stmfile.name, 'wb') as stm_file:
+            with default_storage.open(self.audiofile.name, 'wb') as audio_full:
+                # since the wave library internally uses python's standard open() method to open files
+                # it needs to be handed an already opened file when working with Google Cloud storage
+                wav_full = wave.open(audio_full, 'wb')
                 for srec in self.srecs.all():
-                    with wave.open(srec.audiofile.open('rb'), 'rb') as wav_part:
+                    with srec.audiofile.open('rb') as srec_audio:
+                        wav_part = wave.open(srec_audio, 'rb')
 
                         #On concatenating the first file: also copy all settings
                         if current_timestamp == 0:
@@ -115,7 +117,7 @@ class TextRecording(models.Model):
 
                         stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
                         + wav_path_rel + ' ' + str(wav_part.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
-                        + user_str + ' ' + sentences[srec.index - 1] + '\n'
+                        + user_str + ' ' + sentences[srec.index() - 1] + '\n'
                     
                         stm_file.write(bytes(stm_entry, encoding='utf-8'))
 
@@ -123,6 +125,8 @@ class TextRecording(models.Model):
 
                         #copy audio
                         wav_full.writeframesraw(wav_part.readframes(wav_part.getnframes()))
+                        wav_part.close()
+                wav_full.close()
         
         self.text.shared_folder.concat_stms()
 
@@ -134,7 +138,7 @@ def sentence_rec_upload_path(instance, filename):
     Delivers the location in the filesystem where the recordings should be stored.
     """
     sf_path = instance.recording.text.shared_folder.get_path()
-    return f'{sf_path}/TempAudio/{instance.recording.id}_{instance.index}.wav'
+    return f'{sf_path}/TempAudio/{instance.recording.id}_{instance.sentence.id}.wav'
 
 
 class SentenceRecording(models.Model):
@@ -148,17 +152,22 @@ class SentenceRecording(models.Model):
         INVALID_START_END = "INVALID_START_END"
 
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE, related_name='srecs')
-    index = models.IntegerField(default=0)
+    sentence = models.ForeignKey(text_models.Sentence, on_delete=models.CASCADE, related_name='srecs')
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
     valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
 
     class Meta:
-        ordering = ['recording', 'index']
+        ordering = ['recording', 'sentence']
         constraints = [
-            models.UniqueConstraint(fields=['recording', 'index'], name='unique_srec'),
+            models.UniqueConstraint(fields=['recording', 'sentence'], name='unique_srec'),
         ]
 
     def save(self, *args, **kwargs):
+        #This check can't be a db constraint, since those don't support cross-table lookups.
+        #Because of that, it is moved to the next closest spot.
+        if self.recording.text != self.sentence.text:
+            raise utils.IntegrityError('Text reference is ambiguos')
+
         super().save(*args, **kwargs)
 
         with default_storage.open(self.audiofile.name) as af:
@@ -196,6 +205,9 @@ class SentenceRecording(models.Model):
     def is_listener(self, user):
         return self.recording.is_listener(user)
     
+    def index(self):
+        return self.sentence.index
+
     def get_audio_length(self):
         audio_file = default_storage.open(self.audiofile, 'rb')
         wav = wave.open(audio_file, 'rb')
@@ -203,4 +215,3 @@ class SentenceRecording(models.Model):
         wav.close()
         self.audiofile.close()
         return duration
-

@@ -1,6 +1,6 @@
-from django.core.files.storage import default_storage
 from rest_framework import serializers
 from django.db.models import Q
+from rest_framework.fields import IntegerField
 from . import models
 from textmgmt import models as text_models
 import wave
@@ -26,7 +26,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.TextRecording
         fields = ['id', 'speaker', 'text', 'TTS_permission', 'SR_permission', 'active_sentence', 'sentences_status', 'rec_time_without_rep', 'rec_time_with_rep']
-        read_only_fields = ['speaker', 'active_sentence', 'rec_time_without_rep', 'rec_time_with_rep']
+        read_only_fields = ['speaker', 'rec_time_without_rep', 'rec_time_with_rep']
 
     def validate(self, data):
         if models.TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
@@ -58,19 +58,24 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField()
 
+    #When serializing a model, this field accesses the SentenceRecording index method
+    index = IntegerField()
+
     def validate(self, data):
         try:
-            data['index']
+            index = data.pop('index')
+            text_recording = data['recording']
+            if index > text_recording.active_sentence():
+                raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
+            if text_recording.is_finished():
+                raise serializers.ValidationError("Text already finished. You can't add more Sentencerecordings.")
+            sentence = text_recording.text.sentences.get(index=index)
+            if models.SentenceRecording.objects.filter(sentence=sentence, recording=text_recording).exists():
+                raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
         except KeyError:
             raise serializers.ValidationError("No index provided")
-        if models.SentenceRecording.objects.filter(index=data['index'], recording=data['recording']).exists():
-            raise serializers.ValidationError("A recording for the given senctence in the given text already exists")
-        text_recording = models.TextRecording.objects.get(pk=data['recording'].pk)
-        if data['index'] > text_recording.active_sentence():
-            raise serializers.ValidationError("Index too high. You need to record the sentences in order.")
-        if text_recording.is_finished():
-            raise serializers.ValidationError("Text already finished. You can't add more Sentencerecordings.")
         # type(data['audiofile']) is InMemoryUploadedFile
+        data['sentence'] = sentence
         return super().validate(data)
 
     def validate_index(self, value):
@@ -119,6 +124,9 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
     """
 
     recording = RecordingPKField(read_only=True)
+
+    #When serializing a model, this field accesses the SentenceRecording index method
+    index = IntegerField(read_only=True)
 
     class Meta:
         model = models.SentenceRecording

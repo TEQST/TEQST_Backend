@@ -1,4 +1,4 @@
-from rest_framework import generics, mixins, status, exceptions, response, permissions as rf_permissions
+from rest_framework import generics, status, exceptions, response, permissions as rf_permissions
 from django.core import exceptions as core_exceptions
 from django.db.models import Q
 from . import serializers, models
