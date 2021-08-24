@@ -39,7 +39,7 @@ class TextRecordingSerializer(serializers.ModelSerializer):
         tr = obj
         status = []
         for sr in tr.srecs.all():
-            status.append({"index": sr.index, "status": sr.valid})
+            status.append({"index": sr.index(), "status": sr.valid})
         return status
 
 

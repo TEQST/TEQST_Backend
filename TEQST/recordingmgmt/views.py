@@ -67,7 +67,7 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
             self.check_object_permissions(self.request, trec)
             if not 'index' in self.request.query_params:
                 raise exceptions.NotFound('No index specified')
-            srec = trec.srecs.get(index=self.request.query_params['index'])
+            srec = trec.srecs.get(sentence__index=self.request.query_params['index'])
             self.check_object_permissions(self.request, srec)
             return srec
         except (core_exceptions.ObjectDoesNotExist, core_exceptions.MultipleObjectsReturned):
@@ -99,7 +99,7 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
         try:
             trec = models.TextRecording.objects.get(id=self.kwargs['tr_id'])
             self.check_object_permissions(self.request, trec)
-            srec = trec.srecs.get(index=self.kwargs['index'])
+            srec = trec.srecs.get(sentence__index=self.kwargs['index'])
             self.check_object_permissions(self.request, srec)
             return srec
         except (core_exceptions.ObjectDoesNotExist, core_exceptions.MultipleObjectsReturned):
