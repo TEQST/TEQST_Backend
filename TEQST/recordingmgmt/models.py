@@ -2,11 +2,15 @@ from django.db import models
 from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
+from django.conf import settings
 from textmgmt import models as text_models
 from . import storages
 from .utils import format_timestamp
 import wave, re
 import librosa
+import shlex
+import subprocess
+import os
 from pathlib import Path
 
 
@@ -126,7 +130,7 @@ def sentence_rec_upload_path(instance, filename):
     Delivers the location in the filesystem where the recordings should be stored.
     """
     sf_path = instance.recording.text.shared_folder.get_path()
-    return f'{sf_path}/TempAudio/{instance.recording.id}_{instance.index}.wav'
+    return f'{sf_path}/TempAudio/{instance.recording.id}_{instance.index}.opus'
 
 
 class SentenceRecording(models.Model):
@@ -163,7 +167,8 @@ class SentenceRecording(models.Model):
 
         # update recording times
         self.recording.rec_time_without_rep += self.length
-        self.recording.rec_time_without_rep -= old_length
+        if not creating:
+            self.recording.rec_time_without_rep -= old_length
         self.recording.rec_time_with_rep += self.length
         # the following line does two things:
         # 1. It saves the recording time updates
@@ -184,14 +189,19 @@ class SentenceRecording(models.Model):
     
     def get_audio_info(self):
         """
-        returns audio info in the form of a tuple [Validity, Length].
+        returns audio info in the form of a tuple (Validity, Length).
         Validity as a value of the Validity Enum
-        e.g. [self.Validity.VALID, 5.34]
+        e.g. (self.Validity.VALID, 5.34)
         """
-        # TODO create temporary wav file
+        # create temporary wav file
         # using ffmpeg command "ffmpeg -i input.opus -vn output.wav"
+        cwd_rel, filename_opus = sentence_rec_upload_path(self, None).rsplit('/', 1)
+        filename_wav = filename_opus[:-5]+'.wav'
+        args = shlex.split(f'ffmpeg -i {filename_opus} -vn {filename_wav}')
+        subprocess.run(args, cwd=settings.MEDIA_ROOT/cwd_rel, check=True)  # may raise an error if it didn't work
 
-        with default_storage.open(self.audiofile.name) as af:  # TODO open the temp file, not self.audiofile
+        filepath_wav = settings.MEDIA_ROOT/cwd_rel/filename_wav
+        with default_storage.open(filepath_wav) as af:  # TODO open the temp file, not self.audiofile
             y, sr = librosa.load(af, sr=None)
         length = librosa.get_duration(y=y, sr=sr)
         nonMuteSections = librosa.effects.split(y, 20)
@@ -213,6 +223,7 @@ class SentenceRecording(models.Model):
         else:
             info = (self.Validity.VALID, length)  # does this make sense if len(nonMuteSection) != 0 ?
 
-        # TODO delete temporary file
+        # delete temporary file
+        os.remove(filepath_wav)
 
         return info
