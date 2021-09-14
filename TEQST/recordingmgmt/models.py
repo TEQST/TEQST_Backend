@@ -23,7 +23,7 @@ def get_normalized_filename(instance):
 def text_rec_upload_path(instance, filename):
     sf_path = instance.text.shared_folder.get_path()
     name = get_normalized_filename(instance)
-    return f'{sf_path}/AudioData/{name}.wav'
+    return f'{sf_path}/AudioData/{name}.opus'
 
 
 def stm_upload_path(instance, filename):
@@ -91,35 +91,40 @@ class TextRecording(models.Model):
         sentences = self.text.get_content()
         wav_path_rel = Path(self.audiofile.name).stem
 
-        # accessing files from their FileFields in write mode under the use of the GoogleCloudStorage from django-storages
-        # causes errors. Opening files in write mode from the storage works.
+        # New procedure with opus:
+        # Create a metafile (tempfile) containing the filepaths of the files to be concatenated.
+        # Note: These filepaths can't have ../ in them, which is why it is easiest to create the
+        # tempfile in the TempAudio folder.
+        # Run the ffmpeg command to concatenate the opus files.
+
+        concat_meta_file_path_rel, _ = self.audiofile.name.rsplit('/', 1)
+        tempfile_path = settings.MEDIA_ROOT/self.text.shared_folder.get_path()/'TempAudio/tempfiles.txt'
+
+        # write stmfile and tempfile
         with default_storage.open(self.stmfile.name, 'wb') as stm_file:
-            with default_storage.open(self.audiofile.name, 'wb') as audio_full:
-                # since the wave library internally uses python's standard open() method to open files
-                # it needs to be handed an already opened file when working with Google Cloud storage
-                wav_full = wave.open(audio_full, 'wb')
+            with open(tempfile_path, 'w') as concat_meta_file:
+
                 for srec in self.srecs.all():
-                    with srec.audiofile.open('rb') as srec_audio:
-                        wav_part = wave.open(srec_audio, 'rb')
 
-                        #On concatenating the first file: also copy all settings
-                        if current_timestamp == 0:
-                            wav_full.setparams(wav_part.getparams())
-                        duration = wav_part.getnframes() / wav_part.getframerate()
+                    duration = srec.length
 
-                        stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
-                        + wav_path_rel + ' ' + str(wav_part.getnchannels()) + ' ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
-                        + user_str + ' ' + sentences[srec.index - 1] + '\n'
-                    
-                        stm_file.write(bytes(stm_entry, encoding='utf-8'))
+                    stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
+                    + wav_path_rel + ' 2 ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
+                    + user_str + ' ' + sentences[srec.index - 1] + '\n'
+                
+                    stm_file.write(bytes(stm_entry, encoding='utf-8'))
 
-                        current_timestamp += duration
+                    current_timestamp += duration
 
-                        #copy audio
-                        wav_full.writeframesraw(wav_part.readframes(wav_part.getnframes()))
-                        wav_part.close()
-                wav_full.close()
+                    concat_meta_file.write("file '"+str(self.id)+"_"+str(srec.index)+".opus'\n")  # TODO make an fstring
+
         
+        # merge opus files
+        args = shlex.split(f'ffmpeg -f concat -i ../TempAudio/tempfiles.txt -c copy {wav_path_rel}.opus')
+        subprocess.run(args, cwd=settings.MEDIA_ROOT/concat_meta_file_path_rel, check=True)  # may raise an error if it didn't work
+        # delete tempfile
+        os.remove(tempfile_path)
+
         self.text.shared_folder.concat_stms()
 
 
@@ -201,7 +206,7 @@ class SentenceRecording(models.Model):
         subprocess.run(args, cwd=settings.MEDIA_ROOT/cwd_rel, check=True)  # may raise an error if it didn't work
 
         filepath_wav = settings.MEDIA_ROOT/cwd_rel/filename_wav
-        with default_storage.open(filepath_wav) as af:  # TODO open the temp file, not self.audiofile
+        with default_storage.open(filepath_wav) as af:  # open the temp file, not self.audiofile
             y, sr = librosa.load(af, sr=None)
         length = librosa.get_duration(y=y, sr=sr)
         nonMuteSections = librosa.effects.split(y, 20)
