@@ -36,6 +36,10 @@ class Folder(models.Model):
         #     sf.name = self.name
         #     sf.save()
 
+    #Used for permission checks
+    def is_owner(self, user):
+        return self.owner == user
+
     def get_parent_name(self):
         if self.parent == None:
             return None
@@ -90,6 +94,14 @@ class SharedFolder(Folder):
             self.stmfile.save('name', base.ContentFile(b''), save=False)
             self.logfile.save('name', base.ContentFile(b''), save=False)
         super().save(*args, **kwargs)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.public or self.speaker.filter(id=user.id).exists()
+
+    #Used for permission checks
+    def is_listener(self, user):
+        return self.listener.filter(id=user.id).exists()
     
     def make_shared_folder(self):
         return self
@@ -221,12 +233,27 @@ class Text(models.Model):
             if tr.is_finished():
                 return True
         return False
+
+    #Used for permission checks
+    def is_owner(self, user):
+        return self.shared_folder.is_owner(user)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.shared_folder.is_speaker(user)
+
+    #Used for permission checks
+    def is_listener(self, user):
+        return self.shared_folder.is_listener(user)
     
     def save(self, *args, **kwargs):
         #Now expects a proper sharedfolder instance
         #Parsing a folder to sharedfolder is done in serializer or has to be done manually when working via shell
         #self.shared_folder = self.shared_folder.make_shared_folder()
         super().save(*args, **kwargs)
+        if not self.sentences.exists():
+            self.create_sentences()
+        
         """
         # change encoding of uploaded file to utf-8
         srcfile_path_str = self.textfile.name
@@ -282,21 +309,15 @@ class Text(models.Model):
                     self.sentences.create(content=content[i], index=i + 1, word_count=content[i].strip().count(' ') + 1)
 
     def get_content(self):
-        if not self.sentences.exists():
-            self.create_sentences()
         content = []
         for sentence in self.sentences.all():
             content.append(sentence.content)
         return content
     
     def sentence_count(self):
-        if not self.sentences.exists():
-            self.create_sentences()
         return self.sentences.count()
 
     def word_count(self, sentence_limit=None):
-        if not self.sentences.exists():
-            self.create_sentences()
         count = 0
         if sentence_limit == None:
             for sentence in self.sentences.all():
@@ -336,4 +357,4 @@ class Sentence(models.Model):
         ]
 
     def __str__(self):
-        return str(self.index) + ": " + self.content
+        return self.text.title + " (" + str(self.index) + "): " + self.content

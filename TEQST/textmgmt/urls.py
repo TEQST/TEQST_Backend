@@ -30,7 +30,7 @@ urlpatterns = [
     # spk/texts/<int:pk>/
     path('spk/texts/<int:pk>/', views.SpkTextDetailedView.as_view(), name='spk-text-detail'),
     # pub/sharedfolders/<int:pk>/download/
-    path('download/<int:sf>/', views.SpeechDataDownloadView.as_view(), name='download'),
+    path('download/<int:pk>/', views.SpeechDataDownloadView.as_view(), name='download'),
 
     path('pub/sharedfolders/<int:pk>/stats/', views.PubSharedFolderStatsView.as_view(), name='sharedfolder-stats'),
 

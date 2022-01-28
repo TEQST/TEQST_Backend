@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, utils
 from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
@@ -62,8 +62,20 @@ class TextRecording(models.Model):
             models.UniqueConstraint(fields=['speaker', 'text'], name='unique_trec'),
         ]
 
+    #Used for permission checks
+    def is_owner(self, user):
+        return self.text.is_owner(user)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.speaker == user
+
+    #Used for permission checks
+    def is_listener(self, user):
+        return self.text.is_listener(user)
+
     def active_sentence(self):
-        sentence_num = SentenceRecording.objects.filter(recording=self).count() + 1
+        sentence_num = self.srecs.count() + 1
         # if a speaker is finished with a text this number is one higher than the number of sentences in the text
         return sentence_num
     
@@ -110,13 +122,15 @@ class TextRecording(models.Model):
 
                     stm_entry = wav_path_rel + '_' + username + '_' + format_timestamp(current_timestamp) + '_' + format_timestamp(current_timestamp + duration) + ' ' \
                     + wav_path_rel + ' 2 ' + username + ' ' + "{0:.2f}".format(current_timestamp) + ' ' + "{0:.2f}".format(current_timestamp + duration) + ' ' \
-                    + user_str + ' ' + sentences[srec.index - 1] + '\n'
+                    + user_str + ' ' + sentences[srec.index() - 1] + '\n'
                 
                     stm_file.write(bytes(stm_entry, encoding='utf-8'))
 
                     current_timestamp += duration
 
-                    concat_meta_file.write("file '"+str(self.id)+"_"+str(srec.index)+".opus'\n")  # TODO make an fstring
+                    # the filename here must be the same as is generated in sentence_rec_upload_path
+                    # TODO centralize the filename generation to one location
+                    concat_meta_file.write("file '"+str(self.id)+"_"+str(srec.sentence.id)+".opus'\n")  # TODO make an fstring
 
         
         # merge opus files
@@ -135,7 +149,7 @@ def sentence_rec_upload_path(instance, filename):
     Delivers the location in the filesystem where the recordings should be stored.
     """
     sf_path = instance.recording.text.shared_folder.get_path()
-    return f'{sf_path}/TempAudio/{instance.recording.id}_{instance.index}.opus'
+    return f'{sf_path}/TempAudio/{instance.recording.id}_{instance.sentence.id}.opus'
 
 
 class SentenceRecording(models.Model):
@@ -149,18 +163,23 @@ class SentenceRecording(models.Model):
         INVALID_START_END = "INVALID_START_END"
 
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE, related_name='srecs')
-    index = models.IntegerField(default=0)
+    sentence = models.ForeignKey(text_models.Sentence, on_delete=models.CASCADE, related_name='srecs')
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
     valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
     length = models.FloatField(default=0.0)
 
     class Meta:
-        ordering = ['recording', 'index']
+        ordering = ['recording', 'sentence']
         constraints = [
-            models.UniqueConstraint(fields=['recording', 'index'], name='unique_srec'),
+            models.UniqueConstraint(fields=['recording', 'sentence'], name='unique_srec'),
         ]
 
     def save(self, *args, **kwargs):
+        #This check can't be a db constraint, since those don't support cross-table lookups.
+        #Because of that, it is moved to the next closest spot.
+        if self.recording.text != self.sentence.text:
+            raise utils.IntegrityError('Text reference is ambiguos')
+        
         old_length: float
         creating = True
         if not self._state.adding:
@@ -184,6 +203,7 @@ class SentenceRecording(models.Model):
         if self.recording.is_finished():
             self.recording.create_stm()
     
+    # This method looks deprecated
     def get_audio_length(self):
         audio_file = default_storage.open(self.audiofile, 'rb')
         wav = wave.open(audio_file, 'rb')
@@ -232,3 +252,18 @@ class SentenceRecording(models.Model):
         os.remove(filepath_wav)
 
         return info
+
+    #Used for permission checks
+    def is_owner(self, user):
+        return self.recording.is_owner(user)
+
+    #Used for permission checks
+    def is_speaker(self, user):
+        return self.recording.is_speaker(user)
+
+    #Used for permission checks
+    def is_listener(self, user):
+        return self.recording.is_listener(user)
+    
+    def index(self):
+        return self.sentence.index
