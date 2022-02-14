@@ -152,7 +152,8 @@ class SentenceRecording(models.Model):
         INVALID_START_END = "INVALID_START_END"
 
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE, related_name='srecs')
-    sentence = models.ForeignKey(text_models.Sentence, on_delete=models.CASCADE, related_name='srecs')
+    sentence = models.ForeignKey(text_models.Sentence, on_delete=models.CASCADE, related_name='srecs', null=True)
+    index = models.IntegerField(default=0)
     audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
     valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
 
