@@ -2,7 +2,40 @@ from django.conf import settings
 from usermgmt.countries import COUNTRY_CHOICES
 from usermgmt.utils import GENDER_CHOICES, EDU_CHOICES
 
+from . import models
+
 NAME_ID_SPLITTER = '__'
+
+
+def filter_texts(owner, users=[], countries=[], accents=[]):
+    filter_dict = {
+        'shared_folder__owner': owner,
+    }
+    if users:
+        filter_dict['textrecording__speaker__in']=users
+    if countries:
+        filter_dict['textrecording__speaker__country__in']=countries
+    if accents:
+        filter_dict['textrecording__speaker__accent__in']=accents
+    return models.Text.objects.filter(**filter_dict).distinct()
+
+
+def filter_shared_folders(owner, users=[], countries=[], accents=[]):
+    texts = filter_texts(owner=owner, users=users, countries=countries, accents=accents)
+    return models.SharedFolder.objects.filter(text__in=texts).distinct()
+
+
+def filter_folders(owner, parent=None, users=[], countries=[], accents=[]):
+    results = []
+    shared_folders = filter_shared_folders(owner=owner, users=users, countries=countries, accents=accents)
+    folders = owner.folder.filter(sharedfolder__in=shared_folders).distinct()
+    while folders.exists():
+        results += folders.filter(parent=parent).values_list('pk', flat=True)
+        print('DEBUG', folders)
+        print('DEBUG', folders.filter(parent=parent))
+        print('DEBUG', results)
+        folders = owner.folder.filter(subfolder__in=folders).distinct()
+    return models.Folder.objects.filter(pk__in=results).distinct()
 
 
 def create_headers(speakers):

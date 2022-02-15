@@ -26,7 +26,7 @@ class Folder(models.Model):
 
     # this method is useful for the shell and for the admin view
     def __str__(self):
-        return self.name
+        return self.get_path()
     
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -89,6 +89,9 @@ class SharedFolder(Folder):
     stmfile = models.FileField(upload_to=stm_upload_path, blank=True)
     logfile = models.FileField(upload_to=log_upload_path, blank=True)
 
+    def __str__(self):
+        return self.get_readable_path()
+        
     def save(self, *args, **kwargs):
         if self._state.adding:
             self.stmfile.save('name', base.ContentFile(b''), save=False)
