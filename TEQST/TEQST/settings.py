@@ -24,9 +24,7 @@ INSTALLED_APPS = [
     #this is for CORS requests
     #'corsheaders',
 
-    'textmgmt.apps.TextmgmtConfig',
-    'recordingmgmt.apps.RecordingmgmtConfig',
-    'usermgmt.apps.UsermgmtConfig',
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -34,7 +32,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework.authtoken'
+    'rest_framework.authtoken',
+
+    'admintools',
+
+    'textmgmt.apps.TextmgmtConfig',
+    'recordingmgmt.apps.RecordingmgmtConfig',
+    'usermgmt.apps.UsermgmtConfig',
 ]
 
 MIDDLEWARE = [
@@ -48,7 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'TEQST.logging_middleware.ContentLogging',
+    #'TEQST.logging_middleware.ContentLogging',
 ]
 
 PASSWORD_HASHERS = [
