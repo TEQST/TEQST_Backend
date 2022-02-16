@@ -22,7 +22,7 @@ def create_user_stats(pub, delimiter):
     returns: a File-like io.StringIO object
     """
     COUNTRIES = dict(COUNTRY_CHOICES)
-    fieldnames = ['#', 'Username', 'E-Mail', 'Country', 
+    fieldnames = ['#', 'Username', 'E-Mail', 'Country', 'Accent',  
                   'Total data time (TDT) [min]', 'Total time spend recording (TTSR) [min]', 'Last Change']
     sfs = text_models.SharedFolder.objects.filter(owner=pub)
     #sf_paths = [sf.get_path().strip(pub.username).rstrip(string.digits)[:-2] for sf in sfs]
@@ -37,7 +37,7 @@ def create_user_stats(pub, delimiter):
     
     csvwriter.writerow(fieldnames)
     for i, user in enumerate(users):
-        row = [i+1, user.username, user.email, COUNTRIES[user.country]]
+        row = [i+1, user.username, user.email, COUNTRIES[user.country], user.accent, ]
         user_trs = rec_models.TextRecording.objects.filter(speaker=user, text__shared_folder__owner=pub)
         # Total data recording time
         rtwor = user_trs.aggregate(rtwor_sum=Sum('rec_time_without_rep'))['rtwor_sum']
