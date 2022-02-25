@@ -27,7 +27,7 @@ class CustomUserAdmin(auth_admin.UserAdmin):
             'fields': ('username', 'password', ),
         }),
         ('Personal info', {
-            'fields': ('email', 'gender', 'education', 'country', 'accent', 'languages', ),
+            'fields': ('email', 'gender', 'education', 'birth_year', 'country', 'accent', 'languages', ),
             'classes': ('collapse', ),
         }),
         ('Permissions', {
@@ -41,7 +41,7 @@ class CustomUserAdmin(auth_admin.UserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'password1', 'password2', 'gender', 'education', 'country', 'accent', ),
+            'fields': ('username', 'password1', 'password2', 'gender', 'education', 'birth_year', 'country', 'accent', ),
         }),
     )
     form = auth_forms.UserChangeForm
