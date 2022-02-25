@@ -58,6 +58,7 @@ class CustomUser(auth_models.AbstractUser):
 
     class Meta:
         ordering = ['username']
+        verbose_name = 'User'
 
     def is_publisher(self):
         p = auth_models.Group.objects.get(name='Publisher')
