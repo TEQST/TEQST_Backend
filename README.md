@@ -15,9 +15,7 @@ pip3 install -r TEQST_Backend/requirements.txt
 ### Prepare your settings.py and localsettings.py
 In TEQST/setup_templates you will find templates for the requires localsettings.py file. This file is gitignored and holds settings which are specific to your local project. Place it next to settings.py inside the TEQST/TEQST folder. A random secret key ycan be generated using the command "python manage.py newsecretkey". More Information is in the template files.
 ### Prepare the database models
-python3 manage.py makemigrations usermgmt\
-python3 manage.py makemigrations textmgmt\
-python3 manage.py makemigrations recordingmgmt\
+python3 manage.py makemigrations usermgmt textmgmt recordingmgmt\
 python3 manage.py migrate
 ### Setup Publisher group and a superuser
 #### Automatically 
