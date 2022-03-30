@@ -59,12 +59,12 @@ class CustomUserAdmin(auth_admin.UserAdmin):
 
     def create_assignment_for_speakers(self, request, queryset):
         assignment = Assignment.objects.create()
-        assignment.speakers.add(*queryset)
+        assignment.speaker.add(*queryset)
         self.message_user(request, f"{queryset.count()} users were added as speakers to the newly created assignment {assignment}")
 
     def create_assignment_for_listeners(self, request, queryset):
         assignment = Assignment.objects.create()
-        assignment.listeners.add(*queryset)
+        assignment.listener.add(*queryset)
         self.message_user(request, f"{queryset.count()} users were added as listeners to the newly created assignment {assignment}")
 
 

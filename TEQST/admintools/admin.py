@@ -3,12 +3,12 @@ from . import models
 
 class AssignmentAdmin(admin.ModelAdmin):
 
-    readonly_fields = ('created', )
+    readonly_fields = ('created', 'applied', 'last_apply', )
     filter_horizontal = ('speaker', 'listener', 'folder', )
 
     fieldsets = (
         (None, {
-            'fields': ('apply', 'created', ),
+            'fields': ('apply_now', 'applied', 'last_apply', 'name', 'created', ),
         }),
         ('Selected', {
             'fields': ('speaker', 'listener', 'folder', ),
@@ -16,14 +16,15 @@ class AssignmentAdmin(admin.ModelAdmin):
         }),
     )
 
-    list_display = ('created_at', 'applied', )
-
-    def applied(self, obj):
-        return obj.apply
+    list_display = ('name', 'created_at', 'applied', 'apply_now', 'last_applied_at')
+    list_display_links = ('name', 'created_at', )
+    list_editable = ('apply_now', )
 
     def created_at(self, obj):
-        return obj.__str__()
+        return obj.created_str
 
-    applied.boolean = True
+    def last_applied_at(self, obj):
+        return obj.last_apply_str
+
 
 admin.site.register(models.Assignment, AssignmentAdmin)

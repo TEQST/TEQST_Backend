@@ -18,6 +18,7 @@ In TEQST/setup_templates you will find templates for the requires localsettings.
 python3 manage.py makemigrations usermgmt\
 python3 manage.py makemigrations textmgmt\
 python3 manage.py makemigrations recordingmgmt\
+python3 manage.py makemigrations admintools\
 python3 manage.py migrate
 ### Setup Publisher group and a superuser
 #### Automatically 
