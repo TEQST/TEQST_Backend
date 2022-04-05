@@ -1,4 +1,4 @@
-numpy==1.20
+numpy==1.21.0
 asgiref==3.5.0
 chardet==3.0.4
 Django==3.2.12
