@@ -1,10 +1,10 @@
 numpy==1.20
-asgiref==3.2.10
+asgiref==3.5.0
 chardet==3.0.4
 Django==3.2.12
 django-cors-headers==3.4.0
 djangorestframework==3.11.2
-pytz==2020.1
-sqlparse==0.3.1
+pytz==2022.1
+sqlparse==0.4.2
 librosa==0.8.0
 psycopg2==2.9.1
