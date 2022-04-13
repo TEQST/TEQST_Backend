@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+import more_admin_filters
 from admintools.models import Assignment
 from . import models
 import functools
@@ -15,7 +16,9 @@ class SharedFolderAdmin(admin.ModelAdmin):
     fields = ('owner', 'name', 'path', 'speaker', 'listener', )
     readonly_fields = ('owner', 'path', )
     filter_horizontal = ('speaker', 'listener', )
-    list_filter = ('assignments', )
+    list_filter = (
+        ('assignments', more_admin_filters.MultiSelectRelatedFilter, ), 
+    )
     actions = ('create_assignment', )
 
     def path(self, obj: models.SharedFolder):

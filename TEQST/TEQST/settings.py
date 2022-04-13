@@ -31,11 +31,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'rest_framework',
     'rest_framework.authtoken',
+    'more_admin_filters',
 
     'admintools',
-
     'textmgmt.apps.TextmgmtConfig',
     'recordingmgmt.apps.RecordingmgmtConfig',
     'usermgmt.apps.UsermgmtConfig',
@@ -138,6 +139,8 @@ REST_FRAMEWORK = {
 
 #CORS once again
 #CORS_ALLOWED_ORIGINS = []
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 #Leave this as far down in this file as possible. Only settings that rely on definitions in the localsettings file should go below this import

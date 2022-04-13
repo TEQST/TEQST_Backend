@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin, forms as auth_forms
+import more_admin_filters
 from . import forms, models
 from admintools.models import Assignment
 import functools
@@ -49,8 +50,10 @@ class CustomUserAdmin(auth_admin.UserAdmin):
     change_password_form = auth_forms.AdminPasswordChangeForm
     list_display = ('username', 'country', 'accent', )
     list_filter = (
-        ('speaker_assignments', filter_rename(admin.RelatedFieldListFilter, 'speaker assignment'), ), 
-        ('listener_assignments', filter_rename(admin.RelatedFieldListFilter, 'listener assignment'), ), 
+        ('speaker_assignments', filter_rename(more_admin_filters.MultiSelectRelatedFilter, 'speaker assignment'), ), 
+        ('listener_assignments', filter_rename(more_admin_filters.MultiSelectRelatedFilter, 'listener assignment'), ),
+        ('country', more_admin_filters.MultiSelectFilter, ),
+        ('accent', more_admin_filters.MultiSelectFilter, ),
         'is_staff', 'is_superuser', 'is_active', 'groups', )
     search_fields = ('username', 'country', 'accent', )
     ordering = ('username', )
