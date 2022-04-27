@@ -11,7 +11,7 @@ from pathlib import Path
 
 class Folder(models.Model):
     name = models.CharField(max_length=250)
-    owner = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE, related_name='folder')  
+    owner = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE, related_name='folder', limit_choices_to={'groups__name': 'Publisher'})  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
 
     class Meta:

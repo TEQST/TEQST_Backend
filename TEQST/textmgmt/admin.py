@@ -1,8 +1,8 @@
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-import more_admin_filters
 from admintools.models import Assignment
+from admintools import filters
 from . import models
 import functools
 
@@ -16,13 +16,17 @@ class SharedFolderAdmin(admin.ModelAdmin):
     fields = ('owner', 'name', 'path', 'speaker', 'listener', )
     readonly_fields = ('owner', 'path', )
     filter_horizontal = ('speaker', 'listener', )
+    list_display = ('path', )
     list_filter = (
-        ('assignments', more_admin_filters.MultiSelectRelatedFilter, ), 
+        ('assignments', filters.FixedMultiSelectRelatedFilter, ),
+        ('owner', filters.FixedMultiSelectRelatedFilter, ), 
     )
     actions = ('create_assignment', )
 
+    #@admin.display(ordering='folder_ptr')
     def path(self, obj: models.SharedFolder):
         return obj.get_readable_path()
+    path.admin_order_field = 'folder_ptr'
 
     def has_add_permission(self, request):
         return False
@@ -52,8 +56,11 @@ class TextAdmin(admin.ModelAdmin):
     def folder(self, obj: models.Text):
         return mark_safe(f'<a href="{reverse("admin:shared_folder_change")}">{str(obj.shared_folder)}</a>')
 
+    #@admin.display(ordering='shared_folder')
     def path(self, obj: models.Text):
         return obj.shared_folder.get_readable_path()
+    path.admin_order_field = 'shared_folder'
+    
 
     def has_add_permission(self, request):
         return False

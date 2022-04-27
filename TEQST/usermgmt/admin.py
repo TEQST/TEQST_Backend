@@ -3,6 +3,7 @@ from django.contrib.auth import admin as auth_admin, forms as auth_forms
 import more_admin_filters
 from . import forms, models
 from admintools.models import Assignment
+from admintools import filters
 import functools
 
 def filter_rename(filter_class, title):
@@ -50,8 +51,8 @@ class CustomUserAdmin(auth_admin.UserAdmin):
     change_password_form = auth_forms.AdminPasswordChangeForm
     list_display = ('username', 'country', 'accent', )
     list_filter = (
-        ('speaker_assignments', filter_rename(more_admin_filters.MultiSelectRelatedFilter, 'speaker assignment'), ), 
-        ('listener_assignments', filter_rename(more_admin_filters.MultiSelectRelatedFilter, 'listener assignment'), ),
+        ('speaker_assignments', filter_rename(filters.FixedMultiSelectRelatedFilter, 'speaker assignment'), ), 
+        ('listener_assignments', filter_rename(filters.FixedMultiSelectRelatedFilter, 'listener assignment'), ),
         ('country', more_admin_filters.MultiSelectFilter, ),
         ('accent', more_admin_filters.MultiSelectFilter, ),
         'is_staff', 'is_superuser', 'is_active', 'groups', )
