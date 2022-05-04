@@ -290,7 +290,7 @@ class SpkSharedFolderTextSerializer(serializers.ModelSerializer):
 
     def get_texts(self, obj):
         user = self.context['request'].user
-        ser = TextProgressSerializer(obj.text.filter( Q(language__in=user.languages.all()) | Q(language=None) ), many=True, context=self.context)
+        ser = TextProgressSerializer(obj.text.filter( Q(language__in=user.languages.all()) | Q(language=None) ).distinct(), many=True, context=self.context)
         return ser.data
 
 
@@ -405,7 +405,7 @@ class SpkPublisherSerializer(serializers.ModelSerializer):
         pub = obj
         spk = self.context['request'].user
         info = []
-        for sf in models.SharedFolder.objects.filter(Q(text__language__in=spk.languages.all()) | Q(text__language=None), ~Q(text=None), owner=pub, speaker=spk):
+        for sf in models.SharedFolder.objects.filter(Q(text__language__in=spk.languages.all()) | Q(text__language=None), ~Q(text=None), owner=pub, speaker=spk).distinct():
             info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
         return info
 
