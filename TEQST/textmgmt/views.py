@@ -158,8 +158,8 @@ class SpkPublisherListView(generics.ListAPIView):
         # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         # current code
         user = self.request.user
-        pub_pks = user.sharedfolder.all().values_list('owner', flat=True)
-        return user_models.CustomUser.objects.filter(pk__in = pub_pks)
+        pub_pks = user.sharedfolder.filter( Q(text__language__in=user.languages.all()) | Q(text__language=None), ~Q(text=None) ).values_list('owner', flat=True)
+        return user_models.CustomUser.objects.filter(pk__in = pub_pks).distinct()
 
 
 class SpkPublisherDetailedView(generics.RetrieveAPIView):
@@ -236,6 +236,12 @@ class SpkPublicFoldersView(generics.ListAPIView):
     """
     queryset = models.SharedFolder.objects.filter(public=True)
     serializer_class = serializers.PublicFolderSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        return qs.filter( Q(text__language__in=user.languages.all()) | Q(text__language=None), ~Q(text=None) ).distinct()
+
 
 
 class LstnPublisherListView(generics.ListAPIView):
