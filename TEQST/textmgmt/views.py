@@ -2,7 +2,7 @@ from rest_framework import generics, response, status, views, exceptions, decora
 from django import http
 from django.db.models import Q
 from django.core.files.storage import default_storage
-from . import models, serializers
+from . import models, serializers, utils
 from usermgmt import models as user_models, permissions
 from pathlib import Path
 
@@ -35,6 +35,11 @@ class PubFolderListView(generics.ListCreateAPIView):
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
 
     def get_queryset(self):
+
+        filter_ser = serializers.SpeakerFilterSerializer(data=self.request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        print(filter_ser.validated_data)
+
         user = self.request.user
         #the use of the parent param is deprecated. you should get this info with folderDetailView
         if 'parent' in self.request.query_params:
@@ -43,9 +48,17 @@ class PubFolderListView(generics.ListCreateAPIView):
             if models.Folder.objects.get(pk=self.request.query_params['parent']).is_shared_folder():
                 raise exceptions.NotFound("parent not found")
             #if parent is a sharedfolder: error message
-            return models.Folder.objects.filter(parent=self.request.query_params['parent'], owner=user.pk)
+            return utils.filter_folders(owner=user,
+                parent=self.request.query_params['parent'], 
+                countries=filter_ser.validated_data['country'],
+                accents=filter_ser.validated_data['accent'],
+                users=filter_ser.validated_data['user'],)
 
-        return models.Folder.objects.filter(parent=None, owner=user.pk)  # parent=None means the folder is in the topmost layer
+        return utils.filter_folders(owner=user,
+                parent=None, # parent=None means the folder is in the topmost layer
+                countries=filter_ser.validated_data['country'],
+                accents=filter_ser.validated_data['accent'],
+                users=filter_ser.validated_data['user'],)  
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -91,12 +104,20 @@ class PubTextListView(generics.ListCreateAPIView):
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
 
     def get_queryset(self):
+        filter_ser = serializers.SpeakerFilterSerializer(data=self.request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        print(filter_ser.validated_data)
+
         user = self.request.user
         if 'sharedfolder' in self.request.query_params:
             try:
                 if not models.SharedFolder.objects.filter(pk=self.request.query_params['sharedfolder'], owner=user).exists():
                     raise exceptions.NotFound("Invalid Sharedfolder id")
-                return models.Text.objects.filter(shared_folder=self.request.query_params['sharedfolder'])
+                return utils.filter_texts(owner=self.request.user,
+                    shared_folder=self.request.query_params['sharedfolder'],
+                    countries=filter_ser.validated_data['country'],
+                    accents=filter_ser.validated_data['accent'],
+                    users=filter_ser.validated_data['user'])
             except ValueError:
                 raise exceptions.NotFound("Invalid sharedfolder id")
         raise exceptions.NotFound("No sharedfolder specified")
@@ -209,6 +230,7 @@ class SpeechDataDownloadView(generics.RetrieveAPIView):
         return resp
 
 
+#TODO filter stats + Postman request
 class PubSharedFolderStatsView(generics.RetrieveAPIView):
     """
     url: api/pub/sharedfolders/:id/stats/
@@ -219,6 +241,7 @@ class PubSharedFolderStatsView(generics.RetrieveAPIView):
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
 
+#TODO filter stats + Postman request
 class PubTextStatsView(generics.RetrieveAPIView):
     """
     url: api/pub/texts/:id/stats/

@@ -1,9 +1,16 @@
+from email.policy import default
 from rest_framework import serializers
 from . import models, utils
 from usermgmt import models as user_models, serializers as user_serializers
 from recordingmgmt import models as rec_models
 import django.core.files.uploadedfile as uploadedfile
 import chardet, math
+
+
+class SpeakerFilterSerializer(serializers.Serializer):
+    country = serializers.ListField(child=serializers.CharField(), required=False, default=[])
+    accent = serializers.ListField(child=serializers.CharField(), required=False, default=[])
+    user = serializers.ListField(child=serializers.IntegerField(), required=False, default=[])
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
@@ -62,13 +69,26 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
     """
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
-    subfolder = FolderBasicSerializer(many=True, read_only=True)
+    subfolder = serializers.SerializerMethodField()
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
     
     class Meta:
         model = models.Folder
         fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
         read_only_fields = fields
+
+    def get_subfolder(self, obj):
+        filter_ser = SpeakerFilterSerializer(data=self.context['request'].query_params)
+        filter_ser.is_valid(raise_exception=True)
+        folders = utils.filter_folders(
+            owner = self.context['request'].user,
+            parent = obj,
+            countries = filter_ser.validated_data['country'],
+            accents=filter_ser.validated_data['accent'],
+            users=filter_ser.validated_data['user'],
+        )
+        ser = FolderBasicSerializer(folders, many=True, context=self.context)
+        return ser.data
 
 
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
@@ -244,13 +264,21 @@ class TextStatsSerializer(serializers.ModelSerializer):
             },
         ]
         """
+        filter_ser = SpeakerFilterSerializer(data=self.context['request'].query_params)
+        filter_ser.is_valid(raise_exception=True)
+
         text = obj
         stats = []
         #remove ordering from q1 and q2, so the union operation works
         q1 = text.shared_folder.speaker.all().order_by()
         q2 = user_models.CustomUser.objects.filter(textrecording__text=text).order_by()
+        q3 = utils.filter_users(
+            countries=filter_ser.validated_data['country'],
+            accents=filter_ser.validated_data['accent'],
+            users=filter_ser.validated_data['user'],
+        ).order_by()
         #the union queryset has to be explicitly reordered
-        for speaker in q1.union(q2).order_by('username'):
+        for speaker in q1.union(q2).intersection(q3).order_by('username'):
             spk = {'name': speaker.username, 'finished': 0}
             if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
                 textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
@@ -355,18 +383,32 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
             }
         ]
         """
+        filter_ser = SpeakerFilterSerializer(data=self.context['request'].query_params)
+        filter_ser.is_valid(raise_exception=True)
+
         sf = obj
         stats = []
 
         texts = []
-        for t in sf.text.all():
+        for t in utils.filter_texts(
+            owner=self.context['request'].user,
+            shared_folder=sf,
+            countries=filter_ser.validated_data['country'],
+            accents=filter_ser.validated_data['accent'],
+            users=filter_ser.validated_data['user'],
+        ):
             texts.append((t, t.title, t.sentence_count()))
 
         #remove ordering from q1 and q2, so the union operation works
         q1 = sf.speaker.all().order_by()
         q2 = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sf).order_by()
+        q3 = utils.filter_users(
+            countries=filter_ser.validated_data['country'],
+            accents=filter_ser.validated_data['accent'],
+            users=filter_ser.validated_data['user'],
+        ).order_by()
         #the union queryset has to be explicitly reordered
-        for speaker in q1.union(q2).order_by('username'):
+        for speaker in q1.union(q2).intersection(q3).order_by('username'):
             spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
             #for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
             for text, title, sentence_count in texts:

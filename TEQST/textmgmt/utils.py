@@ -1,4 +1,6 @@
 from django.conf import settings
+
+from usermgmt import models as user_models
 from usermgmt.countries import COUNTRY_CHOICES
 from usermgmt.utils import GENDER_CHOICES, EDU_CHOICES
 
@@ -7,28 +9,44 @@ from . import models
 NAME_ID_SPLITTER = '__'
 
 
-def filter_texts(owner, users=[], countries=[], accents=[]):
+def filter_users(users=[], countries=[], accents=[]):
+    filter_dict = {}
+    if users:
+        filter_dict['id__in'] = users
+    if countries:
+        filter_dict['country__in'] = countries
+    if accents:
+        filter_dict['accent__in'] = accents
+    return user_models.CustomUser.objects.filter(**filter_dict).distinct()
+
+
+
+def filter_texts(owner, shared_folder=None, users=[], countries=[], accents=[]):
     filter_dict = {
         'shared_folder__owner': owner,
+        'textrecording__speaker__in': filter_users(users=users, countries=countries, accents=accents)
     }
-    if users:
-        filter_dict['textrecording__speaker__in']=users
-    if countries:
-        filter_dict['textrecording__speaker__country__in']=countries
-    if accents:
-        filter_dict['textrecording__speaker__accent__in']=accents
+    if not shared_folder is None:
+        filter_dict['shared_folder'] = shared_folder
+        print('DEBUG', 'parent specified', 'Text')
     return models.Text.objects.filter(**filter_dict).distinct()
 
 
-def filter_shared_folders(owner, users=[], countries=[], accents=[]):
-    texts = filter_texts(owner=owner, users=users, countries=countries, accents=accents)
-    return models.SharedFolder.objects.filter(text__in=texts).distinct()
+def filter_shared_folders(owner, parent=None, users=[], countries=[], accents=[]):
+    filter_dict = {
+        'text__in': filter_texts(owner=owner, users=users, countries=countries, accents=accents)
+    }
+    if not parent is None:
+        filter_dict['parent'] = parent
+        print('DEBUG', 'parent specified', 'SharedFolder')
+    return models.SharedFolder.objects.filter(**filter_dict).distinct()
 
 
 def filter_folders(owner, parent=None, users=[], countries=[], accents=[]):
     results = []
     shared_folders = filter_shared_folders(owner=owner, users=users, countries=countries, accents=accents)
     folders = owner.folder.filter(sharedfolder__in=shared_folders).distinct()
+    print('DEBUG', folders)
     while folders.exists():
         results += folders.filter(parent=parent).values_list('pk', flat=True)
         print('DEBUG', folders)
