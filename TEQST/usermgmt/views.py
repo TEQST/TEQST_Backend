@@ -16,7 +16,7 @@ def country_list(request):
 @decorators.api_view()
 @decorators.permission_classes([])
 def accent_list(request):
-    list = models.CustomUser.objects.order_by().values_list('accent', flat=True).distinct()
+    list = models.AccentSuggestion.objects.values_list('name', flat=True).distinct()
     return response.Response(list)
 
 
