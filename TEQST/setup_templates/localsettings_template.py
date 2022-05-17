@@ -27,3 +27,6 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
+
+# Specify the amount of proxy levels the server is running behind, to more accurately use throttling
+REST_FRAMEWORK['NUM_PROXIES'] = None
