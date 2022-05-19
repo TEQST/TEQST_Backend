@@ -48,5 +48,7 @@ urlpatterns = [
 
     path('lstn/sharedfolder/<int:pk>/stats/', views.LstnSharedFolderStatsView.as_view(), name='lstn-sharedfolder-stats'),
 
-    path('lstn/texts/<int:pk>/stats/', views.LstnTextStatsView.as_view(), name='lstn-text-stats')
+    path('lstn/texts/<int:pk>/stats/', views.LstnTextStatsView.as_view(), name='lstn-text-stats'),
+
+    path('spk/folders/<int:pk>/', views.SpkFolderDetailView.as_view(), name='spk-folder-detail'),
 ]

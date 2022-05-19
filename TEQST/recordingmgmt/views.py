@@ -2,7 +2,7 @@ from rest_framework import generics, status, exceptions, response, permissions a
 from django.core import exceptions as core_exceptions
 from django.db.models import Q
 from . import serializers, models
-from textmgmt import models as text_models
+from textmgmt import models as text_models, permissions as text_permissions
 from usermgmt import permissions
 
 from django.http import HttpResponse
@@ -32,8 +32,16 @@ class TextRecordingView(generics.ListCreateAPIView):
 
     
     def perform_create(self, serializer):
+        #TODO this is a dirty permission check, maybe move it into a more suitable place
+        ser = text_permissions.RootParamSerializer(data=self.request.data)
+        if ser.is_valid(raise_exception=False):
+            if serializer.validated_data['text'].is_below_root(ser.validated_data['root']):
+                serializer.save(speaker=self.request.user)
+            else:
+                raise exceptions.PermissionDenied()
+        else:
+            raise exceptions.PermissionDenied()
         # specify request.user as the speaker of a textrecording upon creation
-        serializer.save(speaker=self.request.user)
 
     def get(self, *args, **kwargs):
         """

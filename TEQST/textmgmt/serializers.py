@@ -4,7 +4,14 @@ from usermgmt import models as user_models, serializers as user_serializers
 from recordingmgmt import models as rec_models
 from django.db.models import Q
 import django.core.files.uploadedfile as uploadedfile
-import chardet, math
+import chardet, math, uuid
+
+
+def get_uuid():
+    new_uuid = uuid.uuid4()
+    while models.Folder.objects.filter(root_id=new_uuid).exists():
+        new_uuid = uuid.uuid4()
+    return new_uuid
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
@@ -49,12 +56,20 @@ class FolderBasicSerializer(serializers.ModelSerializer):
     to be used by: FolderDetailedSerializer
     """
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
+    root = serializers.SerializerMethodField()
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
     
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'is_sharedfolder']
+        fields = ['id', 'name', 'is_sharedfolder', 'root']
         read_only_fields = ['name']
+
+    def get_root(self, obj):
+        if obj.root_id is None:
+            obj.root_id = get_uuid()
+            obj.save()
+        return obj.root_id
+
 
 class FolderDetailedSerializer(serializers.ModelSerializer):
     """
@@ -64,12 +79,20 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
     subfolder = FolderBasicSerializer(many=True, read_only=True)
+    root = serializers.SerializerMethodField()
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
     
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
+        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder', 'root']
         read_only_fields = fields
+
+    def get_root(self, obj):
+        if obj.root_id is None:
+            obj.root_id = get_uuid()
+            obj.save()
+        return obj.root_id
+
 
 
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):

@@ -2,6 +2,7 @@ from django.db import models, transaction
 from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
+from django import urls
 from . import utils
 from usermgmt import models as user_models
 import zipfile, chardet, re
@@ -9,7 +10,9 @@ from pathlib import Path
 #from google.cloud.storage import Blob
 
 
+
 class Folder(models.Model):
+    root_id = models.UUIDField(null=True, editable=False)
     name = models.CharField(max_length=250)
     owner = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE, related_name='folder')  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
@@ -40,12 +43,26 @@ class Folder(models.Model):
     def is_owner(self, user):
         return self.owner == user
 
+    def is_root(self, root):
+        return self.root_id == root
+
+    def is_below_root(self, root):
+        if self.parent is None:
+            return False
+        if self.parent.is_root(root):
+            return True
+        return self.parent.is_below_root(root)
+
     def get_parent_name(self):
         if self.parent == None:
             return None
         return self.parent.name
 
+    # Deprecated for below
     def is_shared_folder(self):
+        return self.is_sharedfolder()
+
+    def is_sharedfolder(self):
         """
         This method returns True if called on a Folder instance for which a corresponding SharedFolder instance exists.
         """
@@ -85,7 +102,6 @@ class SharedFolder(Folder):
     speaker = models.ManyToManyField(auth.get_user_model(), related_name='sharedfolder', blank=True)
     listener = models.ManyToManyField(auth.get_user_model(), related_name='listenfolder', blank=True)
     public = models.BooleanField(default=False)
-
     stmfile = models.FileField(upload_to=stm_upload_path, blank=True)
     logfile = models.FileField(upload_to=log_upload_path, blank=True)
 
@@ -97,7 +113,8 @@ class SharedFolder(Folder):
 
     #Used for permission checks
     def is_speaker(self, user):
-        return self.public or self.speaker.filter(id=user.id).exists()
+        #return self.public or self.speaker.filter(id=user.id).exists()
+        return True
 
     #Used for permission checks
     def is_listener(self, user):
@@ -245,6 +262,9 @@ class Text(models.Model):
     #Used for permission checks
     def is_listener(self, user):
         return self.shared_folder.is_listener(user)
+
+    def is_below_root(self, root):
+        return self.shared_folder.is_below_root(root) or self.shared_folder.is_root(root)
     
     def save(self, *args, **kwargs):
         #Now expects a proper sharedfolder instance
