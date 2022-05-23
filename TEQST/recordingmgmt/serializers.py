@@ -6,10 +6,11 @@ from textmgmt import models as text_models
 import wave
 
 
+#TODO maybe collapse this to PrimaryKeyRelatedField(queryset=Text.objects.all())
 class TextPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
-        queryset = text_models.Text.objects.filter(Q(shared_folder__speaker__id=user.id) | Q(shared_folder__public=True)).distinct()
+        queryset = text_models.Text.objects.all().distinct()
         return queryset
 
 
