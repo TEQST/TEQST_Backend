@@ -21,7 +21,7 @@ class TextRecordingView(generics.ListCreateAPIView):
         user = self.request.user
         if 'text' in self.request.query_params:
             try:
-                if not text_models.Text.objects.filter(Q(pk=self.request.query_params['text']), Q(shared_folder__speaker=user) | Q(shared_folder__public=True)).exists():
+                if not text_models.Text.objects.filter(Q(pk=self.request.query_params['text'])).exists():
                     raise exceptions.NotFound("Invalid text id")
                 return models.TextRecording.objects.filter(text=self.request.query_params['text'], speaker=user.pk)
             except ValueError:
