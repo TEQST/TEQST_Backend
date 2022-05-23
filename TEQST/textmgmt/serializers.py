@@ -27,12 +27,19 @@ class FolderFullSerializer(serializers.ModelSerializer):
     """
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
+    root = serializers.SerializerMethodField()
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
  
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder']
-        read_only_fields = ['owner']
+        fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder', 'root']
+        read_only_fields = ['owner', 'root']
+
+    def get_root(self, obj):
+        if obj.root_id is None:
+            obj.root_id = get_uuid()
+            obj.save()
+        return obj.root_id
     
     def validate_name(self, value):
         """
