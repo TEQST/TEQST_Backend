@@ -113,8 +113,8 @@ class SharedFolder(Folder):
 
     #Used for permission checks
     def is_speaker(self, user):
-        #return self.public or self.speaker.filter(id=user.id).exists()
-        return True
+        return self.public or self.speaker.filter(id=user.id).exists()
+        #return True
 
     #Used for permission checks
     def is_listener(self, user):

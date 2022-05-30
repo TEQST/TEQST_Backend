@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.db.models import Q
 from rest_framework.fields import IntegerField
 from . import models
-from textmgmt import models as text_models
+from textmgmt import models as text_models, permissions as text_permissions
 import wave
 
 
@@ -30,11 +30,24 @@ class TextRecordingSerializer(serializers.ModelSerializer):
         read_only_fields = ['speaker', 'rec_time_without_rep', 'rec_time_with_rep']
 
     def validate(self, data):
-        if models.TextRecording.objects.filter(speaker=self.context['request'].user, text=data['text']).exists():
-            raise serializers.ValidationError("A recording for the given text by the given user already exists")
         if data['TTS_permission'] is False and data['SR_permission'] is False:
             raise serializers.ValidationError("Either TTS or SR permission must be True")
         return super().validate(data)
+
+    def validate_text(self, value):
+        user = self.context['request'].user
+
+        if value.textrecording.filter(speaker=user).exists():
+            raise serializers.ValidationError("You already created a recording for this text")
+
+        if not value.is_speaker(user):
+            ser = text_permissions.RootParamSerializer(data=self.context['request'].data)
+            if not ser.is_valid(raise_exception=False):
+                raise serializers.ValidationError("You do not have access to the text you are trying to work on")
+            if not value.is_below_root(ser.validated_data['root']):
+                raise serializers.ValidationError("You do not have access to the text you are trying to work on")
+                
+        return value
     
     def get_sentences_status(self, obj):
         tr = obj

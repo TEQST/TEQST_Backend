@@ -32,16 +32,8 @@ class TextRecordingView(generics.ListCreateAPIView):
 
     
     def perform_create(self, serializer):
-        #TODO this is a dirty permission check, maybe move it into a more suitable place
-        ser = text_permissions.RootParamSerializer(data=self.request.data)
-        if ser.is_valid(raise_exception=False):
-            if serializer.validated_data['text'].is_below_root(ser.validated_data['root']):
-                serializer.save(speaker=self.request.user)
-            else:
-                raise exceptions.PermissionDenied()
-        else:
-            raise exceptions.PermissionDenied()
         # specify request.user as the speaker of a textrecording upon creation
+        serializer.save(speaker=self.request.user)
 
     def get(self, *args, **kwargs):
         """

@@ -115,7 +115,7 @@ class SpkTextListView(generics.RetrieveAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.SpkSharedFolderTextSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker, text_permissions.BelowRoot | text_permissions.IsRoot]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | text_permissions.BelowRoot | text_permissions.IsRoot]
 
 
 class PubTextDetailedView(generics.RetrieveDestroyAPIView):
@@ -141,7 +141,7 @@ class SpkTextDetailedView(generics.RetrieveAPIView):
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextFullSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker, text_permissions.BelowRoot]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | text_permissions.BelowRoot]
 
 
 class SpkPublisherListView(generics.ListAPIView):
