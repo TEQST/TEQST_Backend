@@ -5,7 +5,7 @@ from django.contrib import auth
 from django import urls
 from . import utils
 from usermgmt import models as user_models
-import zipfile, chardet, re
+import zipfile, chardet, re, uuid
 from pathlib import Path
 #from google.cloud.storage import Blob
 
@@ -27,6 +27,16 @@ class Folder(models.Model):
             models.UniqueConstraint(fields=['name', 'owner'], condition=models.Q(parent=None), name='unique_folder'),
         ]
 
+    @property
+    def root(self):
+        if self.root_id is None:
+            new_uuid = uuid.uuid4()
+            while Folder.objects.filter(root_id=new_uuid).exists():
+                new_uuid = uuid.uuid4()
+            self.root_id = new_uuid
+            self.save(update_fields=['root_id'])
+        return self.root_id
+
     # this method is useful for the shell and for the admin view
     def __str__(self):
         return self.name
@@ -44,7 +54,7 @@ class Folder(models.Model):
         return self.owner == user
 
     def is_root(self, root):
-        return self.root_id == root
+        return self.root == root
 
     def is_below_root(self, root):
         if self.parent is None:

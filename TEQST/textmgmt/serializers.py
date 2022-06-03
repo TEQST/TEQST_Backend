@@ -6,13 +6,6 @@ import django.core.files.uploadedfile as uploadedfile
 import chardet, math, uuid
 
 
-def get_uuid():
-    new_uuid = uuid.uuid4()
-    while models.Folder.objects.filter(root_id=new_uuid).exists():
-        new_uuid = uuid.uuid4()
-    return new_uuid
-
-
 class FolderPKField(serializers.PrimaryKeyRelatedField):
     def get_queryset(self):
         user = self.context['request'].user
@@ -27,19 +20,12 @@ class FolderFullSerializer(serializers.ModelSerializer):
     """
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
-    root = serializers.SerializerMethodField()
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
  
     class Meta:
         model = models.Folder
         fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder', 'root']
         read_only_fields = ['owner', 'root']
-
-    def get_root(self, obj):
-        if obj.root_id is None:
-            obj.root_id = get_uuid()
-            obj.save()
-        return obj.root_id
     
     def validate_name(self, value):
         """
@@ -57,12 +43,13 @@ class FolderFullSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('A folder with the given name in the given place already exists')
         return super().validate(data)
 
+
+
 class FolderBasicSerializer(serializers.ModelSerializer):
     """
     to be used by: FolderDetailedSerializer
     """
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
-    root = serializers.SerializerMethodField()
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
     
     class Meta:
@@ -70,11 +57,6 @@ class FolderBasicSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'is_sharedfolder', 'root']
         read_only_fields = ['name']
 
-    def get_root(self, obj):
-        if obj.root_id is None:
-            obj.root_id = get_uuid()
-            obj.save()
-        return obj.root_id
 
 
 class FolderDetailedSerializer(serializers.ModelSerializer):
@@ -85,19 +67,12 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
     subfolder = FolderBasicSerializer(many=True, read_only=True)
-    root = serializers.SerializerMethodField()
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
     
     class Meta:
         model = models.Folder
         fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder', 'root']
         read_only_fields = fields
-
-    def get_root(self, obj):
-        if obj.root_id is None:
-            obj.root_id = get_uuid()
-            obj.save()
-        return obj.root_id
 
 
 
