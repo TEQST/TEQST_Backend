@@ -388,3 +388,45 @@ class Sentence(models.Model):
 
     def __str__(self):
         return self.text.title + " (" + str(self.index) + "): " + self.content
+
+
+
+class ListField(models.CharField):
+    """
+    Expects a list of Strings (not containing SEPARATOR), which are stored as a space separated String
+    """
+
+    def __init__(self, separator, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.separator = separator
+
+    def from_db_value(self, value, expression, connection):
+        return value.split(self.separator)
+
+    def get_prep_value(self, value):
+        return self.separator.join(value)
+
+    def to_python(self, value):
+        if isinstance(value, list):
+            return value
+
+        if value is None:
+            return value
+
+        return value.split(self.separator)
+
+    def value_to_string(self, obj):
+        value = self.value_from_object(obj)
+        return self.separator.join(value)
+
+
+
+class ListenerPermission(models.Model):
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='lstn_permissions')
+    listeners = models.ManyToManyField(auth.get_user_model(), related_name='lstn_permissions')
+    speakers = models.ManyToManyField(auth.get_user_model())
+    accents = ListField(separator=',', max_length=50)
+
+    @property
+    def user_list(self):
+        user_models.CustomUser.objects.filter(accent__in=self.accents).union(self.speakers.all())

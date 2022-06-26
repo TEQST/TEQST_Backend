@@ -239,6 +239,7 @@ class SpkPublicFoldersView(generics.ListAPIView):
     serializer_class = serializers.PublicFolderSerializer
 
 
+'''
 class LstnPublisherListView(generics.ListAPIView):
     """
     url: api/lstn/publishers/
@@ -272,6 +273,7 @@ class LstnPublisherDetailedView(generics.RetrieveAPIView):
         if user.listenfolder.filter(owner=pub).exists():
             return pub
         raise exceptions.PermissionDenied('This publisher has not shared any folders with you as listener.')
+'''
 
 
 class LstnTextListView(generics.RetrieveAPIView):
@@ -294,6 +296,7 @@ class LstnTextDetailedView(generics.RetrieveAPIView):
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
 
 
+'''
 class LstnSharedFolderStatsView(generics.RetrieveAPIView):
     """
     url: api/lstn/sharedfolders/:id/stats/
@@ -312,6 +315,7 @@ class LstnTextStatsView(generics.RetrieveAPIView):
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextStatsSerializer
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
+'''
 
 
 class SpkFolderDetailView(generics.RetrieveAPIView):
@@ -338,3 +342,27 @@ class SpkFolderDetailView(generics.RetrieveAPIView):
             instance.parent = None
         serializer = self.get_serializer(instance)
         return response.Response(serializer.data)
+
+
+#TODO untested
+class PubListenerPermissionView(generics.ListCreateAPIView):
+
+    class InputSerializer(rf_serializers.ModelSerializer):
+        class Meta:
+            model = models.ListenerPermission
+            fields = ['folder', 'listeners', 'speakers', 'accents']
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        class Meta:
+            model = models.ListenerPermission
+            fields = ['folder', 'listeners', 'speakers', 'accents']
+
+    queryset = models.ListenerPermission.objects.all()
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
+
+    def get_serializer_class(self):
+        #TODO extract into mixin
+        if self.request.mode == 'GET':
+            return self.OutputSerializer
+        else:
+            return self.InputSerializer
