@@ -38,3 +38,10 @@ class IsRoot(permissions.BasePermission):
             return False
         return obj.is_root(root=ser.validated_data['root'])
 
+
+def get_listener_permissions(folder, listener):
+    perm_list = []
+    while not folder is None:
+        perm_list.append( folder.lstn_permissions.filter(listeners=listener).order_by() )
+        folder = folder.parent
+    return models.ListenerPermission.objects.none().order_by().union(*perm_list)

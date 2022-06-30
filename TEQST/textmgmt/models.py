@@ -53,6 +53,13 @@ class Folder(models.Model):
     def is_owner(self, user):
         return self.owner == user
 
+    #Used for permission checks
+    def is_listener(self, user):
+        if self.lstn_permissions.filter(listeners=user).exists():
+            return True
+        else:
+            return self.parent.is_listener(user)
+
     def is_root(self, root):
         return self.root == root
 
@@ -125,10 +132,6 @@ class SharedFolder(Folder):
     def is_speaker(self, user):
         return self.public or self.speaker.filter(id=user.id).exists()
         #return True
-
-    #Used for permission checks
-    def is_listener(self, user):
-        return self.listener.filter(id=user.id).exists()
     
     def make_shared_folder(self):
         return self
@@ -393,12 +396,17 @@ class Sentence(models.Model):
 
 class ListField(models.CharField):
     """
-    Expects a list of Strings (not containing SEPARATOR), which are stored as a space separated String
+    Expects a list of Strings (not containing `separator`), which are stored as a String, joined by `separator`
     """
 
     def __init__(self, separator, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.separator = separator
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        kwargs['separator'] = self.separator
+        return name, path, args, kwargs
 
     def from_db_value(self, value, expression, connection):
         return value.split(self.separator)
@@ -429,4 +437,4 @@ class ListenerPermission(models.Model):
 
     @property
     def user_list(self):
-        user_models.CustomUser.objects.filter(accent__in=self.accents).union(self.speakers.all())
+        return user_models.CustomUser.objects.filter(accent__in=self.accents).order_by().union(self.speakers.all().order_by()).order_by('username')
