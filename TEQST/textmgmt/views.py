@@ -4,7 +4,7 @@ from django import http
 from django.db.models import Q
 from django.core.files.storage import default_storage
 from . import models, serializers, stats, permissions as text_permissions
-from usermgmt import models as user_models, permissions
+from usermgmt import models as user_models, permissions, serializers as user_serializers
 from pathlib import Path
 
 
@@ -270,11 +270,11 @@ class SpkFolderDetailView(generics.RetrieveAPIView):
         return response.Response(serializer.data)
 
 
-#TODO untested
+
 class PubListenerPermissionView(generics.ListCreateAPIView):
     """
-    url: api/pub/folders/:id/listeners/
-    use: as publisher share a folder+speakers to one or many listeners
+    url: api/pub/listeners/?folder=:id
+    use: as publisher share a folder+speakers to one or many listeners or view all permissions for a folder
     """
 
     class FilterSerializer(rf_serializers.Serializer):
@@ -293,10 +293,14 @@ class PubListenerPermissionView(generics.ListCreateAPIView):
             return value
 
     class OutputSerializer(rf_serializers.ModelSerializer):
+        accents = rf_serializers.ListField(child=rf_serializers.CharField())
+        listeners = user_serializers.UserBasicSerializer(many=True, read_only=True)
+        speakers = user_serializers.UserBasicSerializer(many=True, read_only=True)
+
         class Meta:
             model = models.ListenerPermission
-            fields = ['listeners', 'speakers', 'accents']
-            depth = 1
+            fields = ['id', 'listeners', 'speakers', 'accents']
+
 
     queryset = models.ListenerPermission.objects.all()
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
@@ -304,6 +308,7 @@ class PubListenerPermissionView(generics.ListCreateAPIView):
     def get_queryset(self):
         qs = super().get_queryset()
         filter_ser = self.FilterSerializer(data=self.request.query_params)
+        filter_ser.is_valid(raise_exception=True)
         self.check_object_permissions(self.request, filter_ser.validated_data['folder'])
         return qs.filter(folder=filter_ser.validated_data['folder'])
 
@@ -413,8 +418,8 @@ class LstnSharedFolderStatsView(generics.RetrieveAPIView):
         
         def get_speaker_stats(self, obj):
             user = self.context['request'].user
-            user_list_list = [ perm.user_list.order_by() for perm in text_permissions.get_listener_permissions(obj, user) ]
-            user_list = user_models.CustomUser.objects.none().order_by().union(*user_list_list)
+            perm_qs = text_permissions.get_listener_permissions(obj, user)
+            user_list = text_permissions.get_combined_speakers(perm_qs)
             return stats.sharedfolder_stats(obj, user_filter=user_list)
 
     queryset = models.SharedFolder.objects.all()
@@ -439,8 +444,8 @@ class LstnTextStatsView(generics.RetrieveAPIView):
         
         def get_speaker_stats(self, obj):
             user = self.context['request'].user
-            user_list_list = [ perm.user_list.order_by() for perm in text_permissions.get_listener_permissions(obj.shared_folder, user) ]
-            user_list = user_models.CustomUser.objects.none().order_by().union(*user_list_list)
+            perm_qs = text_permissions.get_listener_permissions(obj.shared_folder, user)
+            user_list = text_permissions.get_combined_speakers(perm_qs)
             return stats.text_stats(obj, user_filter=user_list)
 
     queryset = models.Text.objects.all()

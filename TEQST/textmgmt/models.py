@@ -57,8 +57,9 @@ class Folder(models.Model):
     def is_listener(self, user):
         if self.lstn_permissions.filter(listeners=user).exists():
             return True
-        else:
-            return self.parent.is_listener(user)
+        if self.parent is None:
+            return False
+        return self.parent.is_listener(user)
 
     def is_root(self, root):
         return self.root == root
@@ -409,6 +410,8 @@ class ListField(models.CharField):
         return name, path, args, kwargs
 
     def from_db_value(self, value, expression, connection):
+        if value == '':
+            return []
         return value.split(self.separator)
 
     def get_prep_value(self, value):
@@ -420,6 +423,9 @@ class ListField(models.CharField):
 
         if value is None:
             return value
+
+        if value == '':
+            return []
 
         return value.split(self.separator)
 
@@ -438,3 +444,6 @@ class ListenerPermission(models.Model):
     @property
     def user_list(self):
         return user_models.CustomUser.objects.filter(accent__in=self.accents).order_by().union(self.speakers.all().order_by()).order_by('username')
+
+    def contains_speaker(self, speaker):
+        return speaker.accent in self.accents or self.speakers.filter(id=speaker.id).exists()

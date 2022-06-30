@@ -58,9 +58,10 @@ class UserFullSerializer(serializers.ModelSerializer):
         
 
 class UserBasicSerializer(serializers.ModelSerializer):
-    '''
+    """
     Is used to retrieve a list of all users
-    '''
+    """
+    languages = LanguageSerializer(many = True, read_only = True)
     class Meta():
         model = models.CustomUser
         depth = 1
