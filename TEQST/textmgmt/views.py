@@ -320,6 +320,45 @@ class PubListenerPermissionView(generics.ListCreateAPIView):
             return self.InputSerializer
 
 
+class PubListenerPermissionChangeView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    url: api/pub/listeners/:id/
+    use: as a publisher, change the listeners+speakers for a given permission view
+    """
+
+    class InputSerializer(rf_serializers.ModelSerializer):
+        accents = rf_serializers.ListField(child=rf_serializers.CharField())
+
+        class Meta:
+            model = models.ListenerPermission
+            fields = ['listeners', 'speakers', 'accents']
+
+        def validate_folder(self, value):
+            if self.context['request'].user != value.owner:
+                raise exceptions.PermissionDenied("You do not own this folder")
+            return value
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        accents = rf_serializers.ListField(child=rf_serializers.CharField())
+        listeners = user_serializers.UserBasicSerializer(many=True, read_only=True)
+        speakers = user_serializers.UserBasicSerializer(many=True, read_only=True)
+
+        class Meta:
+            model = models.ListenerPermission
+            fields = ['id', 'listeners', 'speakers', 'accents']
+
+
+    queryset = models.ListenerPermission.objects.all()
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
+
+    def get_serializer_class(self):
+        #TODO extract into mixin
+        if self.request.method == 'GET':
+            return self.OutputSerializer
+        else:
+            return self.InputSerializer
+
+
 class LstnFolderListView(generics.ListAPIView):
     """
     url:

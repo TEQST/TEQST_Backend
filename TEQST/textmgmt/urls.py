@@ -42,6 +42,8 @@ urlpatterns = [
 
     path('pub/listeners/', views.PubListenerPermissionView.as_view(), name='pub-listeners'),
 
+    path('pub/listeners/<int:pk>/', views.PubListenerPermissionChangeView.as_view(), name='pub-listeners-detail'),
+
     path('lstn/folders/', views.LstnFolderListView.as_view(), name='lstn-folder-list'),
 
     path('lstn/folders/<int:pk>/', views.LstnFolderDetailView.as_view(), name='list-folder-detail'),

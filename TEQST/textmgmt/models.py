@@ -437,8 +437,8 @@ class ListField(models.CharField):
 
 class ListenerPermission(models.Model):
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='lstn_permissions')
-    listeners = models.ManyToManyField(auth.get_user_model(), related_name='lstn_permissions')
-    speakers = models.ManyToManyField(auth.get_user_model())
+    listeners = models.ManyToManyField(auth.get_user_model(), blank=True, related_name='lstn_permissions')
+    speakers = models.ManyToManyField(auth.get_user_model(), blank=True)
     accents = ListField(separator=',', max_length=50)
 
     @property
@@ -447,3 +447,7 @@ class ListenerPermission(models.Model):
 
     def contains_speaker(self, speaker):
         return speaker.accent in self.accents or self.speakers.filter(id=speaker.id).exists()
+
+    # Used for permission checks
+    def is_owner(self, user):
+        return self.folder.is_owner(user)
