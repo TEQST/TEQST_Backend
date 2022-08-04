@@ -1,3 +1,4 @@
+from numpy import source
 from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions, \
     serializers as rf_serializers
 from django import http
@@ -253,21 +254,51 @@ class SpkFolderDetailView(generics.RetrieveAPIView):
                 fields = ['id', 'name', 'is_sharedfolder']
 
         subfolder = NestedSerializer(many=True)
+        path = rf_serializers.CharField(read_only=True, source='get_readable_path')
         class Meta:
             model = models.Folder
-            fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
+            fields = ['id', 'name', 'owner', 'path', 'parent', 'subfolder', 'is_sharedfolder']
 
     queryset = models.Folder.objects.all()
     serializer_class = OutputSerializer
     permission_classes = [rf_permissions.IsAuthenticated, text_permissions.IsRoot | text_permissions.BelowRoot]
 
-    def get(self, request, *args, **kwargs):
-        instance = self.get_object()
-        #TODO extract into custom get_object function
-        if text_permissions.IsRoot().has_object_permission(request, self, instance):
-            instance.parent = None
-        serializer = self.get_serializer(instance)
-        return response.Response(serializer.data)
+    def get_object(self):
+        obj = super().get_object()
+
+        # Don't show parent of root folder; Update recent projects entry
+        if text_permissions.IsRoot().has_object_permission(self.request, self, obj):
+            obj.parent = None
+            models.RecentProject.update_folder_for_speaker(self.request.user, obj)
+        
+        return obj
+
+
+
+class SpkRecentProjectView(generics.ListAPIView):
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+
+        class NestedSerializer(rf_serializers.ModelSerializer):
+            path = rf_serializers.CharField(read_only=True, source='get_readable_path')
+            class Meta:
+                model = models.Folder
+                fields = ['id', 'name', 'owner', 'path', 'parent', 'is_sharedfolder', 'root']
+
+        folder = NestedSerializer()
+
+        class Meta:
+            model = models.RecentProject
+            fields = ['folder', 'last_access']
+        
+
+    queryset = models.RecentProject.objects.none()
+    serializer_class = OutputSerializer
+
+    def get_queryset(self):
+        #TODO add defaults
+        return self.request.user.recentproject_set.all().order_by('-last_access')
+        
 
 
 

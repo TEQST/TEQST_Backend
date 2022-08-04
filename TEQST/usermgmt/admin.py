@@ -15,4 +15,4 @@ class CustomUserAdmin(auth_admin.UserAdmin):
 
 admin.site.register(models.CustomUser, CustomUserAdmin)
 admin.site.register(models.Language)
-admin.site.register(models.AccentSuggestion)
+#admin.site.register(models.AccentSuggestion)

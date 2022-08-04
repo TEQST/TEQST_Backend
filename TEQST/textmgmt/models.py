@@ -89,6 +89,9 @@ class Folder(models.Model):
     def get_path(self):
         return utils.folder_relative_path(self)
 
+    def get_readable_path(self):
+        return self.get_path()
+
     def make_shared_folder(self):
         if self.is_shared_folder():
             return self.sharedfolder
@@ -451,3 +454,23 @@ class ListenerPermission(models.Model):
     # Used for permission checks
     def is_owner(self, user):
         return self.folder.is_owner(user)
+
+
+
+class RecentProject(models.Model):
+    speaker = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE)
+    last_access = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['speaker', 'folder']
+        constraints = [
+            models.UniqueConstraint(fields=['speaker', 'folder'], name='unique_project_user'),
+        ]
+
+
+    @classmethod
+    def update_folder_for_speaker(cls, speaker, folder):
+        obj, _ = cls.objects.get_or_create(speaker=speaker, folder=folder)
+        obj.save() # Ensures update of last_access

@@ -40,6 +40,8 @@ urlpatterns = [
 
     path('spk/folders/<int:pk>/', views.SpkFolderDetailView.as_view(), name='spk-folder-detail'),
 
+    path('spk/recent-folders/', views.SpkRecentProjectView.as_view(), name='spk-recent'),
+
     path('pub/listeners/', views.PubListenerPermissionView.as_view(), name='pub-listeners'),
 
     path('pub/listeners/<int:pk>/', views.PubListenerPermissionChangeView.as_view(), name='pub-listeners-detail'),
