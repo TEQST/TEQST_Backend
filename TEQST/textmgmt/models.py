@@ -1,6 +1,7 @@
 from django.db import models, transaction
 from django.core.files import base
 from django.core.files.storage import default_storage
+from django.conf import settings
 from django.contrib import auth
 from django import urls
 from . import utils
@@ -474,3 +475,12 @@ class RecentProject(models.Model):
     def update_folder_for_speaker(cls, speaker, folder):
         obj, _ = cls.objects.get_or_create(speaker=speaker, folder=folder)
         obj.save() # Ensures update of last_access
+
+
+    @classmethod
+    def add_default_folders_for_speaker(cls, speaker):
+        if not settings.DEFAULT_FOLDER:
+            return
+        for f_uuid in settings.DEFAULT_FOLDER:
+            folder = Folder.objects.get(root_id=f_uuid)
+            cls.update_folder_for_speaker(speaker, folder)

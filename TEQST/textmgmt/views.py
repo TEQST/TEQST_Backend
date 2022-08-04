@@ -296,7 +296,7 @@ class SpkRecentProjectView(generics.ListAPIView):
     serializer_class = OutputSerializer
 
     def get_queryset(self):
-        #TODO add defaults
+        models.RecentProject.add_default_folders_for_speaker(self.request.user)
         return self.request.user.recentproject_set.all().order_by('-last_access')
         
 
