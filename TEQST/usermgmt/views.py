@@ -1,6 +1,7 @@
 from django import http
 from django.contrib import auth
-from rest_framework import status, exceptions, response, generics, decorators, permissions as rf_permissions
+from django.views.decorators import csrf
+from rest_framework import status, exceptions, response, generics, decorators, views, permissions as rf_permissions
 from rest_framework.authtoken import models as token_models
 from . import permissions, models, serializers, countries, userstats
 import re
@@ -113,27 +114,34 @@ class UserRegisterView(generics.CreateAPIView):
     permission_classes = []
 
 
-@decorators.api_view(['POST'])
+
+@decorators.api_view(['GET', 'POST'])
 @decorators.permission_classes([])
+@csrf.csrf_protect # No unprotected login for anonymous users
+@csrf.ensure_csrf_cookie # Retrieve cookie via get
 def login(request):
+    if request.method == 'GET':
+        return response.Response({})
     try:
         username = request.data['username']
         password = request.data['password']
         user = auth.authenticate(username=username, password=password)
         if not user:
             raise exceptions.NotAuthenticated('Invalid credentials')
-        token, created = token_models.Token.objects.get_or_create(user=user)
+        #token, created = token_models.Token.objects.get_or_create(user=user)
+        auth.login(request, user)
         user_serializer = serializers.UserFullSerializer(user, many=False)
-        return response.Response({'token': token.key, 'created': created, 'user': user_serializer.data}, status=status.HTTP_200_OK)
+        return response.Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
     except KeyError:
         raise exceptions.NotAuthenticated('No credentials provided')
 
 
 @decorators.api_view(['POST'])
 def logout(request):
-    token = request.auth 
-    token.delete()
+    #token = request.auth 
+    #token.delete()
     return response.Response('Logout successful!', status=status.HTTP_200_OK)
+
 
 
 @decorators.api_view()
@@ -144,3 +152,5 @@ def check_username(request):
     username = request.query_params['username']
     available = not models.CustomUser.objects.filter(username=username).exists()
     return response.Response({'available': available}, status=status.HTTP_200_OK)
+
+
