@@ -141,9 +141,10 @@ def login(request):
 
 @decorators.api_view(['POST'])
 def logout(request):
-    #token = request.auth 
-    #token.delete()
-    return response.Response('Logout successful!', status=status.HTTP_200_OK)
+    auth.logout(request)
+    resp = response.Response('Logout successful!', status=status.HTTP_200_OK)
+    resp.set_cookie('isLoggedIn', value='false', max_age=0)
+    return resp
 
 
 
