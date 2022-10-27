@@ -1,4 +1,5 @@
 from django import http
+from django.conf import settings
 from django.contrib import auth
 from django.views.decorators import csrf
 from rest_framework import status, exceptions, response, generics, decorators, views, permissions as rf_permissions
@@ -131,7 +132,9 @@ def login(request):
         #token, created = token_models.Token.objects.get_or_create(user=user)
         auth.login(request, user)
         user_serializer = serializers.UserFullSerializer(user, many=False)
-        return response.Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
+        resp = response.Response({'user': user_serializer.data}, status=status.HTTP_200_OK)
+        resp.set_cookie('isLoggedIn', value='true', max_age=settings.SESSION_COOKIE_AGE)
+        return resp
     except KeyError:
         raise exceptions.NotAuthenticated('No credentials provided')
 
