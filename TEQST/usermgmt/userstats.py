@@ -27,11 +27,6 @@ def create_user_stats(pub, delimiter):
 
     sf_text_count = [sf.text.count() for sf in sfs]
 
-    word_count_totals = {}
-    #for sf in sfs:
-        #word_count_totals[sf.pk] = 0
-        #for text in sf.text.all():
-        #    word_count_totals[sf.pk] += text.word_count()
     word_count_totals_qs = sfs.annotate(word_count=Sum('text__sentences__word_count'))
     word_count_totals = {a: b for a, b in word_count_totals_qs.values_list('pk', 'word_count')}
 
@@ -62,15 +57,10 @@ def create_user_stats(pub, delimiter):
         rtwr = 0 if rtwr == None else rtwr
         row.append("{:.3f}".format(rtwr / 60))
 
-        # Get count of finished words for each sharedfolder
-        #word_count_finished = {}
-        #for tr in user_trs:
-        #    if not tr.text.shared_folder.pk in word_count_finished.keys():
-        #        word_count_finished[tr.text.shared_folder.pk] = 0
-        #    word_count_finished[tr.text.shared_folder.pk] += \
-        #      tr.text.word_count(tr.active_sentence() - 1)
-        #row.append(f"{sum(word_count_finished.values(), 0)}")
-        row.append(f"{user_trs.aggregate(word_count=Sum('srecs__sentence__word_count'))['word_count']}")
+        word_count_finished = user_trs.aggregate(word_count=Sum('srecs__sentence__word_count'))['word_count']
+        if word_count_finished is None:
+            word_count_finished = 0
+        row.append(f"{word_count_finished}")
 
         # Last Change
         # SQLite does not support aggregation on date/time fields, hence it is not used here.
@@ -83,11 +73,6 @@ def create_user_stats(pub, delimiter):
             # text progress (only fully finished texts)
             row.append(progress)
 
-            # Word count
-            #if sf.pk in word_count_finished.keys():
-            #    row.append(f"{word_count_finished[sf.pk]}")
-            #else:
-            #    row.append("0")
             word_count_finished = sf_trs.aggregate(word_count=Sum('srecs__sentence__word_count'))['word_count']
             if word_count_finished is None:
                 word_count_finished = 0

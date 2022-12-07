@@ -356,17 +356,11 @@ class Text(models.Model):
         return self.sentences.count()
 
     def word_count(self, sentence_limit=None):
-        count = 0
         if sentence_limit == None:
-            #for sentence in self.sentences.all():
-            #    count += sentence.word_count
-            ret = self.sentences.all().aggregate(models.Sum('word_count'))
+            ret = self.sentences.all().aggregate(word_count=models.Sum('word_count'))
         else:
-            #for sentence in self.sentences.filter(index__lte=sentence_limit):
-            #    count += sentence.word_count
-            ret = self.sentences.filter(index__lte=sentence_limit).aggregate(models.Sum('word_count'))
-        #return count
-        return ret['word_count__sum']
+            ret = self.sentences.filter(index__lte=sentence_limit).aggregate(word_count=models.Sum('word_count'))
+        return ret['word_count']
     
     def get_speakers(self):
         """
