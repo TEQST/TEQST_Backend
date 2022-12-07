@@ -2,7 +2,7 @@ from . import models as user_models
 from textmgmt import models as text_models
 from recordingmgmt import models as rec_models
 from .countries import COUNTRY_CHOICES
-from django.db.models import Sum
+from django.db.models import Sum, Q, F
 import io, csv
 
 class CSV_Delimiter:
@@ -22,12 +22,25 @@ def create_user_stats(pub, delimiter):
     returns: a File-like io.StringIO object
     """
     COUNTRIES = dict(COUNTRY_CHOICES)
-    fieldnames = ['#', 'Username', 'E-Mail', 'Country', 
-                  'Total data time (TDT) [min]', 'Total time spend recording (TTSR) [min]', 'Last Change']
+    #TODO Maybe prefetch_related
     sfs = text_models.SharedFolder.objects.filter(owner=pub)
-    #sf_paths = [sf.get_path().strip(pub.username).rstrip(string.digits)[:-2] for sf in sfs]
-    sf_paths = [[sf.get_readable_path().strip(pub.username)+' [%]', 'TDT [min]', 'TTSR [min]'] for sf in sfs]
+
     sf_text_count = [sf.text.count() for sf in sfs]
+
+    word_count_totals = {}
+    #for sf in sfs:
+        #word_count_totals[sf.pk] = 0
+        #for text in sf.text.all():
+        #    word_count_totals[sf.pk] += text.word_count()
+    word_count_totals_qs = sfs.annotate(word_count=Sum('text__sentences__word_count'))
+    word_count_totals = {a: b for a, b in word_count_totals_qs.values_list('pk', 'word_count')}
+
+    fieldnames = ['#', 'Username', 'E-Mail', 'Country', 
+                  'Total data time (TDT) [min]', 'Total time spend recording (TTSR) [min]', 
+                  f'Word count (total {sum(word_count_totals.values(), 0)})', 'Last Change']
+    #sf_paths = [sf.get_path().strip(pub.username).rstrip(string.digits)[:-2] for sf in sfs]
+    sf_paths = [[sf.get_readable_path().strip(pub.username)+' [%]', f'Word count (total {word_count_totals[sf.pk]})', 'TDT [min]', 'TTSR [min]'] for sf in sfs]
+    
     fieldnames += sum(sf_paths, [])  # sum(list, []) flattens the list
     csvfile = io.StringIO("")
     csvwriter = csv.writer(csvfile, delimiter=delimiter)
@@ -38,6 +51,7 @@ def create_user_stats(pub, delimiter):
     csvwriter.writerow(fieldnames)
     for i, user in enumerate(users):
         row = [i+1, user.username, user.email, COUNTRIES[user.country]]
+        #TODO Maybe prefetch_related
         user_trs = rec_models.TextRecording.objects.filter(speaker=user, text__shared_folder__owner=pub)
         # Total data recording time
         rtwor = user_trs.aggregate(rtwor_sum=Sum('rec_time_without_rep'))['rtwor_sum']
@@ -47,6 +61,17 @@ def create_user_stats(pub, delimiter):
         rtwr = user_trs.aggregate(rtwr_sum=Sum('rec_time_with_rep'))['rtwr_sum']
         rtwr = 0 if rtwr == None else rtwr
         row.append("{:.3f}".format(rtwr / 60))
+
+        # Get count of finished words for each sharedfolder
+        #word_count_finished = {}
+        #for tr in user_trs:
+        #    if not tr.text.shared_folder.pk in word_count_finished.keys():
+        #        word_count_finished[tr.text.shared_folder.pk] = 0
+        #    word_count_finished[tr.text.shared_folder.pk] += \
+        #      tr.text.word_count(tr.active_sentence() - 1)
+        #row.append(f"{sum(word_count_finished.values(), 0)}")
+        row.append(f"{user_trs.aggregate(word_count=Sum('srecs__sentence__word_count'))['word_count']}")
+
         # Last Change
         # SQLite does not support aggregation on date/time fields, hence it is not used here.
         # See https://docs.djangoproject.com/en/3.2/ref/models/querysets/#aggregation-functions
@@ -57,6 +82,17 @@ def create_user_stats(pub, delimiter):
             progress = "{:.3f}".format(len(list(filter(lambda tr: tr.is_finished(), sf_trs))) / sf_text_count[j] * 100)
             # text progress (only fully finished texts)
             row.append(progress)
+
+            # Word count
+            #if sf.pk in word_count_finished.keys():
+            #    row.append(f"{word_count_finished[sf.pk]}")
+            #else:
+            #    row.append("0")
+            word_count_finished = sf_trs.aggregate(word_count=Sum('srecs__sentence__word_count'))['word_count']
+            if word_count_finished is None:
+                word_count_finished = 0
+            row.append(f"{word_count_finished}")
+
             # TDT and TTSR
             rtwor = sf_trs.aggregate(rtwor_sum=Sum('rec_time_without_rep'))['rtwor_sum']
             rtwor = 0 if rtwor == None else rtwor
