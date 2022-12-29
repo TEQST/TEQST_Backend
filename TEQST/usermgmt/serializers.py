@@ -9,7 +9,7 @@ class LanguageSerializer(serializers.ModelSerializer):
 
     class Meta():
         model = models.Language
-        fields = ['english_name', 'native_name', 'short', 'right_to_left', 'is_menu_language']
+        fields = ['english_name', 'native_name', 'short', 'right_to_left']
         read_only_fields = fields
 
 
@@ -22,10 +22,6 @@ class UserFullSerializer(serializers.ModelSerializer):
     #'language_ids' is used for modifying the same attribute and works only with abbreviations's
     languages = LanguageSerializer(many = True, read_only = True)
     language_ids = serializers.PrimaryKeyRelatedField(queryset=models.Language.objects.all(), many=True, source='languages', write_only=True)
-    
-    #'menu_language' and 'menu_language_id' work the same as 'languages' and 'language_ids' but with a single object
-    menu_language = LanguageSerializer(read_only=True)
-    menu_language_id = serializers.PrimaryKeyRelatedField(queryset=models.Language.objects.all(), source='menu_language', write_only=True, required=False)
 
     #'is_publisher' calculates it's value by executing the 'is_publisher' method in the CustomUser model
     is_publisher = serializers.BooleanField(read_only=True)
@@ -34,19 +30,13 @@ class UserFullSerializer(serializers.ModelSerializer):
 
     class Meta():
         model = models.CustomUser
-        fields = ['id', 'username', 'email', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'menu_language', 'menu_language_id', 'accent', 'country', 'dark_mode', 'is_publisher', 'is_listener']
+        fields = ['id', 'username', 'email', 'education', 'gender', 'birth_year', 'languages', 'language_ids', 'accent', 'country', 'dark_mode', 'is_publisher', 'is_listener']
         read_only_fields = ['id', 'username', 'education', 'gender', 'accent', 'country']
 
     #checks if the given birth_year is in a certain "valid" range, is called automatically by the drf
     def validate_birth_year(self, value):
         if value < 1900 or value > datetime.date.today().year:
             raise serializers.ValidationError("Invalid birth_year.")
-        return value
-
-    #checks if the given menu_language_id belongs to a menu language
-    def validate_menu_language_id(self, value):
-        if not value.is_menu_language():
-            raise serializers.ValidationError("Invalid menu language.")
         return value
     
     def validate(self, data):
@@ -80,13 +70,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     languages = LanguageSerializer(many = True, read_only = True)
     language_ids = serializers.PrimaryKeyRelatedField(queryset=models.Language.objects.all(), many=True, source='languages', write_only=True)
     
-    #'menu_language' and 'menu_language_id' work the same as 'languages' and 'language_ids' but with a single object
-    menu_language = LanguageSerializer(read_only=True)
-    menu_language_id = serializers.PrimaryKeyRelatedField(queryset=models.Language.objects.all(), source='menu_language', write_only=True, required=False)
-
     class Meta:
         model = models.CustomUser
-        fields = ['username', 'password', 'email', 'education', 'gender', 'birth_year', 'language_ids', 'languages', 'menu_language', 'menu_language_id', 'accent', 'country']
+        fields = ['username', 'password', 'email', 'education', 'gender', 'birth_year', 'language_ids', 'languages', 'accent', 'country']
         extra_kwargs = {'password': {'write_only': True, 'required': True}}
     
     def create(self, validated_data):
@@ -100,12 +86,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def validate_birth_year(self, value):
         if value < 1900 or value > datetime.date.today().year:
             raise serializers.ValidationError("Invalid birth_year.")
-        return value
-    
-    #checks if the given menu_language_id belongs to a menu language
-    def validate_menu_language_id(self, value):
-        if not value.is_menu_language():
-            raise serializers.ValidationError("Invalid menu language.")
         return value
 
     def validate_username(self, value):

@@ -21,16 +21,12 @@ class Language(models.Model):
     english_name = models.CharField(max_length=50)
     short = models.CharField(max_length=5, unique=True, primary_key=True)
     right_to_left = models.BooleanField(default=False)
-    localization_file = models.FileField(upload_to=utils.upload_path, null=True, blank=True, storage=storages.OverwriteStorage())
 
     class Meta:
         ordering = ['english_name']
 
     def __str__(self):
         return f'{self.english_name} ({self.native_name})'
-
-    def is_menu_language(self):
-        return bool(self.localization_file)
 
 
 class AccentSuggestion(models.Model):
@@ -62,7 +58,6 @@ class CustomUser(auth_models.AbstractUser):
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     # the accent field is for now just a charfield.
     accent = models.CharField(max_length=100)
-    menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
     country = models.CharField(max_length=10, choices=countries.COUNTRY_CHOICES)
     dark_mode = models.BooleanField(default=False, blank=True)
 

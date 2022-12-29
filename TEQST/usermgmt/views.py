@@ -3,7 +3,6 @@ from django.contrib import auth
 from rest_framework import status, exceptions, response, generics, decorators, permissions as rf_permissions
 from rest_framework.authtoken import models as token_models
 from . import permissions, models, serializers, countries, userstats
-import re
 
 
 @decorators.api_view()
@@ -74,34 +73,6 @@ class LanguageListView(generics.ListAPIView):
     queryset = models.Language.objects.all()
     serializer_class = serializers.LanguageSerializer
     permission_classes = []
-
-
-class MenuLanguageView(generics.RetrieveAPIView):
-
-    queryset = models.Language.objects.all()
-    serializer_class = serializers.LanguageSerializer
-    permission_classes = []
-    
-    def get_object(self):
-        filename = self.kwargs['lang']
-        if re.match('[a-z]+\.po$', filename) is None:
-            raise exceptions.NotFound('Invalid filename')
-        data = filename.split('.')
-        if not models.Language.objects.filter(short=data[0]).exists():
-            raise exceptions.NotFound('Not a supported Language')
-        lang = models.Language.objects.get(short=data[0])
-        if not lang.is_menu_language():
-            raise exceptions.NotFound('Translations for this language are unavailable')
-        return lang
-
-
-    def get(self, request, *args, **kwargs):
-        instance = self.get_object()
-        f = instance.localization_file.open("rb") 
-        response = http.HttpResponse()
-        response.write(f.read())
-        response['Content-Type'] = 'application/octet-stream'
-        return response
    
 
 class UserRegisterView(generics.CreateAPIView):
