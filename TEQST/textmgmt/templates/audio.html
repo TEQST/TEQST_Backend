@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>TEQST Browse Audio</title>
+</head>
+<body>
+
+    {% for text in object.text.all %}
+        {% for trec in text.textrecording.all %}
+            {% if trec.is_finished %}
+                <a href="{% url 'browse-audio' path text.title 'wav' %}?root={{ root }}&id={{ trec.id }}">Recording {{ trec.id }}</a>
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+
+</body>
+</html>
