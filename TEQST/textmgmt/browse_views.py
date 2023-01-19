@@ -40,7 +40,7 @@ class SharedFolderFileView(generic.DetailView):
             return http.FileResponse(obj.stmfile)
         if self.kwargs['ext'] == 'log':
             return http.FileResponse(obj.logfile)
-        raise http.Http404("Illegal file type self.kwargs['ext']")
+        raise http.Http404(f"Illegal file type {self.kwargs['ext']}")
 
 
 class AudioBrowseView(generic.DetailView):
