@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from . import models, utils, stats
+from django import urls
 from usermgmt import models as user_models, serializers as user_serializers
 from recordingmgmt import models as rec_models
 import django.core.files.uploadedfile as uploadedfile
@@ -66,14 +67,19 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
     for: retrieval of a Folder with its subfolders
     """
     parent = FolderPKField(allow_null=True)
+    path = serializers.SerializerMethodField()
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
     subfolder = FolderBasicSerializer(many=True, read_only=True)
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
     
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder', 'root']
+        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder', 'root', 'path']
         read_only_fields = fields
+
+    def get_path(self, instance):
+        urlpath = urls.reverse('browse-folder', args=[instance.name])
+        return f"{urlpath}?root={instance.root}&id={instance.id}"
 
 
 
