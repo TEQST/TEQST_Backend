@@ -316,7 +316,7 @@ class PubListenerPermissionView(generics.ListCreateAPIView):
 
         class Meta:
             model = models.ListenerPermission
-            fields = ['folder', 'listeners', 'speakers', 'accents']
+            fields = ['folder', 'listeners', 'speakers', 'accents', 'all_speakers']
 
         def validate_folder(self, value):
             if self.context['request'].user != value.owner:
@@ -330,7 +330,7 @@ class PubListenerPermissionView(generics.ListCreateAPIView):
 
         class Meta:
             model = models.ListenerPermission
-            fields = ['id', 'listeners', 'speakers', 'accents']
+            fields = ['id', 'listeners', 'speakers', 'accents', 'all_speakers']
 
 
     queryset = models.ListenerPermission.objects.all()

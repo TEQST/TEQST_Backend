@@ -444,12 +444,17 @@ class ListenerPermission(models.Model):
     listeners = models.ManyToManyField(auth.get_user_model(), blank=True, related_name='lstn_permissions')
     speakers = models.ManyToManyField(auth.get_user_model(), blank=True)
     accents = ListField(separator=',', max_length=50)
+    all_speakers = models.BooleanField(default=False)
 
     @property
     def user_list(self):
+        if self.all_speakers:
+            return user_models.CustomUser.objects.all()
         return user_models.CustomUser.objects.filter(accent__in=self.accents).order_by().union(self.speakers.all().order_by()).order_by('username')
 
     def contains_speaker(self, speaker):
+        if self.all_speakers:
+            return True
         return speaker.accent in self.accents or self.speakers.filter(id=speaker.id).exists()
 
     # Used for permission checks
