@@ -119,8 +119,8 @@ class TextFullSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("max_lines cannot be less than 10")
         if max_lines > 300:
             raise serializers.ValidationError("max_lines cannot be greater than 300")
-        if text_len / max_lines > 100:
-            raise serializers.ValidationError("Splitting a file into more than 100 partfiles is not permitted. Choose max_lines accordingly.")
+        #if text_len / max_lines > 100:
+        #    raise serializers.ValidationError("Splitting a file into more than 100 partfiles is not permitted. Choose max_lines accordingly.")
 
     
     def split_text(self, textfile: uploadedfile.InMemoryUploadedFile, max_lines):

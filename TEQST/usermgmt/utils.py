@@ -13,3 +13,6 @@ GENDER_CHOICES = (
 )
 
 ACCENT_DEFAULT = 'Not specified'
+
+def upload_path(instance, filename):
+    return 'locale'/filename
