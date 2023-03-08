@@ -69,7 +69,7 @@ class CustomUser(auth_models.AbstractUser):
         return p in self.groups.all()
 
     def is_listener(self):
-        return self.listenfolder.exists()
+        return self.lstn_permissions.exists()
 
     #Below is not core funcionality
     #TODO maybe move tag_usage to Tag class to allow limit_choices_to publisher
