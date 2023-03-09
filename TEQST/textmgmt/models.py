@@ -1,6 +1,7 @@
 from django.db import models, transaction
 from django.core.files import base
 from django.core.files.storage import default_storage
+from django.conf import settings
 from django.contrib import auth
 from django import urls
 from . import utils
@@ -53,6 +54,14 @@ class Folder(models.Model):
     def is_owner(self, user):
         return self.owner == user
 
+    #Used for permission checks
+    def is_listener(self, user):
+        if self.lstn_permissions.filter(listeners=user).exists():
+            return True
+        if self.parent is None:
+            return False
+        return self.parent.is_listener(user)
+
     def is_root(self, root):
         return self.root == root
 
@@ -80,6 +89,9 @@ class Folder(models.Model):
     
     def get_path(self):
         return utils.folder_relative_path(self)
+
+    def get_readable_path(self):
+        return self.get_path()
 
     def make_shared_folder(self):
         if self.is_shared_folder():
@@ -125,10 +137,6 @@ class SharedFolder(Folder):
     def is_speaker(self, user):
         return self.public or self.speaker.filter(id=user.id).exists()
         #return True
-
-    #Used for permission checks
-    def is_listener(self, user):
-        return self.listener.filter(id=user.id).exists()
     
     def make_shared_folder(self):
         return self
@@ -388,3 +396,96 @@ class Sentence(models.Model):
 
     def __str__(self):
         return self.text.title + " (" + str(self.index) + "): " + self.content
+
+
+
+class ListField(models.CharField):
+    """
+    Expects a list of Strings (not containing `separator`), which are stored as a String, joined by `separator`
+    """
+
+    def __init__(self, separator, *args, **kwargs):
+        self.separator = separator
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        kwargs['separator'] = self.separator
+        return name, path, args, kwargs
+
+    def from_db_value(self, value, expression, connection):
+        if value == '':
+            return []
+        return value.split(self.separator)
+
+    def get_prep_value(self, value):
+        return self.separator.join(value)
+
+    def to_python(self, value):
+        if isinstance(value, list):
+            return value
+
+        if value is None:
+            return value
+
+        if value == '':
+            return []
+
+        return value.split(self.separator)
+
+    def value_to_string(self, obj):
+        value = self.value_from_object(obj)
+        return self.separator.join(value)
+
+
+
+class ListenerPermission(models.Model):
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='lstn_permissions')
+    listeners = models.ManyToManyField(auth.get_user_model(), blank=True, related_name='lstn_permissions')
+    speakers = models.ManyToManyField(auth.get_user_model(), blank=True)
+    accents = ListField(separator=',', max_length=50)
+    all_speakers = models.BooleanField(default=False)
+
+    @property
+    def user_list(self):
+        if self.all_speakers:
+            return user_models.CustomUser.objects.all()
+        return user_models.CustomUser.objects.filter(accent__in=self.accents).order_by().union(self.speakers.all().order_by()).order_by('username')
+
+    def contains_speaker(self, speaker):
+        if self.all_speakers:
+            return True
+        return speaker.accent in self.accents or self.speakers.filter(id=speaker.id).exists()
+
+    # Used for permission checks
+    def is_owner(self, user):
+        return self.folder.is_owner(user)
+
+
+
+class RecentProject(models.Model):
+    speaker = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE)
+    last_access = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['speaker', 'folder']
+        constraints = [
+            models.UniqueConstraint(fields=['speaker', 'folder'], name='unique_project_user'),
+        ]
+
+
+    @classmethod
+    def update_folder_for_speaker(cls, speaker, folder):
+        obj, _ = cls.objects.get_or_create(speaker=speaker, folder=folder)
+        obj.save() # Ensures update of last_access
+
+
+    @classmethod
+    def add_default_folders_for_speaker(cls, speaker):
+        if not settings.DEFAULT_FOLDER:
+            return
+        for f_uuid in settings.DEFAULT_FOLDER:
+            folder = Folder.objects.get(root_id=f_uuid)
+            cls.update_folder_for_speaker(speaker, folder)

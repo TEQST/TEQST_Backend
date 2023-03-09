@@ -1,6 +1,3 @@
-from pathlib import Path
-
-LOCALIZATION_FOLDER = 'locale'
 
 EDU_CHOICES = (
     ('B6', 'Less than 6 years of school'),
@@ -18,4 +15,4 @@ GENDER_CHOICES = (
 ACCENT_DEFAULT = 'Not specified'
 
 def upload_path(instance, filename):
-    return Path(LOCALIZATION_FOLDER)/filename
+    return 'locale'/filename

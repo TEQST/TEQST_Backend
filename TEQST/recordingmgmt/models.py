@@ -2,7 +2,7 @@ from django.db import models, utils
 from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
-from textmgmt import models as text_models
+from textmgmt import models as text_models, permissions as text_permissions
 from . import storages
 from .utils import format_timestamp
 import wave, re
@@ -68,8 +68,12 @@ class TextRecording(models.Model):
 
     #Used for permission checks
     def is_listener(self, user):
-        return self.text.is_listener(user)
-
+        perm_qs = text_permissions.get_listener_permissions(self.text.shared_folder, user)
+        for perm in perm_qs:
+            if perm.contains_speaker(self.speaker):
+                return True
+        return False
+        
     def active_sentence(self):
         sentence_num = self.srecs.count() + 1
         # if a speaker is finished with a text this number is one higher than the number of sentences in the text

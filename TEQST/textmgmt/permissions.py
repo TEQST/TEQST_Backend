@@ -1,5 +1,7 @@
 from rest_framework import permissions, serializers
 from . import models
+from usermgmt import models as user_models
+
 
 
 class RootParamSerializer(serializers.Serializer):
@@ -38,3 +40,15 @@ class IsRoot(permissions.BasePermission):
             return False
         return obj.is_root(root=ser.validated_data['root'])
 
+
+def get_listener_permissions(folder, listener):
+    perm_list = []
+    while not folder is None:
+        perm_list.append( folder.lstn_permissions.filter(listeners=listener).order_by() )
+        folder = folder.parent
+    return models.ListenerPermission.objects.none().order_by().union(*perm_list)
+
+
+def get_combined_speakers(listener_permissions):
+    user_list_list = [ perm.user_list.order_by() for perm in listener_permissions ]
+    return user_models.CustomUser.objects.none().order_by().union(*user_list_list)

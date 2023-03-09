@@ -61,6 +61,7 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
     queryset = models.SentenceRecording.objects.all()
     serializer_class = serializers.SentenceRecordingUpdateSerializer
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | (permissions.ReadOnly & (permissions.IsOwner | permissions.IsListener) ) ]
+    
     def get_object(self):
         try:
             trec = models.TextRecording.objects.get(id=self.kwargs['rec'])

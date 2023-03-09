@@ -1,11 +1,8 @@
 from django.test import TestCase, Client
-from django.conf import settings
-from django.core.files import File
 from django.urls import reverse
 from django.contrib.auth.models import Group
 from usermgmt.models import Language, CustomUser
 from usermgmt.tests.utils import *
-
 from rest_framework.authtoken.models import Token
 
 from datetime import date
@@ -36,7 +33,6 @@ class TestRegistration(TestCase):
         self.assertTrue(Language.objects.get(short='en') in user.languages.all())
         self.assertTrue(Language.objects.get(short='fr') in user.languages.all())
         self.assertEqual(user.languages.count(), 2)
-        self.assertEqual(user.menu_language, Language.objects.get(short='en'))
         self.assertEqual(user.country, USER_DATA_CORRECT_1['country'])
 
 
@@ -150,39 +146,6 @@ class TestRegistration(TestCase):
         self.assertEqual(response.status_code, 201)
         user = CustomUser.objects.get(username=user_data['username'])
         self.assertEqual(user.languages.count(), 0)
-    
-    def test_user_registration_without_menu_language_id(self):
-        # setup
-        user_data = USER_DATA_CORRECT_1.copy()
-        user_data.pop('menu_language_id')
-        # test
-        response = self.client.post(reverse("register"), data=user_data)
-        self.assertEqual(response.status_code, 201)
-        user = CustomUser.objects.get(username=user_data['username'])
-        engl = Language.objects.get(short='en')
-        self.assertEqual(user.menu_language, engl)
-    
-    def test_user_registration_invalid_menu_language_no_locfile(self):
-        """
-        registration should fail if given menu language is a language, but not a menu language (i.e. has no .po file)
-        """
-        # setup
-        user_data = USER_DATA_CORRECT_1.copy()
-        user_data['menu_language_id'] = 'fr'
-        # test
-        response = self.client.post(reverse("register"), data=user_data)
-        self.assertEqual(response.status_code, 400)
-    
-    def test_user_registration_invalid_menu_language_no_language(self):
-        """
-        registration should fail if given menu language is not a language
-        """
-        # setup
-        user_data = USER_DATA_CORRECT_1.copy()
-        user_data['menu_language_id'] = 'ru'
-        # test
-        response = self.client.post(reverse("register"), data=user_data)
-        self.assertEqual(response.status_code, 400)
     
     def test_user_registration_without_country(self):
         # setup
@@ -316,7 +279,6 @@ class TestLanguageViews(TestCase):
     """
     urls tested:
     /api/langs/
-    /api/locale/<lang>
     """
 
     @classmethod
@@ -330,33 +292,6 @@ class TestLanguageViews(TestCase):
     def test_langs(self):
         response = self.client.get(reverse("langs")).json()
         self.assertEqual(len(response), 5)
-        for lang in response:
-            if lang['short'] == 'en' or lang['short'] == 'de':
-                self.assertTrue(lang['is_menu_language'])
-            else:
-                self.assertFalse(lang['is_menu_language'])
-    
-    def test_locale_correct(self):
-        response = self.client.get(reverse("locale", args=['en.po']))
-        self.assertEqual(response.status_code, 200)
-    
-    def test_locale_not_a_menu_language(self):
-        response = self.client.get(reverse("locale", args=['fr.po']))
-        self.assertEqual(response.status_code, 404)
-    
-    def test_locale_not_a_language(self):
-        response = self.client.get(reverse("locale", args=['ru.po']))
-        self.assertEqual(response.status_code, 404)
-    
-    def test_locale_wrong_file_format(self):
-        response = self.client.get(reverse("locale", args=['ab.cd.po']))
-        self.assertEqual(response.status_code, 404)
-        response = self.client.get(reverse("locale", args=['.po']))
-        self.assertEqual(response.status_code, 404)
-        response = self.client.get(reverse("locale", args=['en.pof']))
-        self.assertEqual(response.status_code, 404)
-        response = self.client.get(reverse("locale", args=['enpo']))
-        self.assertEqual(response.status_code, 404)
 
 
 class TestUserList(TestCase):
@@ -445,7 +380,6 @@ class TestUser(TestCase):
         self.assertEqual(user['gender'], USER_DATA_CORRECT_1['gender'])
         self.assertEqual(user['birth_year'], USER_DATA_CORRECT_1['birth_year'])
         self.assertEqual(len(user['languages']), 2)
-        self.assertEqual(user['menu_language']['short'],'en')
         self.assertEqual(user['country'], USER_DATA_CORRECT_1['country'])
     
     def test_user_DELETE(self):
@@ -541,42 +475,6 @@ class TestUser(TestCase):
         self.assertEqual(response.status_code, 400)
         #user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
         #self.assertEqual(user.languages.count(), 0)
-    
-    def test_user_PUT_without_menu_language_id(self):
-        # setup
-        put_data = USER_DATA_CORRECT_1.copy()
-        put_data.pop('username')
-        put_data.pop('menu_language_id')
-        # test
-        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 200)
-        user = CustomUser.objects.get(username=USER_DATA_CORRECT_1['username'])
-        engl = Language.objects.get(short='en')
-        self.assertEqual(user.menu_language, engl)
-    
-    def test_user_PUT_invalid_menu_language_no_locfile(self):
-        """
-        registration should fail if given menu language is a language, but not a menu language (i.e. has no .po file)
-        """
-        # setup
-        put_data = USER_DATA_CORRECT_1.copy()
-        put_data.pop('username')
-        put_data['menu_language_id'] = 'fr'
-        # test
-        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 400)
-    
-    def test_user_PUT_invalid_menu_language_no_language(self):
-        """
-        registration should fail if given menu language is not a language
-        """
-        # setup
-        put_data = USER_DATA_CORRECT_1.copy()
-        put_data.pop('username')
-        put_data['menu_language_id'] = 'ru'
-        # test
-        response = self.client.put(reverse("user"), data=put_data, content_type='application/json', HTTP_AUTHORIZATION=self.token)
-        self.assertEqual(response.status_code, 400)
     
     def test_user_PUT_without_country(self):
         # setup

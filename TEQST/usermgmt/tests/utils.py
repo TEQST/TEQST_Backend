@@ -12,7 +12,6 @@ USER_DATA_CORRECT_1 = {"username": "harry",
                      "birth_year": 1999,
                      "language_ids": ["en", "fr"],
                      "accent": "Scotish",
-                     "menu_language_id": "en",
                      "country": "USA"}
 
 USER_DATA_CORRECT_2 = {"username": "ron",
@@ -22,7 +21,6 @@ USER_DATA_CORRECT_2 = {"username": "ron",
                      "birth_year": 2000,
                      "language_ids": ["en", "de"],
                      "accent": "German",
-                     "menu_language_id": "de",
                      "country": "USA"}
 
 USER_DATA_CORRECT_3 = {"username": "hermione",
@@ -32,7 +30,6 @@ USER_DATA_CORRECT_3 = {"username": "hermione",
                      "birth_year": 1997,
                      "language_ids": ["fr"],
                      "accent": "African",
-                     "menu_language_id": "en",
                      "country": "USA"}
 
 USER_DATA_CORRECT_4 = {"username": "ginny",
@@ -42,7 +39,6 @@ USER_DATA_CORRECT_4 = {"username": "ginny",
                      "birth_year": 1998,
                      "language_ids": ["en", "fr", "es"],
                      "accent": "British",
-                     "menu_language_id": "en",
                      "country": "USA"}
 
 USERS_DATA_CORRECT = [USER_DATA_CORRECT_1, USER_DATA_CORRECT_2, USER_DATA_CORRECT_3, USER_DATA_CORRECT_4]
@@ -67,10 +63,8 @@ def setup_users():
 
 def setup_languages():
     EN = Language.objects.get(short="en")
-    EN.localization_file.name = 'locale/en.po'
     EN.save()
     DE = Language.objects.create(native_name="Deutsch", english_name="German", short="de")
-    DE.localization_file.name = 'locale/de.po'
     DE.save()
     Language.objects.create(native_name="Espagnol", english_name="Spanish", short="es")
     Language.objects.create(native_name="Francais", english_name="French", short="fr")
