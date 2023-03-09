@@ -161,7 +161,7 @@ class TextFullSerializer(serializers.ModelSerializer):
             content = ''
             for sentence in filesentences:
                 content += sentence + '\n\n'
-            new_filename = f'{filename[:-4]}_{i + 1}{filename[-4:]}'
+            new_filename = f'{filename[:-4]}_{i+1:04d}{filename[-4:]}'
             textfiles.append(uploadedfile.SimpleUploadedFile(new_filename, content.encode('utf-8-sig')))
 
         return textfiles
@@ -182,7 +182,7 @@ class TextFullSerializer(serializers.ModelSerializer):
             for i in range(len(textfiles)):
                 data = validated_data.copy()
                 data['textfile'] = textfiles[i]
-                data['title'] = f'{validated_data["title"]}_{i + 1}'
+                data['title'] = f'{validated_data["title"]}_{i+1:04d}'
                 return_obj = models.Text.objects.create(**data)
             # some object has to be returned, so it has been decided that the last partfile will be returned
             return return_obj
