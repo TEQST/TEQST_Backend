@@ -1,4 +1,3 @@
-from numpy import source
 from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions, \
     serializers as rf_serializers
 from django import http
@@ -300,8 +299,6 @@ class SpkRecentProjectView(generics.ListAPIView):
         return self.request.user.recentproject_set.all().order_by('-last_access')
         
 
-
-
 class PubListenerPermissionView(generics.ListCreateAPIView):
     """
     url: api/pub/listeners/?folder=:id
@@ -521,3 +518,4 @@ class LstnTextStatsView(generics.RetrieveAPIView):
     queryset = models.Text.objects.all()
     serializer_class = OutputSerializer
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
+

@@ -31,7 +31,7 @@ DATABASES = {
 # Specify the amount of proxy levels the server is running behind, to more accurately use throttling
 REST_FRAMEWORK['NUM_PROXIES'] = None
 
-
+# Specify folder root_ids visible to all users
 DEFAULT_FOLDER = [
     #uuid.UUID('<str>'),
 ]
