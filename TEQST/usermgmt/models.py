@@ -39,16 +39,6 @@ class AccentSuggestion(models.Model):
         return self.name
 
 
-class AccentSuggestion(models.Model):
-    name = models.CharField(max_length=100)
-
-    class Meta:
-        ordering = ['name']
-
-    def __str__(self) -> str:
-        return self.name
-
-
 # classes Tag, Usage and Customization can be used to implement wunschkriterium Tags in Texts
 class Tag(models.Model):
     identifier = models.CharField(max_length=10)
