@@ -1,8 +1,9 @@
-from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions
+from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions, \
+    serializers as rf_serializers
 from django import http
 from django.db.models import Q
 from django.core.files.storage import default_storage
-from . import models, serializers
+from . import models, serializers, permissions as text_permissions
 from usermgmt import models as user_models, permissions
 from pathlib import Path
 
@@ -114,7 +115,7 @@ class SpkTextListView(generics.RetrieveAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.SpkSharedFolderTextSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | text_permissions.BelowRoot | text_permissions.IsRoot]
 
 
 class PubTextDetailedView(generics.RetrieveDestroyAPIView):
@@ -140,7 +141,7 @@ class SpkTextDetailedView(generics.RetrieveAPIView):
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextFullSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | text_permissions.BelowRoot]
 
 
 class SpkPublisherListView(generics.ListAPIView):
@@ -158,8 +159,8 @@ class SpkPublisherListView(generics.ListAPIView):
         # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         # current code
         user = self.request.user
-        pub_pks = user.sharedfolder.filter( Q(text__language__in=user.languages.all()) | Q(text__language=None), ~Q(text=None) ).values_list('owner', flat=True)
-        return user_models.CustomUser.objects.filter(pk__in = pub_pks).distinct()
+        pub_pks = user.sharedfolder.all().values_list('owner', flat=True)
+        return user_models.CustomUser.objects.filter(pk__in = pub_pks)
 
 
 class SpkPublisherDetailedView(generics.RetrieveAPIView):
@@ -237,12 +238,6 @@ class SpkPublicFoldersView(generics.ListAPIView):
     queryset = models.SharedFolder.objects.filter(public=True)
     serializer_class = serializers.PublicFolderSerializer
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        return qs.filter( Q(text__language__in=user.languages.all()) | Q(text__language=None), ~Q(text=None) ).distinct()
-
-
 
 class LstnPublisherListView(generics.ListAPIView):
     """
@@ -317,3 +312,29 @@ class LstnTextStatsView(generics.RetrieveAPIView):
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextStatsSerializer
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
+
+
+class SpkFolderDetailView(generics.RetrieveAPIView):
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        
+        class NestedSerializer(rf_serializers.ModelSerializer):
+            class Meta:
+                model = models.Folder
+                fields = ['id', 'name', 'is_sharedfolder']
+
+        subfolder = NestedSerializer(many=True)
+        class Meta:
+            model = models.Folder
+            fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
+
+    queryset = models.Folder.objects.all()
+    serializer_class = OutputSerializer
+    permission_classes = [rf_permissions.IsAuthenticated, text_permissions.IsRoot | text_permissions.BelowRoot]
+
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if text_permissions.IsRoot().has_object_permission(request, self, instance):
+            instance.parent = None
+        serializer = self.get_serializer(instance)
+        return response.Response(serializer.data)

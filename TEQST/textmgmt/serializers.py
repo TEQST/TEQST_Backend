@@ -2,9 +2,8 @@ from rest_framework import serializers
 from . import models, utils
 from usermgmt import models as user_models, serializers as user_serializers
 from recordingmgmt import models as rec_models
-from django.db.models import Q
 import django.core.files.uploadedfile as uploadedfile
-import chardet, math
+import chardet, math, uuid
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
@@ -25,8 +24,8 @@ class FolderFullSerializer(serializers.ModelSerializer):
  
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder']
-        read_only_fields = ['owner']
+        fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder', 'root']
+        read_only_fields = ['owner', 'root']
     
     def validate_name(self, value):
         """
@@ -44,6 +43,8 @@ class FolderFullSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('A folder with the given name in the given place already exists')
         return super().validate(data)
 
+
+
 class FolderBasicSerializer(serializers.ModelSerializer):
     """
     to be used by: FolderDetailedSerializer
@@ -53,8 +54,10 @@ class FolderBasicSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'is_sharedfolder']
+        fields = ['id', 'name', 'is_sharedfolder', 'root']
         read_only_fields = ['name']
+
+
 
 class FolderDetailedSerializer(serializers.ModelSerializer):
     """
@@ -68,8 +71,9 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
+        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder', 'root']
         read_only_fields = fields
+
 
 
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
@@ -268,7 +272,7 @@ class SpkSharedFolderTextSerializer(serializers.ModelSerializer):
     to be used by view: SpkTextListView
     for: retrieval of a sharedfolder with the texts it contains
     """
-    texts = serializers.SerializerMethodField()
+    texts = TextProgressSerializer(read_only=True, many=True, source='text')
     path = serializers.CharField(read_only=True, source='get_readable_path')
     timestats = serializers.SerializerMethodField()
     
@@ -287,11 +291,6 @@ class SpkSharedFolderTextSerializer(serializers.ModelSerializer):
                 timestats['rec_time_without_rep'] += textrecording.rec_time_without_rep
                 timestats['rec_time_with_rep'] += textrecording.rec_time_with_rep
         return timestats
-
-    def get_texts(self, obj):
-        user = self.context['request'].user
-        ser = TextProgressSerializer(obj.text.filter( Q(language__in=user.languages.all()) | Q(language=None) ).distinct(), many=True, context=self.context)
-        return ser.data
 
 
 class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
@@ -405,7 +404,7 @@ class SpkPublisherSerializer(serializers.ModelSerializer):
         pub = obj
         spk = self.context['request'].user
         info = []
-        for sf in models.SharedFolder.objects.filter(Q(text__language__in=spk.languages.all()) | Q(text__language=None), ~Q(text=None), owner=pub, speaker=spk).distinct():
+        for sf in models.SharedFolder.objects.filter(owner=pub, speaker=spk):
             info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
         return info
 

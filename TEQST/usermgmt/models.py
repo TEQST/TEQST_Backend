@@ -33,6 +33,16 @@ class Language(models.Model):
         return bool(self.localization_file)
 
 
+class AccentSuggestion(models.Model):
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self) -> str:
+        return self.name
+
+
 # classes Tag, Usage and Customization can be used to implement wunschkriterium Tags in Texts
 class Tag(models.Model):
     identifier = models.CharField(max_length=10)
@@ -51,7 +61,7 @@ class CustomUser(auth_models.AbstractUser):
     education = models.CharField(max_length=50, choices=utils.EDU_CHOICES)
     languages = models.ManyToManyField(Language, blank=True, related_name='speakers')
     # the accent field is for now just a charfield.
-    accent = models.CharField(max_length=50)
+    accent = models.CharField(max_length=100)
     menu_language = models.ForeignKey(Language, on_delete=models.SET_DEFAULT, default=get_english, blank=True)
     country = models.CharField(max_length=10, choices=countries.COUNTRY_CHOICES)
     dark_mode = models.BooleanField(default=False, blank=True)
