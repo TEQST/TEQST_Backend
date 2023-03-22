@@ -2,6 +2,7 @@ from django.db import models, utils
 from django.core.files import base
 from django.core.files.storage import default_storage
 from django.contrib import auth
+from django.utils import timezone
 from textmgmt import models as text_models, permissions as text_permissions
 from . import storages
 from .utils import format_timestamp
@@ -37,11 +38,6 @@ class TextRecording(models.Model):
 
     TTS_permission = models.BooleanField(default=True)
     SR_permission = models.BooleanField(default=True)
-
-    # This stores the last time a sentencerecording for this textrecording was created/updated
-    last_updated = models.DateTimeField(auto_now=True)
-    rec_time_without_rep = models.FloatField(default=0.0)
-    rec_time_with_rep = models.FloatField(default=0.0)
     
     audiofile = models.FileField(upload_to=text_rec_upload_path, blank=True)
     stmfile = models.FileField(upload_to=stm_upload_path, blank=True)
@@ -57,6 +53,10 @@ class TextRecording(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['speaker', 'text'], name='unique_trec'),
         ]
+
+    @property
+    def last_updated(self):
+        return self.srecs.aggregate(last_updated=models.Max('last_updated'))['last_updated']
 
     #Used for permission checks
     def is_owner(self, user):
@@ -157,7 +157,11 @@ class SentenceRecording(models.Model):
 
     recording = models.ForeignKey(TextRecording, on_delete=models.CASCADE, related_name='srecs')
     sentence = models.ForeignKey(text_models.Sentence, on_delete=models.CASCADE, related_name='srecs')
-    audiofile = models.FileField(upload_to=sentence_rec_upload_path, storage=storages.BackupStorage())
+
+    audiofile = models.FileField(upload_to=sentence_rec_upload_path)
+    # This is not auto_now_add, since it is meant to track the audiofile, not the model
+    last_updated = models.DateTimeField(default=timezone.now) 
+
     valid = models.CharField(max_length=50, choices=Validity.choices, default=Validity.VALID)
 
     class Meta:
@@ -191,8 +195,6 @@ class SentenceRecording(models.Model):
                 else:
                     self.valid = self.Validity.VALID
             super().save()
-        # the followiing line ensures that the last_updated field of the textrecording is updated
-        self.recording.save()
 
         if self.recording.is_finished():
             self.recording.create_stm()
@@ -211,6 +213,34 @@ class SentenceRecording(models.Model):
     
     def index(self):
         return self.sentence.index
+
+    def get_audio_length(self):
+        audio_file = default_storage.open(self.audiofile, 'rb')
+        wav = wave.open(audio_file, 'rb')
+        duration = wav.getnframes() / wav.getframerate()
+        wav.close()
+        self.audiofile.close()
+        return duration
+    
+
+
+
+def sentence_rec_backup_upload_path(instance, filename):
+    """
+    Delivers the location in the filesystem where the recordings should be stored.
+    """
+    sf_path = instance.recording.recording.text.shared_folder.get_path()
+    return f'{sf_path}/TempAudio/Backup/{instance.recording.id}_{instance.sentence.id}.wav'
+
+
+class SentenceRecordingBackup(models.Model):
+
+    recording = models.ForeignKey(SentenceRecording, on_delete=models.CASCADE, related_name='backups')
+
+    audiofile = models.FileField(upload_to=sentence_rec_backup_upload_path)
+    last_updated = models.DateTimeField() 
+
+    valid = models.CharField(max_length=50, choices=SentenceRecording.Validity.choices, default=SentenceRecording.Validity.VALID)
 
     def get_audio_length(self):
         audio_file = default_storage.open(self.audiofile, 'rb')

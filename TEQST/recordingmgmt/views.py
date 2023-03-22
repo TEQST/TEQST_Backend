@@ -1,11 +1,11 @@
 from rest_framework import generics, status, exceptions, response, permissions as rf_permissions
+from django import http
 from django.core import exceptions as core_exceptions
 from django.db.models import Q
 from . import serializers, models
 from textmgmt import models as text_models, permissions as text_permissions
 from usermgmt import permissions
 
-from django.http import HttpResponse
 from pathlib import Path
 
 
@@ -45,6 +45,8 @@ class TextRecordingView(generics.ListCreateAPIView):
             resp = response.Response(status=status.HTTP_204_NO_CONTENT)
         return resp
 
+
+
 class SentenceRecordingCreateView(generics.CreateAPIView):
     """
     url: api/sentencerecordings/
@@ -53,6 +55,9 @@ class SentenceRecordingCreateView(generics.CreateAPIView):
     queryset = models.SentenceRecording.objects.all()
     serializer_class = serializers.SentenceRecordingSerializer
 
+
+
+#This is currently used for recording updates
 class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
     """
     url: api/sentencerecordings/:id/
@@ -60,7 +65,7 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
     """
     queryset = models.SentenceRecording.objects.all()
     serializer_class = serializers.SentenceRecordingUpdateSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | (permissions.ReadOnly & (permissions.IsOwner | permissions.IsListener) ) ]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker]
     
     def get_object(self):
         try:
@@ -73,20 +78,14 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
             return srec
         except (core_exceptions.ObjectDoesNotExist, core_exceptions.MultipleObjectsReturned):
             raise exceptions.NotFound('Invalid recording specified')
-
+        
     def get(self, request, *args, **kwargs):
-        """
-        handles the get request
-        """
         instance = self.get_object()
-        f = instance.audiofile.open("rb") 
-        response = HttpResponse()
-        response.write(f.read())
-        response['Content-Type'] = 'audio/wav'
-        response['Content-Length'] = instance.audiofile.size
-        return response
+        return http.FileResponse(instance.audiofile.open('rb'))
 
 
+
+#This is currently used for recording audio retrieval
 class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     """
     url: api/sentencerecordings/<tr_id>/<index>/
@@ -94,7 +93,7 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
     """
     queryset = models.SentenceRecording.objects.all()
     serializer_class = serializers.SentenceRecordingUpdateSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | (permissions.ReadOnly & (permissions.IsOwner | permissions.IsListener) ) ]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | permissions.IsOwner | permissions.IsListener]
 
     def get_object(self):
         try:
@@ -107,13 +106,5 @@ class SentenceRecordingRetrieveUpdateView(generics.RetrieveUpdateAPIView):
             raise exceptions.NotFound('Invalid recording specified')
 
     def get(self, request, *args, **kwargs):
-        """
-        handles the get request
-        """
         instance = self.get_object()
-        f = instance.audiofile.open("rb") 
-        response = HttpResponse()
-        response.write(f.read())
-        response['Content-Type'] = 'audio/wav'
-        response['Content-Length'] = instance.audiofile.size
-        return response
+        return http.FileResponse(instance.audiofile.open('rb'))

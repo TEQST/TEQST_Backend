@@ -3,7 +3,7 @@ from textmgmt import models as text_models
 from recordingmgmt import models as rec_models
 from .countries import COUNTRY_CHOICES
 from django.db.models import Sum, Q, F
-import io, csv
+import io, csv, datetime
 
 class CSV_Delimiter:
     COMMA = ','
@@ -11,7 +11,11 @@ class CSV_Delimiter:
 
 
 
-def create_user_stats(pub, delimiter):
+def create_user_stats(folders: list[text_models.Folder], start: datetime.date, end: datetime.date):
+    pass
+
+
+def create_user_stats_depr(pub, delimiter):
     """
     Creates a csv file with user statistics for a publisher.
     The delimiter is configurable, because when opening the csv file with excel it depends on the region which
