@@ -106,24 +106,9 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
-        # type(validated_data['audiofile']) is InMemoryUploadedFile
-        wav_file = validated_data['audiofile'].open('rb')
-        wav = wave.open(wav_file, 'rb')
-        duration = wav.getnframes() / wav.getframerate()
-        wav.close()
-        # print('DURATION:', duration)
-        textrecording = validated_data['recording']
+        validated_data['legacy'] = False
+        return super().create(validated_data)
 
-        # sentence = textrecording.text.get_content()[validated_data['index'] - 1]
-        # self.check_audio_duration(duration, sentence)
-
-        obj = super().create(validated_data)
-
-        textrecording.rec_time_without_rep += duration
-        textrecording.rec_time_with_rep += duration
-        textrecording.save()
-
-        return obj
 
     class Meta:
         model = models.SentenceRecording
@@ -160,21 +145,26 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
     #     elif duration < len(sentence) / 40:
     #         raise serializers.ValidationError("Recording is too short")
 
-    def update(self, instance, validated_data):
+    def update(self, instance: models.SentenceRecording, validated_data):
         
         # Backup the previous recording, then update it's fields
-        models.SentenceRecordingBackup.objects.create(
+        backup = models.SentenceRecordingBackup(
             recording = instance,
-            audiofile = instance.audiofile,
+            length = instance.length,
             last_updated = instance.last_updated,
             valid = instance.valid,
         )
+        backup.save()
+        backup.audiofile.save('unused', instance.audiofile)
 
         # TODO uncomment this and get the index (XXXX) if it is clear which view is used for this
         #sentence = textrecording.text.get_content()[XXXX - 1]
         #self.check_audio_duration(duration, sentence)
 
         validated_data['last_updated'] = timezone.now()
+        validated_data['legacy'] = False
+
+        instance.audiofile.delete(save=False)
 
         obj = super().update(instance, validated_data)
 

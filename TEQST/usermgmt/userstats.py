@@ -3,7 +3,8 @@ from textmgmt import models as text_models
 from recordingmgmt import models as rec_models
 from .countries import COUNTRY_CHOICES
 from django.db.models import Sum, Q, F
-import io, csv, datetime
+from django.utils import timezone
+import io, csv, datetime, pandas
 
 class CSV_Delimiter:
     COMMA = ','
@@ -11,8 +12,15 @@ class CSV_Delimiter:
 
 
 
-def create_user_stats(folders: list[text_models.Folder], start: datetime.date, end: datetime.date):
-    pass
+def create_user_stats(folders: list[text_models.Folder], s: datetime.date, e: datetime.date):
+
+    # Extend dates to aware datetimes. Start is inclusive, End is exclusive
+    start = datetime.datetime(s.year, s.month, s.day, tzinfo=timezone.get_current_timezone())
+    end = datetime.datetime(s.year, s.month, s.day, tzinfo=timezone.get_current_timezone())
+
+    # If a TextRecording was created before the given end time, add its legacy time fields to the total.
+    # This takes care of legacy data. New recordings always have 0.0 in those fields, since they're unused
+    
 
 
 def create_user_stats_depr(pub, delimiter):

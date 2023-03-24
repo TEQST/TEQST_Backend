@@ -13,6 +13,7 @@ class TextRecordingView(generics.ListCreateAPIView):
     """
     url: api/textrecordings/
     use: retrieval and creation of textrecordings for a given text and request.user
+    When creating a TextRecording, the root uuid has to be sent with the request body
     """
     queryset = models.TextRecording.objects.all()
     serializer_class = serializers.TextRecordingSerializer
@@ -79,9 +80,10 @@ class SentenceRecordingUpdateView(generics.RetrieveUpdateAPIView):
         except (core_exceptions.ObjectDoesNotExist, core_exceptions.MultipleObjectsReturned):
             raise exceptions.NotFound('Invalid recording specified')
         
-    def get(self, request, *args, **kwargs):
-        instance = self.get_object()
-        return http.FileResponse(instance.audiofile.open('rb'))
+    # Useful for browsable API to have a default get response
+    #def get(self, request, *args, **kwargs):
+    #    instance = self.get_object()
+    #    return http.FileResponse(instance.audiofile.open('rb'))
 
 
 

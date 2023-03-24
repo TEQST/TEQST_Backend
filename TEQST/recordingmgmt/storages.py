@@ -14,7 +14,7 @@ class OverwriteStorage(storage.default_storage.__class__):
 
 class BackupStorage(storage.default_storage.__class__):
     """
-    This provides a file storage policy that overwrites files in the event of equal filenames
+    This provides a file storage policy that backups files in the event of equal filenames
     """
 
     def get_available_name(self, name, max_length=None):
