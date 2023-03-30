@@ -154,6 +154,15 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
             last_updated = instance.last_updated,
             valid = instance.valid,
         )
+
+        # If the instance was legacy before, we need to provide a final update to the trec rec_length fields
+        if instance.legacy:
+            length = instance.get_audio_length()
+            instance.recording.rec_time_with_rep_old -= length
+            instance.recording.rec_time_without_rep_old -= length
+            instance.recording.save()
+            backup.length = length #Init length for stats to read
+
         backup.save()
         backup.audiofile.save('unused', instance.audiofile)
 

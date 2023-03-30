@@ -253,11 +253,8 @@ class SentenceRecording(models.Model):
 
     #TODO use length field if available
     def get_audio_length(self):
-        audio_file = default_storage.open(self.audiofile, 'rb')
-        wav = wave.open(audio_file, 'rb')
-        duration = wav.getnframes() / wav.getframerate()
-        wav.close()
-        self.audiofile.close()
+        with wave.open(self.audiofile, 'rb') as wav:
+            duration = wav.getnframes() / wav.getframerate()
         return duration
     
 
