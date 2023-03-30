@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from django.db.models import Q
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.fields import IntegerField
 from . import models
@@ -125,7 +125,7 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField(read_only=True)
 
-    #When serializing a model, this field accesses the SentenceRecording index method
+    # When serializing a model, this field accesses the SentenceRecording index method
     index = IntegerField(read_only=True)
 
     class Meta:
@@ -135,7 +135,7 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
         extra_kwargs = {'audiofile': {'write_only': True}}
 
     def validate_audiofile(self, value):
-        print(type(value))
+        #print(type(value))
         #TODO check for file differences, otherwise reject (repeat request, consider proper idempotency)
         return value
 
@@ -146,25 +146,27 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
     #         raise serializers.ValidationError("Recording is too short")
 
     def update(self, instance: models.SentenceRecording, validated_data):
+
+        with transaction.atomic():
         
-        # Backup the previous recording, then update it's fields
-        backup = models.SentenceRecordingBackup(
-            recording = instance,
-            length = instance.length,
-            last_updated = instance.last_updated,
-            valid = instance.valid,
-        )
+            # Backup the previous recording, then update it's fields
+            backup = models.SentenceRecordingBackup(
+                recording = instance,
+                length = instance.length,
+                last_updated = instance.last_updated,
+                valid = instance.valid,
+            )
 
-        # If the instance was legacy before, we need to provide a final update to the trec rec_length fields
-        if instance.legacy:
-            length = instance.get_audio_length()
-            instance.recording.rec_time_with_rep_old -= length
-            instance.recording.rec_time_without_rep_old -= length
-            instance.recording.save()
-            backup.length = length #Init length for stats to read
+            # If the instance was legacy before, we need to provide a final update to the trec rec_length fields
+            if instance.legacy:
+                length = instance.get_audio_length()
+                instance.recording.rec_time_with_rep_old -= length
+                instance.recording.rec_time_without_rep_old -= length
+                instance.recording.save()
+                backup.length = length #Init length for stats to read
 
-        backup.save()
-        backup.audiofile.save('unused', instance.audiofile)
+            backup.save()
+            backup.audiofile.save('unused', instance.audiofile)
 
         # TODO uncomment this and get the index (XXXX) if it is clear which view is used for this
         #sentence = textrecording.text.get_content()[XXXX - 1]
