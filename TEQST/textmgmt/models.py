@@ -360,6 +360,8 @@ class Text(models.Model):
             ret = self.sentences.all().aggregate(word_count=models.Sum('word_count'))
         else:
             ret = self.sentences.filter(index__lte=sentence_limit).aggregate(word_count=models.Sum('word_count'))
+        if ret['word_count'] is None:
+            return 0
         return ret['word_count']
     
     def get_speakers(self):

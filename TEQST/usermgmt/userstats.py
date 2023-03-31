@@ -7,7 +7,7 @@ from django.utils import timezone
 import io, csv, datetime, pandas as pd
 
 
-def create_user_stats(folders: list[text_models.Folder]):
+def create_user_stats(folders: 'list[text_models.Folder]'):
     pass
     # Utilize one Calculator for each given folder, also accumulate totals
 
@@ -23,7 +23,7 @@ class UserStatCalculator:
     root: text_models.Folder
     start: datetime.datetime
     end: datetime.datetime
-    all_folders: list[text_models.Folder]
+    all_folders: 'list[text_models.Folder]'
     agg_data: pd.DataFrame
 
     def __init__(self, root: text_models.Folder, start: datetime.date, end: datetime.date, *args, **kwargs) -> None:
