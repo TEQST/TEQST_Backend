@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('pub/folders/', views.PubFolderListView.as_view(), name='folders'),
     path('pub/folders/<int:pk>/', views.PubFolderDetailedView.as_view(), name='folder-detail'),
+    path('pub/folders/<int:pk>/stats/', views.PubFolderStatsView.as_view(), name='folder-stats'),
     path('pub/folders/delete/', views.multi_delete_folders, name='folder-delete'),
     path('spk/publishers/', views.SpkPublisherListView.as_view(), name='publishers'),
     path('spk/publishers/<int:pk>/', views.SpkPublisherDetailedView.as_view(), name='publisher-detail'),

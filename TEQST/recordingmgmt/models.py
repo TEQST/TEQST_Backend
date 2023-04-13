@@ -248,6 +248,7 @@ class SentenceRecording(models.Model):
     def is_listener(self, user):
         return self.recording.is_listener(user)
     
+    #TODO @property ???
     def index(self):
         return self.sentence.index
 

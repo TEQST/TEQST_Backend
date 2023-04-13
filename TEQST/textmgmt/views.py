@@ -3,7 +3,7 @@ from rest_framework import generics, response, status, views, exceptions, decora
 from django import http
 from django.db.models import Q
 from django.core.files.storage import default_storage
-from . import models, serializers, stats, permissions as text_permissions
+from . import models, folderstats, serializers, stats, permissions as text_permissions
 from usermgmt import models as user_models, permissions, serializers as user_serializers
 from pathlib import Path
 
@@ -518,4 +518,39 @@ class LstnTextStatsView(generics.RetrieveAPIView):
     queryset = models.Text.objects.all()
     serializer_class = OutputSerializer
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
+
+
+
+class PubFolderStatsView(generics.RetrieveAPIView):
+    """
+    url: /api/pub/:id/stats/
+    use: get stats for folder as sheet
+    """
+
+    class FilterSerializer(rf_serializers.Serializer):
+        start = rf_serializers.DateField()
+        end = rf_serializers.DateField()
+
+    queryset = models.Folder.objects.all()
+    serializer_class = None
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
+
+    def get(self, request, *args, **kwargs):
+        instance: models.Folder = self.get_object()
+        filter_ser = self.FilterSerializer(data=request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        fsc_class = folderstats.FolderStatMultiCollector
+        if not instance.subfolder.exists():
+            fsc_class = folderstats.FolderStatSingleCollector
+        fsc = fsc_class(root=instance,
+            start=filter_ser.validated_data['start'],
+            end=filter_ser.validated_data['end']
+        )
+        filename = f"{fsc.root.name}_{fsc.start.strftime('%d-%m-%Y')}_{fsc.end.strftime('%d-%m-%Y')}"
+        resp = http.HttpResponse(headers={
+            "Content-Type": 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            "Content-Disposition": f'attachment; filename={filename}.xlsx'
+        })
+        fsc.agg_data.to_excel(resp, index=True)
+        return resp
 
