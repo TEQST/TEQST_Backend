@@ -523,8 +523,8 @@ class LstnTextStatsView(generics.RetrieveAPIView):
 
 class PubFolderStatsView(generics.RetrieveAPIView):
     """
-    url: /api/pub/:id/stats/
-    use: get stats for folder as sheet
+    url: /api/pub/:id/stats/?start=<iso-8601>&end=<iso-8601>
+    use: get stats for folder as excel-sheet
     """
 
     class FilterSerializer(rf_serializers.Serializer):
