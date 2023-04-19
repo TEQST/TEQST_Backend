@@ -12,6 +12,9 @@ def get_user_stats(usernames):
     data = user_models.CustomUser.objects.filter(username__in=usernames).values(
         'username', 'country', 'accent'
     )
+    if not data.exists():
+        #Manually create empty dataframe, because set_index causes errors
+        return pd.DataFrame(columns=['country', 'accent'])
     stats = pd.DataFrame(data).set_index('username')
     stats['country'] = stats.apply(lambda x: country_dict[ x['country'] ], axis=1)
     stats = stats.rename({

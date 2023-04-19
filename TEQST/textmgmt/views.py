@@ -6,6 +6,7 @@ from django.core.files.storage import default_storage
 from . import models, folderstats, serializers, stats, permissions as text_permissions
 from usermgmt import models as user_models, permissions, serializers as user_serializers
 from pathlib import Path
+import calendar, datetime
 
 
 @decorators.api_view(['POST'])
@@ -523,11 +524,18 @@ class LstnTextStatsView(generics.RetrieveAPIView):
 
 class PubFolderStatsView(generics.RetrieveAPIView):
     """
-    url: /api/pub/:id/stats/?start=<iso-8601>&end=<iso-8601>
-    use: get stats for folder as excel-sheet
+    url: /api/pub/:id/stats/
+    params: ?month=<iso-8601> or ?start=<iso-8601>&end=<iso-8601>
+    use: get stats for folder as excel-sheet,
+        `month` only considers year and month
+        `start` & `end` consider year, month and day
     """
 
-    class FilterSerializer(rf_serializers.Serializer):
+    class FilterSerializerBasic(rf_serializers.Serializer):
+        month = rf_serializers.IntegerField(min_value=1, max_value=12)
+        year = rf_serializers.IntegerField()
+
+    class FilterSerializerDetailed(rf_serializers.Serializer):
         start = rf_serializers.DateField()
         end = rf_serializers.DateField()
 
@@ -535,17 +543,41 @@ class PubFolderStatsView(generics.RetrieveAPIView):
     serializer_class = None
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
 
+    def parse_basic(self, request):
+        filter_ser = self.FilterSerializerBasic(data=request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        month = filter_ser.validated_data['month']
+        year = filter_ser.validated_data['year']
+        last_day = calendar.monthrange(year, month)[1]
+        start = datetime.date(year, month, 1)
+        end = datetime.date(year, month, last_day)
+        return start, end
+
+    def parse_detailed(self, request):
+        filter_ser = self.FilterSerializerDetailed(data=request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        start = filter_ser.validated_data['start']
+        end = filter_ser.validated_data['end']
+        return start, end
+
     def get(self, request, *args, **kwargs):
         instance: models.Folder = self.get_object()
-        filter_ser = self.FilterSerializer(data=request.query_params)
-        filter_ser.is_valid(raise_exception=True)
+        
+        if 'month' in request.query_params.keys() and \
+            'year' in request.query_params.keys():
+            start, end = self.parse_basic(request)
+        elif 'end' in request.query_params.keys() and \
+            'start' in request.query_params.keys():
+            start, end = self.parse_detailed(request)
+        else:
+            raise rf_serializers.ValidationError(
+                "Query params have to either specify 'month&year' or 'start&end'"
+            )
+
         fsc_class = folderstats.FolderStatMultiCollector
         if not instance.subfolder.exists():
             fsc_class = folderstats.FolderStatSingleCollector
-        fsc = fsc_class(root=instance,
-            start=filter_ser.validated_data['start'],
-            end=filter_ser.validated_data['end']
-        )
+        fsc = fsc_class(root=instance, start=start, end=end)
         filename = f"{fsc.root.name}_{fsc.start.strftime('%d-%m-%Y')}_{fsc.end.strftime('%d-%m-%Y')}"
         resp = http.HttpResponse(headers={
             "Content-Type": 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

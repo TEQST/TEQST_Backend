@@ -70,6 +70,10 @@ class FolderStatCalculator(FolderStatBase):
 
 
     def create_user_rec_stats(self, *args, **kwargs):
+
+        #Collect columns as list of Series to then pass to concat
+        columns = []
+
         # Query for new stats, discard legacy recordings, those are tracked on trec totals
         srecs_time = rec_models.SentenceRecording.objects.filter(legacy=False, 
             recording__text__shared_folder__in=self.all_folders
@@ -78,7 +82,7 @@ class FolderStatCalculator(FolderStatBase):
         ).values_list('recording__speaker__username').annotate(
             models.Sum('length')
         )
-        new_time = pd.Series(dict(srecs_time), name='new_time', dtype='float64')
+        columns.append( pd.Series(dict(srecs_time), name='new_time', dtype='float64') )
         #TODO maybe fill this with newest backup if available. Check with advisor.
         
         # Query for word counts, these always come from sentencerecordings, legacy or not
@@ -90,7 +94,7 @@ class FolderStatCalculator(FolderStatBase):
             models.Sum('sentence__word_count')
         )
         # Switch to a type that can hold a <NA> value for later join
-        word_count = pd.Series(dict(srecs_words), name=self.word_count_col, dtype='Int64')
+        columns.append( pd.Series(dict(srecs_words), name=self.word_count_col, dtype='Int64') )
         
         #Query backups for repetition time
         backups = rec_models.SentenceRecordingBackup.objects.filter(
@@ -100,26 +104,30 @@ class FolderStatCalculator(FolderStatBase):
         ).values_list('recording__recording__speaker__username').annotate(
             models.Sum('length')
         )
-        new_reps = pd.Series(dict(backups), name='new_reps', dtype='float64')
+        columns.append( pd.Series(dict(backups), name='new_reps', dtype='float64') )
 
         # If a TextRecording was created during the time window, add its legacy time fields to the total.
         # This takes care of legacy data. New recordings always have 0.0 in those fields, since they're unused
-        trecs_time = rec_models.TextRecording.objects.filter(
+        trecs_time_no_rep = rec_models.TextRecording.objects.filter(
             text__shared_folder__in=self.all_folders
         ).filter(created_at__date__gte=self.start, created_at__date__lte=self.end).order_by(
             # Clearing the ordering is required for grouping with values() to work properly
-        ).values(username=models.F('speaker__username')).annotate(
-            old_no_reps=models.Sum('rec_time_without_rep_old'),
-            old_with_reps=models.Sum('rec_time_with_rep_old')
+        ).values_list('speaker__username').annotate(
+            models.Sum('rec_time_without_rep_old')
         )
-        old_data = pd.DataFrame(trecs_time).set_index('username').astype('float64')
+        trecs_time_with_rep = rec_models.TextRecording.objects.filter(
+            text__shared_folder__in=self.all_folders
+        ).filter(created_at__date__gte=self.start, created_at__date__lte=self.end).order_by(
+            # Clearing the ordering is required for grouping with values() to work properly
+        ).values_list('speaker__username').annotate(
+            models.Sum('rec_time_with_rep_old')
+        )
+        columns.append( pd.Series(dict(trecs_time_no_rep), name='old_no_reps', dtype='float64') )
+        columns.append( pd.Series(dict(trecs_time_with_rep), name='old_with_reps', dtype='float64') )
+        
 
         # Assemble DataFrame
-        self.agg_data = old_data \
-            .merge(new_time,   how='outer', left_index=True, right_index=True) \
-            .merge(new_reps,   how='outer', left_index=True, right_index=True) \
-            .merge(word_count, how='outer', left_index=True, right_index=True) \
-            .sort_index().fillna(0)
+        self.agg_data = pd.concat(columns, axis=1).sort_index().fillna(0)
         
         # Compute the desired column values and drop temporary columns
         self.agg_data[self.cur_rec_col] = self.agg_data['new_time'] \
