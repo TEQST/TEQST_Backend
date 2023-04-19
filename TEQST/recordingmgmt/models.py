@@ -68,7 +68,11 @@ class TextRecording(models.Model):
                 last_updated = self.srecs.aggregate(last_updated=models.Max('last_updated'))['last_updated']
                 return last_updated
             except NotSupportedError: #SQLite doesn't support aggregation on datetime fields
-                pass
+                most_recent = self.last_updated_old
+                for srec in self.srecs.filter(legacy=False):
+                    if most_recent < srec.last_updated:
+                        most_recent = srec.last_updated
+                return most_recent
         if self.last_updated_old is None: # If legacy update times are disabled, fallback to created_at
             return self.created_at
         return self.last_updated_old # Fall back to old timestamp
