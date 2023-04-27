@@ -12,8 +12,8 @@ class FolderStatBase:
     end: datetime.datetime
     agg_data: pd.DataFrame
     word_total: int
-    cur_rec_col = 'Current Recordings (sec)'
-    all_rec_col = 'All Recordings (sec)'
+    cur_rec_col = 'TDT (min)'
+    all_rec_col = 'TTSR (min)'
 
     def __init__(self, root: text_models.Folder, start: datetime.date, end: datetime.date, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -137,6 +137,11 @@ class FolderStatCalculator(FolderStatBase):
         self.agg_data = self.agg_data.drop(
             columns=['new_time', 'new_reps', 'old_no_reps', 'old_with_reps']
         )
+
+        # Convert time information to minutes
+        self.agg_data[self.cur_rec_col] /= 60.0
+        self.agg_data[self.all_rec_col] /= 60.0
+
 
 
 

@@ -10,7 +10,7 @@ import io, csv, datetime, pandas as pd
 def get_user_stats(usernames):
     country_dict = dict(COUNTRY_CHOICES)
     data = user_models.CustomUser.objects.filter(username__in=usernames).values(
-        'username', 'country', 'accent'
+        'username', 'email', 'country', 'accent'
     )
     if not data.exists():
         #Manually create empty dataframe, because set_index causes errors
@@ -18,6 +18,7 @@ def get_user_stats(usernames):
     stats = pd.DataFrame(data).set_index('username')
     stats['country'] = stats.apply(lambda x: country_dict[ x['country'] ], axis=1)
     stats = stats.rename({
+        'email': 'E-Mail',
         'country': 'Country',
         'accent': 'Accent'
     }, axis=1)
