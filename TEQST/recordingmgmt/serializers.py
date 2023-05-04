@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from django.db.models import Q
+from django.db import transaction
+from django.utils import timezone
 from rest_framework.fields import IntegerField
 from . import models
 from textmgmt import models as text_models, permissions as text_permissions
@@ -105,24 +106,9 @@ class SentenceRecordingSerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
-        # type(validated_data['audiofile']) is InMemoryUploadedFile
-        wav_file = validated_data['audiofile'].open('rb')
-        wav = wave.open(wav_file, 'rb')
-        duration = wav.getnframes() / wav.getframerate()
-        wav.close()
-        # print('DURATION:', duration)
-        textrecording = validated_data['recording']
+        validated_data['legacy'] = False
+        return super().create(validated_data)
 
-        # sentence = textrecording.text.get_content()[validated_data['index'] - 1]
-        # self.check_audio_duration(duration, sentence)
-
-        obj = super().create(validated_data)
-
-        textrecording.rec_time_without_rep += duration
-        textrecording.rec_time_with_rep += duration
-        textrecording.save()
-
-        return obj
 
     class Meta:
         model = models.SentenceRecording
@@ -139,7 +125,7 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
 
     recording = RecordingPKField(read_only=True)
 
-    #When serializing a model, this field accesses the SentenceRecording index method
+    # When serializing a model, this field accesses the SentenceRecording index method
     index = IntegerField(read_only=True)
 
     class Meta:
@@ -148,35 +134,49 @@ class SentenceRecordingUpdateSerializer(serializers.ModelSerializer):
         read_only_fields = ['recording', 'index', 'valid']
         extra_kwargs = {'audiofile': {'write_only': True}}
 
+    def validate_audiofile(self, value):
+        #print(type(value))
+        #TODO check for file differences, otherwise reject (repeat request, consider proper idempotency)
+        return value
+
     # def check_audio_duration(self, duration: float, sentence: str):
     #     if duration > len(sentence) / 2.5:
     #         raise serializers.ValidationError("Recording is too long")
     #     elif duration < len(sentence) / 40:
     #         raise serializers.ValidationError("Recording is too short")
 
-    def update(self, instance, validated_data):
-        wav_file = validated_data['audiofile'].open('rb')
-        wav = wave.open(wav_file, 'rb')
-        duration = wav.getnframes() / wav.getframerate()
-        wav.close()
-        # print('DURATION:', duration)
-        wav_file_old = instance.audiofile.open('rb')
-        wav_old = wave.open(wav_file_old, 'rb')
-        duration_old = wav_old.getnframes() / wav_old.getframerate()
-        wav_old.close()
-        instance.audiofile.close()  # refer to the wave docs: the caller must close the file, this is not done by wave.close()
-        # print('DURATION OLD:', duration_old)
-        textrecording = instance.recording
+    def update(self, instance: models.SentenceRecording, validated_data):
+
+        with transaction.atomic():
+        
+            # Backup the previous recording, then update it's fields
+            backup = models.SentenceRecordingBackup(
+                recording = instance,
+                length = instance.length,
+                last_updated = instance.last_updated,
+                valid = instance.valid,
+            )
+
+            # If the instance was legacy before, we need to provide a final update to the trec rec_length fields
+            if instance.legacy:
+                length = instance.get_audio_length()
+                instance.recording.rec_time_with_rep_old -= length
+                instance.recording.rec_time_without_rep_old -= length
+                instance.recording.save()
+                backup.length = length #Init length for stats to read
+
+            backup.save()
+            backup.audiofile.save('unused', instance.audiofile)
 
         # TODO uncomment this and get the index (XXXX) if it is clear which view is used for this
         #sentence = textrecording.text.get_content()[XXXX - 1]
         #self.check_audio_duration(duration, sentence)
 
-        obj = super().update(instance, validated_data)
+        validated_data['last_updated'] = timezone.now()
+        validated_data['legacy'] = False
 
-        textrecording.rec_time_without_rep += duration
-        textrecording.rec_time_without_rep -= duration_old
-        textrecording.rec_time_with_rep += duration
-        textrecording.save()
+        instance.audiofile.delete(save=False)
+
+        obj = super().update(instance, validated_data)
 
         return obj
