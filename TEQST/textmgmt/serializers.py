@@ -88,6 +88,7 @@ class TextFullSerializer(serializers.ModelSerializer):
     """
     to be used by view: PubTextListView, PubTextDetailedView, SpkTextDetailedView
     for: creation of a text, retrieval of a text
+    Creating texts through this serializer is deprecated
     """
     content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
     shared_folder = SharedFolderPKField()
@@ -110,6 +111,7 @@ class TextFullSerializer(serializers.ModelSerializer):
 #            raise serializers.ValidationError("Text title can't contain a space character.")
 #        return value
     
+    # deprecated
     def check_max_lines(self, max_lines: int, text_len: int):
         """
         This is very similar to the standard validate_<field_name> methods, but is called from the split_text method.
@@ -123,6 +125,7 @@ class TextFullSerializer(serializers.ModelSerializer):
         #    raise serializers.ValidationError("Splitting a file into more than 100 partfiles is not permitted. Choose max_lines accordingly.")
 
     
+    # deprecated
     def split_text(self, textfile: uploadedfile.InMemoryUploadedFile, max_lines):
         """
         Splits the textfile into smaller files with at most max_lines sentences. 
@@ -166,6 +169,7 @@ class TextFullSerializer(serializers.ModelSerializer):
 
         return textfiles
     
+    # deprecated
     def create(self, validated_data):
         max_lines = validated_data.pop('max_lines', None)
         sf = validated_data['shared_folder']

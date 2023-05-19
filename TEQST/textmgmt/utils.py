@@ -1,6 +1,7 @@
 from django.conf import settings
 from usermgmt.countries import COUNTRY_CHOICES
 from usermgmt.utils import GENDER_CHOICES, EDU_CHOICES
+import docx, pathlib, re
 
 NAME_ID_SPLITTER = '__'
 
@@ -57,3 +58,61 @@ def folder_path(folder):
     media_path = folder_relative_path(folder)
     path = settings.MEDIA_ROOT/media_path
     return path
+
+
+def split_str(str_, max_len=250):
+    if len(str_) > max_len:
+        strings = re.split('([,;:.?!])', str_)
+        if len(strings) <= 1: # fallback if no punctuation in the text, split in the middle
+            strings = re.split('([ ])', str_)
+        limit = 0
+        len_start, len_end = 0, len(str_)
+        # split string near the middle
+        for i in range(0, len(strings), 2):
+            word_len = len( strings[i].strip() )
+            if abs(len_end - len_start) <= abs(len_end - len_start - 2*word_len):
+                limit = i
+                break
+            len_end -= word_len
+            len_start += word_len
+        return split_str(''.join(strings[:limit]).strip(), max_len=max_len) \
+         + split_str(''.join(strings[limit:]).strip(), max_len=max_len)
+    return [str_]
+
+
+def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250):
+    
+    filepath = pathlib.PurePath(textfile.name)
+    # Check suffix to identify filetype, unknown/no suffix is assumed plain text
+    content = []
+    if filepath.suffix in ['doc', 'docx']:
+        with textfile.open('rb') as f:
+            doc = docx.Document(f)
+            content = map(lambda par: par.text, doc.paragraphs)
+    #elif filepath.suffix in [<filetype>]:
+    #   handle file type
+    else:
+        with textfile.open('r') as txt:
+            content_str: str = txt.read()
+            content_str = content_str.replace('\r\n', '\n')
+            # Normalize newline characters
+            content_str = content_str.replace('\r', '\n')
+            content = content_str.split(separator)
+
+    # Run char split before line split
+    split_content = []
+    for line in content:
+        split_content += split_str(line, max_chars)
+
+    if max_lines is None:
+        return [content]
+
+    text_split = []
+    num_texts = len(content) // max_lines + 1
+    len_text = len(content) // num_texts + 1
+
+    for i in range(0, len(content), len_text):
+        lim =  min(i+len_text, len(content))
+        text_split.append(content[i:lim])
+
+    return text_split

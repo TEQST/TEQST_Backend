@@ -1,9 +1,10 @@
 from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions, \
     serializers as rf_serializers
 from django import http
+from django.core.files import base as base_files
 from django.db.models import Q
 from django.core.files.storage import default_storage
-from . import models, folderstats, serializers, stats, permissions as text_permissions
+from . import models, folderstats, serializers, stats, utils, permissions as text_permissions
 from usermgmt import models as user_models, permissions, serializers as user_serializers
 from pathlib import Path
 import calendar, datetime
@@ -87,6 +88,7 @@ class PubTextListView(generics.ListCreateAPIView):
     """
     url: api/pub/texts/?sharedfolder=123
     use: in the publish tab: retrieve a list of texts contained in a sharedfolder, text upload
+    Creating texts through this view is deprecated
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextBasicSerializer
@@ -586,3 +588,57 @@ class PubFolderStatsView(generics.RetrieveAPIView):
         fsc.agg_data.to_excel(resp, index=True)
         return resp
 
+
+
+class PubTextUploadView(generics.CreateAPIView):
+
+    class InputSerializer(rf_serializers.Serializer):
+        parent = serializers.SharedFolderPKField()
+        textfile = rf_serializers.FileField(write_only=True)
+        title = rf_serializers.CharField()
+        language = rf_serializers.PrimaryKeyRelatedField(
+            queryset=user_models.Language.objects.all())
+        
+        max_char_per_line = rf_serializers.IntegerField(default=250)
+        max_lines_per_text = rf_serializers.IntegerField(required=False)
+        separator = rf_serializers.CharField(required=False)
+
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
+    serializer_class = InputSerializer
+
+    def perform_create(self, serializer: InputSerializer):
+        print("Input data:")
+        print(serializer.validated_data)
+
+        parent = serializer.validated_data['parent']
+        textfile = serializer.validated_data['textfile']
+        title = serializer.validated_data['title']
+        language = serializer.validated_data['language']
+
+        max_chars = serializer.validated_data['max_chars_per_line']
+        max_lines = serializer.validated_data.get('max_lines_per_text', None)
+        separator = serializer.validated_data.get('separator', None)
+
+        if separator is None:
+            separator = '\n\n'
+
+        content: 'list[list[str]]'
+        content = utils.parse_file(textfile, separator, max_lines, max_chars)
+
+        parent.make_shared_folder()
+        # Create multiple texts if necessary
+        if len(content) > 1:
+            for i, section in enumerate(content):
+                models.Text.objects.create(
+                    shared_folder = parent,
+                    textfile = base_files.ContentFile('\n\n'.join(section)),
+                    title = f'{title}_{i+1:04d}',
+                    language = language,
+                )
+        else:
+            models.Text.objects.create(
+                shared_folder = parent,
+                textfile = base_files.ContentFile('\n\n'.join(content[0])),
+                title = f'{title}',
+                language = language,
+            )
