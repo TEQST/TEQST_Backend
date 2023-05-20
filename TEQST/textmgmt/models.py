@@ -232,7 +232,7 @@ def upload_path(instance, filename):
     Generates the upload path for a text
     """
     sf_path = Path(instance.shared_folder.sharedfolder.get_path())
-    path = sf_path/filename
+    path = sf_path/'Texts'/filename
     return path
 
 
@@ -314,12 +314,18 @@ class Text(models.Model):
     def create_sentences(self):
         with transaction.atomic():
             if not self.sentences.exists():
-                with self.textfile.open('r') as f:
+                with self.textfile.open('rb') as f:
+
+                    # it is not enough to detect the encoding from the first line
+                    # it hast to be the entire file content
+                    encoding = chardet.detect(f.read())['encoding']
+                    f.seek(0)
                     file_content = f.readlines()
 
                     sentence = ""
                     content = []
-                    for line in file_content:
+                    for l in file_content:
+                        line = l.decode(encoding).strip()
                         if line == "":
                             if sentence != "":
                                 content.append(sentence)

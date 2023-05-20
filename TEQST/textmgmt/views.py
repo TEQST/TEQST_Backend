@@ -1,13 +1,13 @@
 from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions, \
     serializers as rf_serializers
 from django import http
-from django.core.files import base as base_files
+from django.core.files import base as base_files, uploadedfile
 from django.db.models import Q
 from django.core.files.storage import default_storage
 from . import models, folderstats, serializers, stats, utils, permissions as text_permissions
 from usermgmt import models as user_models, permissions, serializers as user_serializers
 from pathlib import Path
-import calendar, datetime
+import calendar, datetime, pathlib
 
 
 @decorators.api_view(['POST'])
@@ -599,7 +599,7 @@ class PubTextUploadView(generics.CreateAPIView):
         language = rf_serializers.PrimaryKeyRelatedField(
             queryset=user_models.Language.objects.all())
         
-        max_char_per_line = rf_serializers.IntegerField(default=250)
+        max_chars_per_line = rf_serializers.IntegerField(required=False)
         max_lines_per_text = rf_serializers.IntegerField(required=False)
         separator = rf_serializers.CharField(required=False)
 
@@ -607,15 +607,13 @@ class PubTextUploadView(generics.CreateAPIView):
     serializer_class = InputSerializer
 
     def perform_create(self, serializer: InputSerializer):
-        print("Input data:")
-        print(serializer.validated_data)
 
         parent = serializer.validated_data['parent']
         textfile = serializer.validated_data['textfile']
         title = serializer.validated_data['title']
         language = serializer.validated_data['language']
 
-        max_chars = serializer.validated_data['max_chars_per_line']
+        max_chars = serializer.validated_data.get('max_chars_per_line', None)
         max_lines = serializer.validated_data.get('max_lines_per_text', None)
         separator = serializer.validated_data.get('separator', None)
 
@@ -625,20 +623,24 @@ class PubTextUploadView(generics.CreateAPIView):
         content: 'list[list[str]]'
         content = utils.parse_file(textfile, separator, max_lines, max_chars)
 
-        parent.make_shared_folder()
+        filepath = pathlib.PurePath(textfile.name)
+
+        sf = parent.make_shared_folder()
         # Create multiple texts if necessary
         if len(content) > 1:
             for i, section in enumerate(content):
                 models.Text.objects.create(
-                    shared_folder = parent,
-                    textfile = base_files.ContentFile('\n\n'.join(section)),
+                    shared_folder = sf,
+                    #textfile = base_files.ContentFile('\n\n'.join(section)),
+                    textfile = utils.make_file(section, f'{filepath.stem}_{i+1:04d}'),
                     title = f'{title}_{i+1:04d}',
                     language = language,
                 )
         else:
             models.Text.objects.create(
-                shared_folder = parent,
-                textfile = base_files.ContentFile('\n\n'.join(content[0])),
+                shared_folder = sf,
+                #textfile = base_files.ContentFile('\n\n'.join(content[0])),
+                textfile = utils.make_file(content[0], filepath.stem),
                 title = f'{title}',
                 language = language,
             )
