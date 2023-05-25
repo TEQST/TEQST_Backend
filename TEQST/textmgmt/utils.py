@@ -4,6 +4,7 @@ from rest_framework import exceptions
 from usermgmt.countries import COUNTRY_CHOICES
 from usermgmt.utils import GENDER_CHOICES, EDU_CHOICES
 import chardet, docx, pathlib, re
+from nltk import tokenize
 
 NAME_ID_SPLITTER = '__'
 
@@ -88,7 +89,7 @@ def split_str(str_, max_len=None):
     # split string near the middle
     for i in range(0, len(strings), 2):
         word_len = len( strings[i].strip() )
-        if abs(len_end - len_start) <= abs(len_end - len_start - 2*word_len):
+        if abs(len_end - len_start) < abs(len_end - len_start - 2*word_len):
             limit = i
             break
         len_end -= word_len
@@ -97,14 +98,19 @@ def split_str(str_, max_len=None):
         + split_str(''.join(strings[limit:]).strip(), max_len=max_len)
 
 
-def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250):
+def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250,
+               tknz=False, lang='english'):
     
+    print(f"{separator=}")
+
+    textfile.seek(0)
     filepath = pathlib.PurePath(textfile.name)
     # Check suffix to identify filetype, unknown/no suffix is assumed plain text
-    content = []
     if filepath.suffix in ['.doc', '.docx']:
         doc = docx.Document(textfile)
         content = map(lambda par: par.text, doc.paragraphs)
+        if tknz:
+            content_str = '\n'.join(content)
     #elif filepath.suffix in [<filetype>]:
     #   handle file type
     else:
@@ -112,10 +118,14 @@ def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250):
         enc = chardet.detect(content_bytes)['encoding']
         content_str = content_bytes.decode(enc)
 
-        content_str = content_str.replace('\r\n', '\n')
-        # Normalize newline characters
-        content_str = content_str.replace('\r', '\n')
-        content = content_str.split(separator)
+        if not tknz:
+            content_str = content_str.replace('\r\n', '\n')
+            # Normalize newline characters
+            content_str = content_str.replace('\r', '\n')
+            content = content_str.split(separator)
+
+    if tknz:
+        content = tokenize.sent_tokenize(content_str, language=lang)
 
     # Run char split before line split
     split_content = []

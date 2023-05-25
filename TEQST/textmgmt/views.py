@@ -601,31 +601,41 @@ class PubTextUploadView(generics.CreateAPIView):
         
         max_chars_per_line = rf_serializers.IntegerField(required=False)
         max_lines_per_text = rf_serializers.IntegerField(required=False)
-        separator = rf_serializers.CharField(required=False)
+        separator = rf_serializers.CharField(required=False, trim_whitespace=False)
+        tokenize = rf_serializers.BooleanField(default=False)
 
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
     serializer_class = InputSerializer
 
     def perform_create(self, serializer: InputSerializer):
 
-        parent = serializer.validated_data['parent']
+        parent: models.Folder = serializer.validated_data['parent']
         textfile = serializer.validated_data['textfile']
-        title = serializer.validated_data['title']
-        language = serializer.validated_data['language']
+        title: str = serializer.validated_data['title']
+        language: user_models.Language = serializer.validated_data['language']
 
-        max_chars = serializer.validated_data.get('max_chars_per_line', None)
-        max_lines = serializer.validated_data.get('max_lines_per_text', None)
-        separator = serializer.validated_data.get('separator', None)
+        max_chars: int = serializer.validated_data.get('max_chars_per_line', None)
+        max_lines: int = serializer.validated_data.get('max_lines_per_text', None)
+        separator: str = serializer.validated_data.get('separator', None)
+        tokenize: bool = serializer.validated_data.get('tokenize', False)
+
 
         if separator is None:
             separator = '\n\n'
+        else:
+            # Unescape \n and \t
+            separator = separator.replace('\\t', '\t')
+            separator = separator.replace('\\n', '\n')
+
+        print(f"{separator=}")
 
         content: 'list[list[str]]'
-        content = utils.parse_file(textfile, separator, max_lines, max_chars)
+        content = utils.parse_file(textfile, separator, max_lines, max_chars, 
+                                   tokenize, language.english_name)
 
         filepath = pathlib.PurePath(textfile.name)
 
-        sf = parent.make_shared_folder()
+        sf: models.SharedFolder = parent.make_shared_folder()
         # Create multiple texts if necessary
         if len(content) > 1:
             for i, section in enumerate(content):
