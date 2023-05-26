@@ -7,7 +7,7 @@ from django.core.files.storage import default_storage
 from . import models, folderstats, serializers, stats, utils, permissions as text_permissions
 from usermgmt import models as user_models, permissions, serializers as user_serializers
 from pathlib import Path
-import calendar, datetime, pathlib
+import calendar, datetime, codecs, pathlib
 
 
 @decorators.api_view(['POST'])
@@ -619,13 +619,14 @@ class PubTextUploadView(generics.CreateAPIView):
         separator: str = serializer.validated_data.get('separator', None)
         tokenize: bool = serializer.validated_data.get('tokenize', False)
 
+        print(f"raw_{separator=}")
 
         if separator is None:
             separator = '\n\n'
         else:
-            # Unescape \n and \t
-            separator = separator.replace('\\t', '\t')
-            separator = separator.replace('\\n', '\n')
+            # Unescape (experimental decode feature)
+            sep_bytes: bytes = codecs.escape_decode(separator)[0]
+            separator = sep_bytes.decode()
 
         print(f"{separator=}")
 

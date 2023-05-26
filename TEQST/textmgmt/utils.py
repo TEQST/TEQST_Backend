@@ -122,10 +122,16 @@ def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250,
             content_str = content_str.replace('\r\n', '\n')
             # Normalize newline characters
             content_str = content_str.replace('\r', '\n')
-            content = content_str.split(separator)
+
+            #TODO maybe use re.split to allow for more customization. Test default behaviour
+            content = re.split(separator, content_str)
 
     if tknz:
         content = tokenize.sent_tokenize(content_str, language=lang)
+
+    # If there is any [\n]+ remaining (which would get in the way later),
+    # replace it by a single \n (to not get in the way later).
+    content = map(lambda x: re.sub('\n+', '\n', x), content)
 
     # Run char split before line split
     split_content = []
