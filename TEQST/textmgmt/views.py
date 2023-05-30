@@ -599,8 +599,8 @@ class PubTextUploadView(generics.CreateAPIView):
         language = rf_serializers.PrimaryKeyRelatedField(
             queryset=user_models.Language.objects.all())
         
-        max_chars_per_line = rf_serializers.IntegerField(required=False)
-        max_lines_per_text = rf_serializers.IntegerField(required=False)
+        max_chars = rf_serializers.IntegerField(required=False)
+        max_lines = rf_serializers.IntegerField(required=False)
         separator = rf_serializers.CharField(required=False, trim_whitespace=False)
         tokenize = rf_serializers.BooleanField(default=False)
 
@@ -614,8 +614,8 @@ class PubTextUploadView(generics.CreateAPIView):
         title: str = serializer.validated_data['title']
         language: user_models.Language = serializer.validated_data['language']
 
-        max_chars: int = serializer.validated_data.get('max_chars_per_line', None)
-        max_lines: int = serializer.validated_data.get('max_lines_per_text', None)
+        max_chars: int = serializer.validated_data.get('max_chars', None)
+        max_lines: int = serializer.validated_data.get('max_lines', None)
         separator: str = serializer.validated_data.get('separator', None)
         tokenize: bool = serializer.validated_data.get('tokenize', False)
 
