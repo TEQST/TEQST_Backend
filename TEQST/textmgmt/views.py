@@ -619,16 +619,12 @@ class PubTextUploadView(generics.CreateAPIView):
         separator: str = serializer.validated_data.get('separator', None)
         tokenize: bool = serializer.validated_data.get('tokenize', False)
 
-        print(f"raw_{separator=}")
-
         if separator is None:
             separator = '\n\n'
         else:
             # Unescape (experimental decode feature)
             sep_bytes: bytes = codecs.escape_decode(separator)[0]
             separator = sep_bytes.decode()
-
-        print(f"{separator=}")
 
         content: 'list[list[str]]'
         content = utils.parse_file(textfile, separator, max_lines, max_chars, 

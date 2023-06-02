@@ -100,8 +100,6 @@ def split_str(str_, max_len=None):
 
 def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250,
                tknz=False, lang='english'):
-    
-    print(f"{separator=}")
 
     textfile.seek(0)
     filepath = pathlib.PurePath(textfile.name)
@@ -118,16 +116,15 @@ def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250,
         enc = chardet.detect(content_bytes)['encoding']
         content_str = content_bytes.decode(enc)
 
-        if not tknz:
-            content_str = content_str.replace('\r\n', '\n')
-            # Normalize newline characters
-            content_str = content_str.replace('\r', '\n')
+        content_str = content_str.replace('\r\n', '\n')
+        # Normalize newline characters
+        content_str = content_str.replace('\r', '\n')
 
-            #TODO maybe use re.split to allow for more customization. Test default behaviour
+        if not tknz:
             content = re.split(separator, content_str)
 
     if tknz:
-        content = tokenize.sent_tokenize(content_str, language=lang)
+        content = tokenize.sent_tokenize(content_str, language=lang.lower())
 
     # If there is any [\n]+ remaining (which would get in the way later),
     # replace it by a single \n (to not get in the way later).
@@ -135,7 +132,7 @@ def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250,
 
     # Run char split before line split
     split_content = []
-    for line in content:
+    for line in list(content):
         split_content += split_str(line, max_chars)
 
     if max_lines is None:
