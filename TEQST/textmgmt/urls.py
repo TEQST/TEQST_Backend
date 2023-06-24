@@ -4,7 +4,6 @@ from . import views
 urlpatterns = [
     path('pub/folders/', views.PubFolderListView.as_view(), name='folders'),
     path('pub/folders/<int:pk>/', views.PubFolderDetailedView.as_view(), name='folder-detail'),
-    path('pub/folders/<int:pk>/stats/', views.PubFolderStatsView.as_view(), name='folder-stats'),
     path('pub/folders/delete/', views.multi_delete_folders, name='folder-delete'),
     path('spk/publishers/', views.SpkPublisherListView.as_view(), name='publishers'),
     path('spk/publishers/<int:pk>/', views.SpkPublisherDetailedView.as_view(), name='publisher-detail'),
@@ -12,6 +11,7 @@ urlpatterns = [
     # pub/sharedfolders/<int:pk>/texts/ for the GET Method
     # pub/texts/ for the POST method
     path('pub/texts/', views.PubTextListView.as_view(), name='pub-texts'),
+    path('pub/texts/upload-text/', views.PubTextUploadView.as_view(), name='pub-upload-text'),
     path('spk/sharedfolders/<int:pk>/texts/', views.SpkTextListView.as_view(), name='sharedfolder-detail'),
     path('pub/sharedfolders/<int:pk>/speakers/', views.PubSharedFolderSpeakerView.as_view(), name='sharedfolder-speakers'),
     path('pub/sharedfolders/<int:pk>/listeners/', views.PubSharedFolderListenerView.as_view(), name='sharedfolder-listeners'),

@@ -232,7 +232,7 @@ def upload_path(instance, filename):
     Generates the upload path for a text
     """
     sf_path = Path(instance.shared_folder.sharedfolder.get_path())
-    path = sf_path/filename
+    path = sf_path/'Texts'/filename
     return path
 
 
@@ -314,34 +314,28 @@ class Text(models.Model):
     def create_sentences(self):
         with transaction.atomic():
             if not self.sentences.exists():
-                #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
-                #f = default_storage.open(self.textfile.name, 'rb')
-                f = self.textfile.open('rb')
-                #file_content = f.readlines()
+                with self.textfile.open('rb') as f:
 
-                # it is not enough to detect the encoding from the first line
-                # it hast to be the entire file content
-                encoding = chardet.detect(f.read())['encoding']
-                f.seek(0)
-                file_content = f.readlines()
+                    # it is not enough to detect the encoding from the first line
+                    # it hast to be the entire file content
+                    encoding = chardet.detect(f.read())['encoding']
+                    f.seek(0)
+                    file_content = f.readlines()
 
-                sentence = ""
-                content = []
-                for line in file_content:
-                    #line = line.decode('utf-8')
-                    line = line.decode(encoding).strip()
-                    #line = line.decode('unicode_escape')
-                    if line == "":
-                        if sentence != "":
-                            content.append(sentence)
-                            sentence = ""
-                    else:
-                        if sentence != "":
-                            sentence += ' '
-                        sentence += line
-                if sentence != "":
-                    content.append(sentence)
-                f.close()
+                    sentence = ""
+                    content = []
+                    for l in file_content:
+                        line = l.decode(encoding).strip()
+                        if line == "":
+                            if sentence != "":
+                                content.append(sentence)
+                                sentence = ""
+                        else:
+                            if sentence != "":
+                                sentence += ' '
+                            sentence += line
+                    if sentence != "":
+                        content.append(sentence)
 
                 for i in range(len(content)):
                     self.sentences.create(content=content[i], index=i + 1, word_count=content[i].strip().count(' ') + 1)

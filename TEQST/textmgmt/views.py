@@ -1,12 +1,13 @@
 from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions, \
     serializers as rf_serializers
 from django import http
+from django.core.files import base as base_files, uploadedfile
 from django.db.models import Q
 from django.core.files.storage import default_storage
-from . import models, folderstats, serializers, stats, permissions as text_permissions
+from . import models, folderstats, serializers, stats, utils, permissions as text_permissions
 from usermgmt import models as user_models, permissions, serializers as user_serializers
 from pathlib import Path
-import calendar, datetime
+import calendar, datetime, codecs, pathlib
 
 
 @decorators.api_view(['POST'])
@@ -87,6 +88,7 @@ class PubTextListView(generics.ListCreateAPIView):
     """
     url: api/pub/texts/?sharedfolder=123
     use: in the publish tab: retrieve a list of texts contained in a sharedfolder, text upload
+    Creating texts through this view is deprecated
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextBasicSerializer
@@ -586,3 +588,66 @@ class PubFolderStatsView(generics.RetrieveAPIView):
         fsc.agg_data.to_excel(resp, index=True)
         return resp
 
+
+
+class PubTextUploadView(generics.CreateAPIView):
+
+    class InputSerializer(rf_serializers.Serializer):
+        parent = serializers.SharedFolderPKField()
+        textfile = rf_serializers.FileField(write_only=True)
+        title = rf_serializers.CharField()
+        language = rf_serializers.PrimaryKeyRelatedField(
+            queryset=user_models.Language.objects.all())
+        
+        max_chars = rf_serializers.IntegerField(required=False)
+        max_lines = rf_serializers.IntegerField(required=False)
+        separator = rf_serializers.CharField(required=False, trim_whitespace=False)
+        tokenize = rf_serializers.BooleanField(default=False)
+
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
+    serializer_class = InputSerializer
+
+    def perform_create(self, serializer: InputSerializer):
+
+        parent: models.Folder = serializer.validated_data['parent']
+        textfile = serializer.validated_data['textfile']
+        title: str = serializer.validated_data['title']
+        language: user_models.Language = serializer.validated_data['language']
+
+        max_chars: int = serializer.validated_data.get('max_chars', None)
+        max_lines: int = serializer.validated_data.get('max_lines', None)
+        separator: str = serializer.validated_data.get('separator', None)
+        tokenize: bool = serializer.validated_data.get('tokenize', False)
+
+        if separator is None:
+            separator = '\n\n'
+        else:
+            # Unescape (experimental decode feature)
+            sep_bytes: bytes = codecs.escape_decode(separator)[0]
+            separator = sep_bytes.decode()
+
+        content: 'list[list[str]]'
+        content = utils.parse_file(textfile, separator, max_lines, max_chars, 
+                                   tokenize, language.english_name)
+
+        filepath = pathlib.PurePath(textfile.name)
+
+        sf: models.SharedFolder = parent.make_shared_folder()
+        # Create multiple texts if necessary
+        if len(content) > 1:
+            for i, section in enumerate(content):
+                models.Text.objects.create(
+                    shared_folder = sf,
+                    #textfile = base_files.ContentFile('\n\n'.join(section)),
+                    textfile = utils.make_file(section, f'{filepath.stem}_{i+1:04d}'),
+                    title = f'{title}_{i+1:04d}',
+                    language = language,
+                )
+        else:
+            models.Text.objects.create(
+                shared_folder = sf,
+                #textfile = base_files.ContentFile('\n\n'.join(content[0])),
+                textfile = utils.make_file(content[0], filepath.stem),
+                title = f'{title}',
+                language = language,
+            )
