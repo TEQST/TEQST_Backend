@@ -594,7 +594,7 @@ class PubTextUploadView(generics.CreateAPIView):
 
     class InputSerializer(rf_serializers.Serializer):
         parent = serializers.SharedFolderPKField()
-        textfile = rf_serializers.FileField(write_only=True)
+        textfile = rf_serializers.ListField(child=rf_serializers.FileField(), write_only=True)
         title = rf_serializers.CharField()
         language = rf_serializers.PrimaryKeyRelatedField(
             queryset=user_models.Language.objects.all())
@@ -627,10 +627,10 @@ class PubTextUploadView(generics.CreateAPIView):
             separator = sep_bytes.decode()
 
         content: 'list[list[str]]'
-        content = utils.parse_file(textfile, separator, max_lines, max_chars, 
-                                   tokenize, language.english_name)
-
-        filepath = pathlib.PurePath(textfile.name)
+        content = []
+        for file in textfile:
+            content += utils.parse_file(file, separator, max_lines, max_chars, 
+                                    tokenize, language.english_name)
 
         sf: models.SharedFolder = parent.make_shared_folder()
         # Create multiple texts if necessary
@@ -639,7 +639,7 @@ class PubTextUploadView(generics.CreateAPIView):
                 models.Text.objects.create(
                     shared_folder = sf,
                     #textfile = base_files.ContentFile('\n\n'.join(section)),
-                    textfile = utils.make_file(section, f'{filepath.stem}_{i+1:04d}'),
+                    textfile = utils.make_file(section, f'{title}_{i+1:04d}'),
                     title = f'{title}_{i+1:04d}',
                     language = language,
                 )
@@ -647,7 +647,7 @@ class PubTextUploadView(generics.CreateAPIView):
             models.Text.objects.create(
                 shared_folder = sf,
                 #textfile = base_files.ContentFile('\n\n'.join(content[0])),
-                textfile = utils.make_file(content[0], filepath.stem),
+                textfile = utils.make_file(content[0], title),
                 title = f'{title}',
                 language = language,
             )
