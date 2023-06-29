@@ -589,7 +589,9 @@ class PubFolderStatsView(generics.RetrieveAPIView):
         return resp
 
 
-
+FILENAMES = 'filenames'
+CONCAT = 'concat'
+NUMBERING = 'numbering'
 class PubTextUploadView(generics.CreateAPIView):
 
     class InputSerializer(rf_serializers.Serializer):
@@ -603,6 +605,17 @@ class PubTextUploadView(generics.CreateAPIView):
         max_lines = rf_serializers.IntegerField(required=False)
         separator = rf_serializers.CharField(required=False, trim_whitespace=False)
         tokenize = rf_serializers.BooleanField(default=False)
+
+        naming = rf_serializers.ChoiceField(
+            choices=[FILENAMES, CONCAT, NUMBERING],
+            default=CONCAT,
+        )
+
+        def validate(self, data: dict):
+            if data.get('tokenize', False) and data.get('separator', None) is not None:
+                raise rf_serializers.ValidationError(
+                    "Cannot specify both 'tokenize' and 'separator'")
+            return data
 
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
     serializer_class = InputSerializer
@@ -619,6 +632,8 @@ class PubTextUploadView(generics.CreateAPIView):
         separator: str = serializer.validated_data.get('separator', None)
         tokenize: bool = serializer.validated_data.get('tokenize', False)
 
+        naming: str = serializer.validated_data['naming']
+
         if separator is None:
             separator = '\n\n'
         else:
@@ -626,28 +641,33 @@ class PubTextUploadView(generics.CreateAPIView):
             sep_bytes: bytes = codecs.escape_decode(separator)[0]
             separator = sep_bytes.decode()
 
-        content: 'list[list[str]]'
+        content: 'list[tuple[str, str]]'
         content = []
-        for file in textfile:
-            content += utils.parse_file(file, separator, max_lines, max_chars, 
+        count = 0
+        for fc, file in enumerate(textfile):
+            loc_content = utils.parse_file(file, separator, max_lines, max_chars, 
                                     tokenize, language.english_name)
+            for i, text in enumerate(loc_content):
+                if naming == FILENAMES:
+                    #TODO maybe 1) combine with title 2) strip extension
+                    name = file.name
+                if naming == CONCAT:
+                    name = f'{title}_{count+1:04d}'
+                if naming == NUMBERING:
+                    if len(loc_content) > 1:
+                        name = f'{title}_{fc+1:04d}_{i+1:04d}'
+                    else:
+                        name = f'{title}_{fc+1:04d}'
+                content.append( (name, text) )
+                count += 1
 
         sf: models.SharedFolder = parent.make_shared_folder()
         # Create multiple texts if necessary
-        if len(content) > 1:
-            for i, section in enumerate(content):
-                models.Text.objects.create(
-                    shared_folder = sf,
-                    #textfile = base_files.ContentFile('\n\n'.join(section)),
-                    textfile = utils.make_file(section, f'{title}_{i+1:04d}'),
-                    title = f'{title}_{i+1:04d}',
-                    language = language,
-                )
-        else:
+        for name, section in content:
             models.Text.objects.create(
                 shared_folder = sf,
-                #textfile = base_files.ContentFile('\n\n'.join(content[0])),
-                textfile = utils.make_file(content[0], title),
-                title = f'{title}',
+                #textfile = base_files.ContentFile('\n\n'.join(section)),
+                textfile = utils.make_file(section, name),
+                title = name,
                 language = language,
             )
