@@ -654,10 +654,7 @@ class PubTextUploadView(generics.CreateAPIView):
                 if naming == CONCAT:
                     name = f'{title}_{count+1:04d}'
                 if naming == NUMBERING:
-                    if len(loc_content) > 1:
-                        name = f'{title}_{fc+1:04d}_{i+1:04d}'
-                    else:
-                        name = f'{title}_{fc+1:04d}'
+                    name = f'{title}_{fc+1:02d}_{i+1:03d}'
                 content.append( (name, text) )
                 count += 1
 
