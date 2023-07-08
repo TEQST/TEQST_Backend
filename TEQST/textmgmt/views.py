@@ -6,7 +6,6 @@ from django.db.models import Q
 from django.core.files.storage import default_storage
 from . import models, folderstats, serializers, stats, utils, permissions as text_permissions
 from usermgmt import models as user_models, permissions, serializers as user_serializers
-from pathlib import Path
 import calendar, datetime, codecs, pathlib
 
 
@@ -649,8 +648,7 @@ class PubTextUploadView(generics.CreateAPIView):
                                     tokenize, language.english_name)
             for i, text in enumerate(loc_content):
                 if naming == FILENAMES:
-                    #TODO maybe 1) combine with title 2) strip extension
-                    name = file.name
+                    name = f'{title}_{pathlib.PurePath(file.name).stem}'
                 if naming == CONCAT:
                     name = f'{title}_{count+1:04d}'
                 if naming == NUMBERING:
