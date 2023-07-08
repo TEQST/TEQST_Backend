@@ -10,8 +10,7 @@ urlpatterns = [
     path('langs/', views.LanguageListView.as_view(), name="langs"),
     path('countries/', views.country_list, name="countries"),
     path('accents/', views.accent_list, name="accents"),
-    path('locale/<lang>', views.MenuLanguageView.as_view(), name="locale"),
     path('auth/register/', views.UserRegisterView.as_view(), name="register"),
     path('auth/login/', views.login, name="login"),
-    path('auth/logout/', views.logout, name="logout")
+    path('auth/logout/', views.logout, name="logout"),
 ]

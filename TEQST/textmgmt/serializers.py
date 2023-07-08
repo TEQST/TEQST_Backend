@@ -1,10 +1,9 @@
 from rest_framework import serializers
-from . import models, utils
+from . import models, utils, stats
 from usermgmt import models as user_models, serializers as user_serializers
 from recordingmgmt import models as rec_models
-from django.db.models import Q
 import django.core.files.uploadedfile as uploadedfile
-import chardet, math
+import chardet, math, uuid
 
 
 class FolderPKField(serializers.PrimaryKeyRelatedField):
@@ -19,14 +18,15 @@ class FolderFullSerializer(serializers.ModelSerializer):
     to be used by view: PubFolderListView
     for: Folder creation, top-level-folder list retrieval
     """
+    #TODO default=None ???
     parent = FolderPKField(allow_null=True)
     is_sharedfolder = serializers.BooleanField(source='is_shared_folder', read_only=True)
     # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
  
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder']
-        read_only_fields = ['owner']
+        fields = ['id', 'name', 'owner', 'parent', 'is_sharedfolder', 'root']
+        read_only_fields = ['owner', 'root']
     
     def validate_name(self, value):
         """
@@ -44,6 +44,8 @@ class FolderFullSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('A folder with the given name in the given place already exists')
         return super().validate(data)
 
+
+
 class FolderBasicSerializer(serializers.ModelSerializer):
     """
     to be used by: FolderDetailedSerializer
@@ -53,8 +55,10 @@ class FolderBasicSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'is_sharedfolder']
+        fields = ['id', 'name', 'is_sharedfolder', 'root']
         read_only_fields = ['name']
+
+
 
 class FolderDetailedSerializer(serializers.ModelSerializer):
     """
@@ -68,8 +72,9 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = models.Folder
-        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
+        fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder', 'root']
         read_only_fields = fields
+
 
 
 class SharedFolderPKField(serializers.PrimaryKeyRelatedField):
@@ -83,6 +88,7 @@ class TextFullSerializer(serializers.ModelSerializer):
     """
     to be used by view: PubTextListView, PubTextDetailedView, SpkTextDetailedView
     for: creation of a text, retrieval of a text
+    Creating texts through this serializer is deprecated
     """
     content = serializers.ListField(source='get_content', child=serializers.CharField(), read_only=True)
     shared_folder = SharedFolderPKField()
@@ -105,6 +111,7 @@ class TextFullSerializer(serializers.ModelSerializer):
 #            raise serializers.ValidationError("Text title can't contain a space character.")
 #        return value
     
+    # deprecated
     def check_max_lines(self, max_lines: int, text_len: int):
         """
         This is very similar to the standard validate_<field_name> methods, but is called from the split_text method.
@@ -114,10 +121,11 @@ class TextFullSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("max_lines cannot be less than 10")
         if max_lines > 300:
             raise serializers.ValidationError("max_lines cannot be greater than 300")
-        if text_len / max_lines > 100:
-            raise serializers.ValidationError("Splitting a file into more than 100 partfiles is not permitted. Choose max_lines accordingly.")
+        #if text_len / max_lines > 100:
+        #    raise serializers.ValidationError("Splitting a file into more than 100 partfiles is not permitted. Choose max_lines accordingly.")
 
     
+    # deprecated
     def split_text(self, textfile: uploadedfile.InMemoryUploadedFile, max_lines):
         """
         Splits the textfile into smaller files with at most max_lines sentences. 
@@ -156,11 +164,12 @@ class TextFullSerializer(serializers.ModelSerializer):
             content = ''
             for sentence in filesentences:
                 content += sentence + '\n\n'
-            new_filename = f'{filename[:-4]}_{i + 1}{filename[-4:]}'
+            new_filename = f'{filename[:-4]}_{i+1:04d}{filename[-4:]}'
             textfiles.append(uploadedfile.SimpleUploadedFile(new_filename, content.encode('utf-8-sig')))
 
         return textfiles
     
+    # deprecated
     def create(self, validated_data):
         max_lines = validated_data.pop('max_lines', None)
         sf = validated_data['shared_folder']
@@ -177,7 +186,7 @@ class TextFullSerializer(serializers.ModelSerializer):
             for i in range(len(textfiles)):
                 data = validated_data.copy()
                 data['textfile'] = textfiles[i]
-                data['title'] = f'{validated_data["title"]}_{i + 1}'
+                data['title'] = f'{validated_data["title"]}_{i+1:04d}'
                 return_obj = models.Text.objects.create(**data)
             # some object has to be returned, so it has been decided that the last partfile will be returned
             return return_obj
@@ -233,34 +242,7 @@ class TextStatsSerializer(serializers.ModelSerializer):
         read_only_fields = fields
     
     def get_speaker_stats(self, obj):
-        """
-        example return (multiple speakers are of course possible):
-        [
-            {
-                'name': 'John',
-                'finished': 5,
-                'textrecording_id': 32,  # this key is only there if a textrecording exists
-                'rec_time_without_rep': 3.072,  # same
-                'rec_time_with_rep': 4.532  # same
-            },
-        ]
-        """
-        text = obj
-        stats = []
-        #remove ordering from q1 and q2, so the union operation works
-        q1 = text.shared_folder.speaker.all().order_by()
-        q2 = user_models.CustomUser.objects.filter(textrecording__text=text).order_by()
-        #the union queryset has to be explicitly reordered
-        for speaker in q1.union(q2).order_by('username'):
-            spk = {'name': speaker.username, 'finished': 0}
-            if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
-                textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
-                spk['textrecording_id'] = textrecording.pk
-                spk['finished'] = textrecording.active_sentence() - 1
-                spk['rec_time_without_rep'] = textrecording.rec_time_without_rep
-                spk['rec_time_with_rep'] = textrecording.rec_time_with_rep
-            stats.append(spk)
-        return stats
+        return stats.text_stats(obj)
 
 
 class SpkSharedFolderTextSerializer(serializers.ModelSerializer):
@@ -268,7 +250,7 @@ class SpkSharedFolderTextSerializer(serializers.ModelSerializer):
     to be used by view: SpkTextListView
     for: retrieval of a sharedfolder with the texts it contains
     """
-    texts = serializers.SerializerMethodField()
+    texts = TextProgressSerializer(read_only=True, many=True, source='text')
     path = serializers.CharField(read_only=True, source='get_readable_path')
     timestats = serializers.SerializerMethodField()
     
@@ -287,11 +269,6 @@ class SpkSharedFolderTextSerializer(serializers.ModelSerializer):
                 timestats['rec_time_without_rep'] += textrecording.rec_time_without_rep
                 timestats['rec_time_with_rep'] += textrecording.rec_time_with_rep
         return timestats
-
-    def get_texts(self, obj):
-        user = self.context['request'].user
-        ser = TextProgressSerializer(obj.text.filter( Q(language__in=user.languages.all()) | Q(language=None) ).distinct(), many=True, context=self.context)
-        return ser.data
 
 
 class SharedFolderSpeakerSerializer(serializers.ModelSerializer):
@@ -337,56 +314,7 @@ class SharedFolderStatsSerializer(serializers.ModelSerializer):
         read_only_fields = fields
     
     def get_speaker_stats(self, obj):
-        """
-        example return (multiple speakers are of course possible):
-        [
-            {
-                'name': 'John',
-                'rec_time_without_rep': 10.452,
-                'rec_time_with_rep': 12.001
-                'texts':[
-                    {
-                        'title': 't1',
-                        'finished': 5,
-                        'total': 9, 
-                        'rec_time_without_rep': 10.452,
-                        'rec_time_with_rep': 12.001
-                    },
-                    {
-                        'title': 't2',
-                        'finished': 0,
-                        'total': 4
-                    }
-                ]
-            }
-        ]
-        """
-        sf = obj
-        stats = []
-
-        texts = []
-        for t in sf.text.all():
-            texts.append((t, t.title, t.sentence_count()))
-
-        #remove ordering from q1 and q2, so the union operation works
-        q1 = sf.speaker.all().order_by()
-        q2 = user_models.CustomUser.objects.filter(textrecording__text__shared_folder=sf).order_by()
-        #the union queryset has to be explicitly reordered
-        for speaker in q1.union(q2).order_by('username'):
-            spk = {'name': speaker.username, 'rec_time_without_rep': 0, 'rec_time_with_rep': 0, 'texts': []}
-            #for text in models.Text.objects.filter(shared_folder=sf.folder_ptr):
-            for text, title, sentence_count in texts:
-                txt = {'title': title, 'finished': 0, 'total': sentence_count}
-                if rec_models.TextRecording.objects.filter(speaker=speaker, text=text).exists():
-                    textrecording = rec_models.TextRecording.objects.get(speaker=speaker, text=text)
-                    txt['finished'] = textrecording.active_sentence() - 1
-                    txt['rec_time_without_rep'] = textrecording.rec_time_without_rep
-                    txt['rec_time_with_rep'] = textrecording.rec_time_with_rep
-                    spk['rec_time_without_rep'] += textrecording.rec_time_without_rep
-                    spk['rec_time_with_rep'] += textrecording.rec_time_with_rep
-                spk['texts'].append(txt)
-            stats.append(spk)
-        return stats
+        return stats.sharedfolder_stats(obj)
 
 
 class SpkPublisherSerializer(serializers.ModelSerializer):
@@ -405,7 +333,7 @@ class SpkPublisherSerializer(serializers.ModelSerializer):
         pub = obj
         spk = self.context['request'].user
         info = []
-        for sf in models.SharedFolder.objects.filter(Q(text__language__in=spk.languages.all()) | Q(text__language=None), ~Q(text=None), owner=pub, speaker=spk).distinct():
+        for sf in models.SharedFolder.objects.filter(owner=pub, speaker=spk):
             info.append({"id": sf.pk, "name": sf.name, "path": sf.get_readable_path()})
         return info
 

@@ -1,15 +1,19 @@
 from django.db import models, transaction
 from django.core.files import base
 from django.core.files.storage import default_storage
+from django.conf import settings
 from django.contrib import auth
+from django import urls
 from . import utils
 from usermgmt import models as user_models
-import zipfile, chardet, re
+import zipfile, chardet, re, uuid
 from pathlib import Path
 #from google.cloud.storage import Blob
 
 
+
 class Folder(models.Model):
+    root_id = models.UUIDField(null=True, editable=False)
     name = models.CharField(max_length=250)
     owner = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE, related_name='folder')  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
@@ -23,6 +27,16 @@ class Folder(models.Model):
             # This constraint only applies to root folders (i.e. folders with parent == None)
             models.UniqueConstraint(fields=['name', 'owner'], condition=models.Q(parent=None), name='unique_folder'),
         ]
+
+    @property
+    def root(self):
+        if self.root_id is None:
+            new_uuid = uuid.uuid4()
+            while Folder.objects.filter(root_id=new_uuid).exists():
+                new_uuid = uuid.uuid4()
+            self.root_id = new_uuid
+            self.save(update_fields=['root_id'])
+        return self.root_id
 
     # this method is useful for the shell and for the admin view
     def __str__(self):
@@ -40,12 +54,34 @@ class Folder(models.Model):
     def is_owner(self, user):
         return self.owner == user
 
+    #Used for permission checks
+    def is_listener(self, user):
+        if self.lstn_permissions.filter(listeners=user).exists():
+            return True
+        if self.parent is None:
+            return False
+        return self.parent.is_listener(user)
+
+    def is_root(self, root):
+        return self.root == root
+
+    def is_below_root(self, root):
+        if self.parent is None:
+            return False
+        if self.parent.is_root(root):
+            return True
+        return self.parent.is_below_root(root)
+
     def get_parent_name(self):
         if self.parent == None:
             return None
         return self.parent.name
 
+    # Deprecated for below
     def is_shared_folder(self):
+        return self.is_sharedfolder()
+
+    def is_sharedfolder(self):
         """
         This method returns True if called on a Folder instance for which a corresponding SharedFolder instance exists.
         """
@@ -53,6 +89,9 @@ class Folder(models.Model):
     
     def get_path(self):
         return utils.folder_relative_path(self)
+
+    def get_readable_path(self):
+        return self.get_path()
 
     def make_shared_folder(self):
         if self.is_shared_folder():
@@ -85,7 +124,6 @@ class SharedFolder(Folder):
     speaker = models.ManyToManyField(auth.get_user_model(), related_name='sharedfolder', blank=True)
     listener = models.ManyToManyField(auth.get_user_model(), related_name='listenfolder', blank=True)
     public = models.BooleanField(default=False)
-
     stmfile = models.FileField(upload_to=stm_upload_path, blank=True)
     logfile = models.FileField(upload_to=log_upload_path, blank=True)
 
@@ -98,10 +136,7 @@ class SharedFolder(Folder):
     #Used for permission checks
     def is_speaker(self, user):
         return self.public or self.speaker.filter(id=user.id).exists()
-
-    #Used for permission checks
-    def is_listener(self, user):
-        return self.listener.filter(id=user.id).exists()
+        #return True
     
     def make_shared_folder(self):
         return self
@@ -197,7 +232,7 @@ def upload_path(instance, filename):
     Generates the upload path for a text
     """
     sf_path = Path(instance.shared_folder.sharedfolder.get_path())
-    path = sf_path/filename
+    path = sf_path/'Texts'/filename
     return path
 
 
@@ -245,6 +280,9 @@ class Text(models.Model):
     #Used for permission checks
     def is_listener(self, user):
         return self.shared_folder.is_listener(user)
+
+    def is_below_root(self, root):
+        return self.shared_folder.is_below_root(root) or self.shared_folder.is_root(root)
     
     def save(self, *args, **kwargs):
         #Now expects a proper sharedfolder instance
@@ -276,34 +314,28 @@ class Text(models.Model):
     def create_sentences(self):
         with transaction.atomic():
             if not self.sentences.exists():
-                #f = default_storage.open(self.textfile.path, 'r', encoding='utf-8-sig')
-                #f = default_storage.open(self.textfile.name, 'rb')
-                f = self.textfile.open('rb')
-                #file_content = f.readlines()
+                with self.textfile.open('rb') as f:
 
-                # it is not enough to detect the encoding from the first line
-                # it hast to be the entire file content
-                encoding = chardet.detect(f.read())['encoding']
-                f.seek(0)
-                file_content = f.readlines()
+                    # it is not enough to detect the encoding from the first line
+                    # it hast to be the entire file content
+                    encoding = chardet.detect(f.read())['encoding']
+                    f.seek(0)
+                    file_content = f.readlines()
 
-                sentence = ""
-                content = []
-                for line in file_content:
-                    #line = line.decode('utf-8')
-                    line = line.decode(encoding).strip()
-                    #line = line.decode('unicode_escape')
-                    if line == "":
-                        if sentence != "":
-                            content.append(sentence)
-                            sentence = ""
-                    else:
-                        if sentence != "":
-                            sentence += ' '
-                        sentence += line
-                if sentence != "":
-                    content.append(sentence)
-                f.close()
+                    sentence = ""
+                    content = []
+                    for l in file_content:
+                        line = l.decode(encoding).strip()
+                        if line == "":
+                            if sentence != "":
+                                content.append(sentence)
+                                sentence = ""
+                        else:
+                            if sentence != "":
+                                sentence += ' '
+                            sentence += line
+                    if sentence != "":
+                        content.append(sentence)
 
                 for i in range(len(content)):
                     self.sentences.create(content=content[i], index=i + 1, word_count=content[i].strip().count(' ') + 1)
@@ -318,14 +350,13 @@ class Text(models.Model):
         return self.sentences.count()
 
     def word_count(self, sentence_limit=None):
-        count = 0
         if sentence_limit == None:
-            for sentence in self.sentences.all():
-                count += sentence.word_count
+            ret = self.sentences.all().aggregate(word_count=models.Sum('word_count'))
         else:
-            for sentence in self.sentences.filter(index__lte=sentence_limit):
-                count += sentence.word_count
-        return count
+            ret = self.sentences.filter(index__lte=sentence_limit).aggregate(word_count=models.Sum('word_count'))
+        if ret['word_count'] is None:
+            return 0
+        return ret['word_count']
     
     def get_speakers(self):
         """
@@ -358,3 +389,96 @@ class Sentence(models.Model):
 
     def __str__(self):
         return self.text.title + " (" + str(self.index) + "): " + self.content
+
+
+
+class ListField(models.CharField):
+    """
+    Expects a list of Strings (not containing `separator`), which are stored as a String, joined by `separator`
+    """
+
+    def __init__(self, separator, *args, **kwargs):
+        self.separator = separator
+        super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        kwargs['separator'] = self.separator
+        return name, path, args, kwargs
+
+    def from_db_value(self, value, expression, connection):
+        if value == '':
+            return []
+        return value.split(self.separator)
+
+    def get_prep_value(self, value):
+        return self.separator.join(value)
+
+    def to_python(self, value):
+        if isinstance(value, list):
+            return value
+
+        if value is None:
+            return value
+
+        if value == '':
+            return []
+
+        return value.split(self.separator)
+
+    def value_to_string(self, obj):
+        value = self.value_from_object(obj)
+        return self.separator.join(value)
+
+
+
+class ListenerPermission(models.Model):
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE, related_name='lstn_permissions')
+    listeners = models.ManyToManyField(auth.get_user_model(), blank=True, related_name='lstn_permissions')
+    speakers = models.ManyToManyField(auth.get_user_model(), blank=True)
+    accents = ListField(separator=',', max_length=50)
+    all_speakers = models.BooleanField(default=False)
+
+    @property
+    def user_list(self):
+        if self.all_speakers:
+            return user_models.CustomUser.objects.all()
+        return user_models.CustomUser.objects.filter(accent__in=self.accents).order_by().union(self.speakers.all().order_by()).order_by('username')
+
+    def contains_speaker(self, speaker):
+        if self.all_speakers:
+            return True
+        return speaker.accent in self.accents or self.speakers.filter(id=speaker.id).exists()
+
+    # Used for permission checks
+    def is_owner(self, user):
+        return self.folder.is_owner(user)
+
+
+
+class RecentProject(models.Model):
+    speaker = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE)
+    folder = models.ForeignKey(Folder, on_delete=models.CASCADE)
+    last_access = models.DateTimeField(auto_now=True)
+
+
+    class Meta:
+        ordering = ['speaker', 'folder']
+        constraints = [
+            models.UniqueConstraint(fields=['speaker', 'folder'], name='unique_project_user'),
+        ]
+
+
+    @classmethod
+    def update_folder_for_speaker(cls, speaker, folder):
+        obj, _ = cls.objects.get_or_create(speaker=speaker, folder=folder)
+        obj.save() # Ensures update of last_access
+
+
+    @classmethod
+    def add_default_folders_for_speaker(cls, speaker):
+        if not settings.DEFAULT_FOLDER:
+            return
+        for f_uuid in settings.DEFAULT_FOLDER:
+            folder = Folder.objects.get(root_id=f_uuid)
+            cls.update_folder_for_speaker(speaker, folder)

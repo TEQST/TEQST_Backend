@@ -1,10 +1,13 @@
-from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions
+from rest_framework import generics, response, status, views, exceptions, decorators, permissions as rf_permissions, \
+    serializers as rf_serializers
 from django import http
+from django.core.files import base as base_files, uploadedfile
 from django.db.models import Q
 from django.core.files.storage import default_storage
-from . import models, serializers
-from usermgmt import models as user_models, permissions
+from . import models, folderstats, serializers, stats, utils, permissions as text_permissions
+from usermgmt import models as user_models, permissions, serializers as user_serializers
 from pathlib import Path
+import calendar, datetime, codecs, pathlib
 
 
 @decorators.api_view(['POST'])
@@ -85,6 +88,7 @@ class PubTextListView(generics.ListCreateAPIView):
     """
     url: api/pub/texts/?sharedfolder=123
     use: in the publish tab: retrieve a list of texts contained in a sharedfolder, text upload
+    Creating texts through this view is deprecated
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextBasicSerializer
@@ -114,7 +118,7 @@ class SpkTextListView(generics.RetrieveAPIView):
     """
     queryset = models.SharedFolder.objects.all()
     serializer_class = serializers.SpkSharedFolderTextSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | text_permissions.BelowRoot | text_permissions.IsRoot]
 
 
 class PubTextDetailedView(generics.RetrieveDestroyAPIView):
@@ -140,7 +144,7 @@ class SpkTextDetailedView(generics.RetrieveAPIView):
     """
     queryset = models.Text.objects.all()
     serializer_class = serializers.TextFullSerializer
-    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker]
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsSpeaker | text_permissions.BelowRoot]
 
 
 class SpkPublisherListView(generics.ListAPIView):
@@ -158,8 +162,8 @@ class SpkPublisherListView(generics.ListAPIView):
         # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
         # current code
         user = self.request.user
-        pub_pks = user.sharedfolder.filter( Q(text__language__in=user.languages.all()) | Q(text__language=None), ~Q(text=None) ).values_list('owner', flat=True)
-        return user_models.CustomUser.objects.filter(pk__in = pub_pks).distinct()
+        pub_pks = user.sharedfolder.all().values_list('owner', flat=True)
+        return user_models.CustomUser.objects.filter(pk__in = pub_pks)
 
 
 class SpkPublisherDetailedView(generics.RetrieveAPIView):
@@ -237,46 +241,215 @@ class SpkPublicFoldersView(generics.ListAPIView):
     queryset = models.SharedFolder.objects.filter(public=True)
     serializer_class = serializers.PublicFolderSerializer
 
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-        return qs.filter( Q(text__language__in=user.languages.all()) | Q(text__language=None), ~Q(text=None) ).distinct()
 
-
-
-class LstnPublisherListView(generics.ListAPIView):
+class SpkFolderDetailView(generics.RetrieveAPIView):
     """
-    url: api/lstn/publishers/
-    use: get list of publishers who own sharedfolders shared with request.user
+    url: api/spk/folders/:id/
+    use: retrieve a folder with its subfolders as a speaker
     """
-    queryset = user_models.CustomUser.objects.all()
-    serializer_class = serializers.LstnPublisherSerializer
 
-    def get_queryset(self):
-        # does not check for is_publisher. This is not necessary
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        
+        class NestedSerializer(rf_serializers.ModelSerializer):
+            class Meta:
+                model = models.Folder
+                fields = ['id', 'name', 'is_sharedfolder']
 
-        # possible alternative solution
-        # return CustomUser.objects.filter(folder__sharedfolder__speakers=self.request.user)
-        # current code
-        user = self.request.user
-        pub_pks = user.listenfolder.all().values_list('owner', flat=True)
-        return user_models.CustomUser.objects.filter(pk__in = pub_pks)
+        subfolder = NestedSerializer(many=True)
+        path = rf_serializers.CharField(read_only=True, source='get_readable_path')
+        class Meta:
+            model = models.Folder
+            fields = ['id', 'name', 'owner', 'path', 'parent', 'subfolder', 'is_sharedfolder']
 
-
-class LstnPublisherDetailedView(generics.RetrieveAPIView):
-    """
-    url: api/lstn/publishers/:id/
-    use: in speak tab: retrieve a publisher with their folders which they shared with request.user
-    """
-    queryset = user_models.CustomUser.objects.all()
-    serializer_class = serializers.LstnPublisherSerializer
+    queryset = models.Folder.objects.all()
+    serializer_class = OutputSerializer
+    permission_classes = [rf_permissions.IsAuthenticated, text_permissions.IsRoot | text_permissions.BelowRoot]
 
     def get_object(self):
-        pub = super().get_object()
-        user = self.request.user
-        if user.listenfolder.filter(owner=pub).exists():
-            return pub
-        raise exceptions.PermissionDenied('This publisher has not shared any folders with you as listener.')
+        obj = super().get_object()
+
+        # Don't show parent of root folder; Update recent projects entry
+        if text_permissions.IsRoot().has_object_permission(self.request, self, obj):
+            obj.parent = None
+            models.RecentProject.update_folder_for_speaker(self.request.user, obj)
+        
+        return obj
+
+
+
+class SpkRecentProjectView(generics.ListAPIView):
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+
+        class NestedSerializer(rf_serializers.ModelSerializer):
+            path = rf_serializers.CharField(read_only=True, source='get_readable_path')
+            class Meta:
+                model = models.Folder
+                fields = ['id', 'name', 'owner', 'path', 'parent', 'is_sharedfolder', 'root']
+
+        folder = NestedSerializer()
+
+        class Meta:
+            model = models.RecentProject
+            fields = ['folder', 'last_access']
+        
+
+    queryset = models.RecentProject.objects.none()
+    serializer_class = OutputSerializer
+
+    def get_queryset(self):
+        models.RecentProject.add_default_folders_for_speaker(self.request.user)
+        return self.request.user.recentproject_set.all().order_by('-last_access')
+        
+
+class PubListenerPermissionView(generics.ListCreateAPIView):
+    """
+    url: api/pub/listeners/?folder=:id
+    use: as publisher share a folder+speakers to one or many listeners or view all permissions for a folder
+    """
+
+    class FilterSerializer(rf_serializers.Serializer):
+        folder = rf_serializers.PrimaryKeyRelatedField(queryset=models.Folder.objects.all())
+
+    class InputSerializer(rf_serializers.ModelSerializer):
+        accents = rf_serializers.ListField(child=rf_serializers.CharField())
+
+        class Meta:
+            model = models.ListenerPermission
+            fields = ['folder', 'listeners', 'speakers', 'accents', 'all_speakers']
+
+        def validate_folder(self, value):
+            if self.context['request'].user != value.owner:
+                raise exceptions.PermissionDenied("You do not own this folder")
+            return value
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        accents = rf_serializers.ListField(child=rf_serializers.CharField())
+        listeners = user_serializers.UserBasicSerializer(many=True, read_only=True)
+        speakers = user_serializers.UserBasicSerializer(many=True, read_only=True)
+
+        class Meta:
+            model = models.ListenerPermission
+            fields = ['id', 'listeners', 'speakers', 'accents', 'all_speakers']
+
+
+    queryset = models.ListenerPermission.objects.all()
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        filter_ser = self.FilterSerializer(data=self.request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        self.check_object_permissions(self.request, filter_ser.validated_data['folder'])
+        return qs.filter(folder=filter_ser.validated_data['folder'])
+
+    def get_serializer_class(self):
+        #TODO extract into mixin
+        if self.request.method == 'GET':
+            return self.OutputSerializer
+        else:
+            return self.InputSerializer
+
+
+class PubListenerPermissionChangeView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    url: api/pub/listeners/:id/
+    use: as a publisher, change the listeners+speakers for a given permission view
+    """
+
+    class InputSerializer(rf_serializers.ModelSerializer):
+        accents = rf_serializers.ListField(child=rf_serializers.CharField())
+
+        class Meta:
+            model = models.ListenerPermission
+            fields = ['listeners', 'speakers', 'accents']
+
+        def validate_folder(self, value):
+            if self.context['request'].user != value.owner:
+                raise exceptions.PermissionDenied("You do not own this folder")
+            return value
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        accents = rf_serializers.ListField(child=rf_serializers.CharField())
+        listeners = user_serializers.UserBasicSerializer(many=True, read_only=True)
+        speakers = user_serializers.UserBasicSerializer(many=True, read_only=True)
+
+        class Meta:
+            model = models.ListenerPermission
+            fields = ['id', 'listeners', 'speakers', 'accents']
+
+
+    queryset = models.ListenerPermission.objects.all()
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
+
+    def get_serializer_class(self):
+        #TODO extract into mixin
+        if self.request.method == 'GET':
+            return self.OutputSerializer
+        else:
+            return self.InputSerializer
+
+
+class LstnFolderListView(generics.ListAPIView):
+    """
+    url:
+    use: as listener, retrieve a list of folders to which you have access
+    """
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        is_sharedfolder = rf_serializers.BooleanField(source='is_shared_folder')
+        # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
+        
+        class Meta:
+            model = models.Folder
+            #TODO include root?
+            fields = ['id', 'name', 'is_sharedfolder']
+
+    queryset = models.Folder.objects.all()
+    serializer_class = OutputSerializer
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(lstn_permissions__listeners=self.request.user)
+        
+
+class LstnFolderDetailView(generics.RetrieveAPIView):
+    """
+    url: 
+    use: as listener, retrieve a folder to which you have access, including its subfolders
+    """
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+
+        class NestedSerializer(rf_serializers.ModelSerializer):
+            is_sharedfolder = rf_serializers.BooleanField(source='is_shared_folder', read_only=True)
+            # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
+            
+            class Meta:
+                model = models.Folder
+                #TODO include root?
+                fields = ['id', 'name', 'is_sharedfolder']
+                read_only_fields = ['name']
+
+        parent = rf_serializers.PrimaryKeyRelatedField(allow_null=True, read_only=True)
+        is_sharedfolder = rf_serializers.BooleanField(source='is_shared_folder')
+        subfolder = NestedSerializer(many=True)
+        # is_sharedfolder in the sense that this folder has a corresponding Sharedfolder object with the same pk as this Folder
+        
+        class Meta:
+            model = models.Folder
+            fields = ['id', 'name', 'owner', 'parent', 'subfolder', 'is_sharedfolder']
+
+    queryset = models.Folder.objects.all()
+    serializer_class = OutputSerializer
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
+
+    def get_object(self):
+        instance = super().get_object()
+        if not instance.parent is None:
+            if not instance.parent.is_listener(self.request.user):
+                instance.parent = None
+        return instance
 
 
 class LstnTextListView(generics.RetrieveAPIView):
@@ -304,8 +477,23 @@ class LstnSharedFolderStatsView(generics.RetrieveAPIView):
     url: api/lstn/sharedfolders/:id/stats/
     use: get statistics on how far the speakers of a publisher's shared folder are
     """
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        speakers = rf_serializers.SerializerMethodField(read_only=True, method_name='get_speaker_stats')
+
+        class Meta:
+            model = models.SharedFolder
+            fields = ['id', 'name', 'speakers']
+            read_only_fields = fields
+        
+        def get_speaker_stats(self, obj):
+            user = self.context['request'].user
+            perm_qs = text_permissions.get_listener_permissions(obj, user)
+            user_list = text_permissions.get_combined_speakers(perm_qs)
+            return stats.sharedfolder_stats(obj, user_filter=user_list)
+
     queryset = models.SharedFolder.objects.all()
-    serializer_class = serializers.SharedFolderStatsSerializer
+    serializer_class = OutputSerializer
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
 
 
@@ -314,6 +502,152 @@ class LstnTextStatsView(generics.RetrieveAPIView):
     url: api/lstn/texts/:id/stats/
     use: get statistics on how far the speakers are in a given text
     """
+
+    class OutputSerializer(rf_serializers.ModelSerializer):
+        speakers = rf_serializers.SerializerMethodField(read_only=True, method_name='get_speaker_stats')
+        total = rf_serializers.IntegerField(read_only=True, source='sentence_count')
+
+        class Meta:
+            model = models.Text
+            fields = ['id', 'title', 'total', 'speakers']
+            read_only_fields = fields
+        
+        def get_speaker_stats(self, obj):
+            user = self.context['request'].user
+            perm_qs = text_permissions.get_listener_permissions(obj.shared_folder, user)
+            user_list = text_permissions.get_combined_speakers(perm_qs)
+            return stats.text_stats(obj, user_filter=user_list)
+
     queryset = models.Text.objects.all()
-    serializer_class = serializers.TextStatsSerializer
+    serializer_class = OutputSerializer
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsListener]
+
+
+
+class PubFolderStatsView(generics.RetrieveAPIView):
+    """
+    url: /api/pub/:id/stats/
+    params: ?month=<iso-8601> or ?start=<iso-8601>&end=<iso-8601>
+    use: get stats for folder as excel-sheet,
+        `month` only considers year and month
+        `start` & `end` consider year, month and day
+    """
+
+    class FilterSerializerBasic(rf_serializers.Serializer):
+        month = rf_serializers.IntegerField(min_value=1, max_value=12)
+        year = rf_serializers.IntegerField()
+
+    class FilterSerializerDetailed(rf_serializers.Serializer):
+        start = rf_serializers.DateField()
+        end = rf_serializers.DateField()
+
+    queryset = models.Folder.objects.all()
+    serializer_class = None
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher, permissions.IsOwner]
+
+    def parse_basic(self, request):
+        filter_ser = self.FilterSerializerBasic(data=request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        month = filter_ser.validated_data['month']
+        year = filter_ser.validated_data['year']
+        last_day = calendar.monthrange(year, month)[1]
+        start = datetime.date(year, month, 1)
+        end = datetime.date(year, month, last_day)
+        return start, end
+
+    def parse_detailed(self, request):
+        filter_ser = self.FilterSerializerDetailed(data=request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        start = filter_ser.validated_data['start']
+        end = filter_ser.validated_data['end']
+        return start, end
+
+    def get(self, request, *args, **kwargs):
+        instance: models.Folder = self.get_object()
+        
+        if 'month' in request.query_params.keys() and \
+            'year' in request.query_params.keys():
+            start, end = self.parse_basic(request)
+        elif 'end' in request.query_params.keys() and \
+            'start' in request.query_params.keys():
+            start, end = self.parse_detailed(request)
+        else:
+            raise rf_serializers.ValidationError(
+                "Query params have to either specify 'month&year' or 'start&end'"
+            )
+
+        fsc_class = folderstats.FolderStatMultiCollector
+        if not instance.subfolder.exists():
+            fsc_class = folderstats.FolderStatSingleCollector
+        fsc = fsc_class(root=instance, start=start, end=end)
+        filename = f"{fsc.root.name}_{fsc.start.strftime('%d-%m-%Y')}_{fsc.end.strftime('%d-%m-%Y')}"
+        resp = http.HttpResponse(headers={
+            "Content-Type": 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            "Content-Disposition": f'attachment; filename={filename}.xlsx'
+        })
+        fsc.agg_data.to_excel(resp, index=True)
+        return resp
+
+
+
+class PubTextUploadView(generics.CreateAPIView):
+
+    class InputSerializer(rf_serializers.Serializer):
+        parent = serializers.SharedFolderPKField()
+        textfile = rf_serializers.FileField(write_only=True)
+        title = rf_serializers.CharField()
+        language = rf_serializers.PrimaryKeyRelatedField(
+            queryset=user_models.Language.objects.all())
+        
+        max_chars = rf_serializers.IntegerField(required=False)
+        max_lines = rf_serializers.IntegerField(required=False)
+        separator = rf_serializers.CharField(required=False, trim_whitespace=False)
+        tokenize = rf_serializers.BooleanField(default=False)
+
+    permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
+    serializer_class = InputSerializer
+
+    def perform_create(self, serializer: InputSerializer):
+
+        parent: models.Folder = serializer.validated_data['parent']
+        textfile = serializer.validated_data['textfile']
+        title: str = serializer.validated_data['title']
+        language: user_models.Language = serializer.validated_data['language']
+
+        max_chars: int = serializer.validated_data.get('max_chars', None)
+        max_lines: int = serializer.validated_data.get('max_lines', None)
+        separator: str = serializer.validated_data.get('separator', None)
+        tokenize: bool = serializer.validated_data.get('tokenize', False)
+
+        if separator is None:
+            separator = '\n\n'
+        else:
+            # Unescape (experimental decode feature)
+            sep_bytes: bytes = codecs.escape_decode(separator)[0]
+            separator = sep_bytes.decode()
+
+        content: 'list[list[str]]'
+        content = utils.parse_file(textfile, separator, max_lines, max_chars, 
+                                   tokenize, language.english_name)
+
+        filepath = pathlib.PurePath(textfile.name)
+
+        sf: models.SharedFolder = parent.make_shared_folder()
+        # Create multiple texts if necessary
+        if len(content) > 1:
+            for i, section in enumerate(content):
+                models.Text.objects.create(
+                    shared_folder = sf,
+                    #textfile = base_files.ContentFile('\n\n'.join(section)),
+                    textfile = utils.make_file(section, f'{filepath.stem}_{i+1:04d}'),
+                    title = f'{title}_{i+1:04d}',
+                    language = language,
+                )
+        else:
+            models.Text.objects.create(
+                shared_folder = sf,
+                #textfile = base_files.ContentFile('\n\n'.join(content[0])),
+                textfile = utils.make_file(content[0], filepath.stem),
+                title = f'{title}',
+                language = language,
+            )
