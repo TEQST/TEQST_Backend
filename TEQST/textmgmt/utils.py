@@ -98,8 +98,7 @@ def split_str(str_, max_len=None):
         + split_str(''.join(strings[limit:]).strip(), max_len=max_len)
 
 
-def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250,
-               tknz=False, lang='english'):
+def parse_file(textfile, separator='\n\n', tknz=False, lang='english'):
 
     textfile.seek(0)
     filepath = pathlib.PurePath(textfile.name)
@@ -130,9 +129,14 @@ def parse_file(textfile, separator='\n\n', max_lines=None, max_chars=250,
     # replace it by a single \n (to not get in the way later).
     content = map(lambda x: re.sub('\n+', '\n', x), content)
 
+    return content
+
+
+def split_lines(lines, max_lines=None, max_chars=250):
+
     # Run char split before line split
     split_content = []
-    for line in list(content):
+    for line in list(lines):
         split_content += split_str(line, max_chars)
 
     if max_lines is None:

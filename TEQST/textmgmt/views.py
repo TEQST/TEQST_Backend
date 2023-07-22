@@ -641,28 +641,43 @@ class PubTextUploadView(generics.CreateAPIView):
             separator = sep_bytes.decode()
 
         content: 'list[tuple[str, str]]'
-        content = []
-        count = 0
-        for fc, file in enumerate(textfile):
-            loc_content = utils.parse_file(file, separator, max_lines, max_chars, 
-                                    tokenize, language.english_name)
-            for i, text in enumerate(loc_content):
-                if naming == FILENAMES:
-                    name = f'{title}_{pathlib.PurePath(file.name).stem}'
-                if naming == CONCAT:
-                    name = f'{title}_{count+1:04d}'
-                if naming == NUMBERING:
-                    name = f'{title}_{fc+1:02d}_{i+1:03d}'
-                content.append( (name, text) )
-                count += 1
+        content = []        
 
+        if naming == CONCAT:
+            pre_split = []
+            for file in textfile:
+                pre_split += utils.parse_file(file, separator, tokenize, language.english_name)
+            loc_content = utils.split_lines(pre_split, max_lines, max_chars)
+            for i, text in enumerate(loc_content):
+                name = title
+                if len(loc_content) > 1:
+                    name = f'{name}_{i+1:03d}'
+                content.append( (name, text) )
+        else:
+            for fc, file in enumerate(textfile):
+                pre_split = utils.parse_file(file, separator, tokenize, language.english_name)
+                loc_content = utils.split_lines(pre_split, max_lines, max_chars)
+                for i, text in enumerate(loc_content):
+                    if naming == FILENAMES:
+                        name = pathlib.PurePath(file.name).stem.replace('__', '_')
+                    if naming == NUMBERING:
+                        name = f'{title}_{fc+1:02d}'
+                    if len(loc_content) > 1:
+                        name = f'{name}_{i+1:03d}'
+                    content.append( (name, text) )
+        
         sf: models.SharedFolder = parent.make_shared_folder()
         # Create multiple texts if necessary
         for name, section in content:
+            new_name = name
+            count = 2
+            while models.Text.objects.filter(shared_folder=sf, title=new_name).exists():
+                new_name = f'{name}_{count:02d}'
+                count += 1
             models.Text.objects.create(
                 shared_folder = sf,
                 #textfile = base_files.ContentFile('\n\n'.join(section)),
                 textfile = utils.make_file(section, name),
-                title = name,
+                title = new_name,
                 language = language,
             )
