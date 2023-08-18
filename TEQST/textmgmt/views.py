@@ -6,7 +6,6 @@ from django.db.models import Q
 from django.core.files.storage import default_storage
 from . import models, folderstats, serializers, stats, utils, permissions as text_permissions
 from usermgmt import models as user_models, permissions, serializers as user_serializers
-from pathlib import Path
 import calendar, datetime, codecs, pathlib
 
 
@@ -589,12 +588,14 @@ class PubFolderStatsView(generics.RetrieveAPIView):
         return resp
 
 
-
+FILENAMES = 'filenames'
+CONCAT = 'concat'
+NUMBERING = 'numbering'
 class PubTextUploadView(generics.CreateAPIView):
 
     class InputSerializer(rf_serializers.Serializer):
         parent = serializers.SharedFolderPKField()
-        textfile = rf_serializers.FileField(write_only=True)
+        textfile = rf_serializers.ListField(child=rf_serializers.FileField(), write_only=True)
         title = rf_serializers.CharField()
         language = rf_serializers.PrimaryKeyRelatedField(
             queryset=user_models.Language.objects.all())
@@ -603,6 +604,17 @@ class PubTextUploadView(generics.CreateAPIView):
         max_lines = rf_serializers.IntegerField(required=False)
         separator = rf_serializers.CharField(required=False, trim_whitespace=False)
         tokenize = rf_serializers.BooleanField(default=False)
+
+        naming = rf_serializers.ChoiceField(
+            choices=[FILENAMES, CONCAT, NUMBERING],
+            default=CONCAT,
+        )
+
+        def validate(self, data: dict):
+            if data.get('tokenize', False) and data.get('separator', None) is not None:
+                raise rf_serializers.ValidationError(
+                    "Cannot specify both 'tokenize' and 'separator'")
+            return data
 
     permission_classes = [rf_permissions.IsAuthenticated, permissions.IsPublisher]
     serializer_class = InputSerializer
@@ -619,6 +631,8 @@ class PubTextUploadView(generics.CreateAPIView):
         separator: str = serializer.validated_data.get('separator', None)
         tokenize: bool = serializer.validated_data.get('tokenize', False)
 
+        naming: str = serializer.validated_data['naming']
+
         if separator is None:
             separator = '\n\n'
         else:
@@ -626,28 +640,44 @@ class PubTextUploadView(generics.CreateAPIView):
             sep_bytes: bytes = codecs.escape_decode(separator)[0]
             separator = sep_bytes.decode()
 
-        content: 'list[list[str]]'
-        content = utils.parse_file(textfile, separator, max_lines, max_chars, 
-                                   tokenize, language.english_name)
+        content: 'list[tuple[str, str]]'
+        content = []        
 
-        filepath = pathlib.PurePath(textfile.name)
-
+        if naming == CONCAT:
+            pre_split = []
+            for file in textfile:
+                pre_split += utils.parse_file(file, separator, tokenize, language.english_name)
+            loc_content = utils.split_lines(pre_split, max_lines, max_chars)
+            for i, text in enumerate(loc_content):
+                name = title
+                if len(loc_content) > 1:
+                    name = f'{name}_{i+1:03d}'
+                content.append( (name, text) )
+        else:
+            for fc, file in enumerate(textfile):
+                pre_split = utils.parse_file(file, separator, tokenize, language.english_name)
+                loc_content = utils.split_lines(pre_split, max_lines, max_chars)
+                for i, text in enumerate(loc_content):
+                    if naming == FILENAMES:
+                        name = pathlib.PurePath(file.name).stem.replace('__', '_')
+                    if naming == NUMBERING:
+                        name = f'{title}_{fc+1:02d}'
+                    if len(loc_content) > 1:
+                        name = f'{name}_{i+1:03d}'
+                    content.append( (name, text) )
+        
         sf: models.SharedFolder = parent.make_shared_folder()
         # Create multiple texts if necessary
-        if len(content) > 1:
-            for i, section in enumerate(content):
-                models.Text.objects.create(
-                    shared_folder = sf,
-                    #textfile = base_files.ContentFile('\n\n'.join(section)),
-                    textfile = utils.make_file(section, f'{filepath.stem}_{i+1:04d}'),
-                    title = f'{title}_{i+1:04d}',
-                    language = language,
-                )
-        else:
+        for name, section in content:
+            new_name = name
+            count = 2
+            while models.Text.objects.filter(shared_folder=sf, title=new_name).exists():
+                new_name = f'{name}_{count:02d}'
+                count += 1
             models.Text.objects.create(
                 shared_folder = sf,
-                #textfile = base_files.ContentFile('\n\n'.join(content[0])),
-                textfile = utils.make_file(content[0], filepath.stem),
-                title = f'{title}',
+                #textfile = base_files.ContentFile('\n\n'.join(section)),
+                textfile = utils.make_file(section, name),
+                title = new_name,
                 language = language,
             )
