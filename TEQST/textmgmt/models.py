@@ -14,6 +14,7 @@ from pathlib import Path
 
 class Folder(models.Model):
     root_id = models.UUIDField(null=True, editable=False)
+    dl_id = models.UUIDField(null=True, editable=False)
     name = models.CharField(max_length=250)
     owner = models.ForeignKey(auth.get_user_model(), on_delete=models.CASCADE, related_name='folder')  
     parent = models.ForeignKey('self', on_delete=models.CASCADE, related_name='subfolder', blank=True, null=True)
@@ -37,6 +38,16 @@ class Folder(models.Model):
             self.root_id = new_uuid
             self.save(update_fields=['root_id'])
         return self.root_id
+    
+    @property
+    def download(self):
+        if self.dl_id is None:
+            new_uuid = uuid.uuid4()
+            while Folder.objects.filter(dl_id=new_uuid).exists():
+                new_uuid = uuid.uuid4()
+            self.dl_id = new_uuid
+            self.save(update_fields=['dl_id'])
+        return self.dl_id
 
     # this method is useful for the shell and for the admin view
     def __str__(self):
@@ -64,6 +75,9 @@ class Folder(models.Model):
 
     def is_root(self, root):
         return self.root == root
+    
+    def is_dl_root(self, download):
+        return self.download == download
 
     def is_below_root(self, root):
         if self.parent is None:
@@ -71,6 +85,13 @@ class Folder(models.Model):
         if self.parent.is_root(root):
             return True
         return self.parent.is_below_root(root)
+    
+    def is_below_dl_root(self, download):
+        if self.parent is None:
+            return False
+        if self.parent.is_dl_root(download):
+            return True
+        return self.parent.is_below_dl_root(download)
 
     def get_parent_name(self):
         if self.parent == None:
@@ -283,6 +304,9 @@ class Text(models.Model):
 
     def is_below_root(self, root):
         return self.shared_folder.is_below_root(root) or self.shared_folder.is_root(root)
+    
+    def is_below_dl_root(self, download):
+        return self.shared_folder.is_below_dl_root(download) or self.shared_folder.is_dl_root(download)
     
     def save(self, *args, **kwargs):
         #Now expects a proper sharedfolder instance

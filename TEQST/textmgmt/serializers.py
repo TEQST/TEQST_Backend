@@ -79,7 +79,7 @@ class FolderDetailedSerializer(serializers.ModelSerializer):
 
     def get_path(self, instance):
         urlpath = urls.reverse('browse-folder', args=[instance.name])
-        return f"{urlpath}?root={instance.root}&id={instance.id}"
+        return f"{urlpath}?root={instance.download}&id={instance.id}"
 
 
 

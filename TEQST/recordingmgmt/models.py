@@ -111,6 +111,9 @@ class TextRecording(models.Model):
 
     def is_below_root(self, root):
         return self.text.is_below_root(root)
+    
+    def is_below_dl_root(self, download):
+        return self.text.is_below_dl_root(download)
 
     def get_audio_filename(self):
         return get_normalized_filename(self)

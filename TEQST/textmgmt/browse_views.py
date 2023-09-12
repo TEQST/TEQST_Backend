@@ -11,7 +11,7 @@ def retrieve_instance(request, model_manager):
 
     #Check against root parameter
     root = uuid.UUID(request.GET['root'])
-    if obj.is_below_root(root) or obj.is_root(root):
+    if obj.is_below_dl_root(root) or obj.is_dl_root(root):
         return obj
     else:
         raise http.Http404(f"No folder matches current parameters {request.GET}")
