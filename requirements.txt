@@ -5,7 +5,7 @@ python-docx==0.8.11
 nltk==3.7
 asgiref==3.5.0
 chardet==3.0.4
-Django==3.2.20
+Django==3.2.23
 django-cors-headers==3.4.0
 djangorestframework==3.11.2
 pytz==2022.1
