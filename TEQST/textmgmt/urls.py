@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, browse_views
 
 urlpatterns = [
     path('pub/folders/', views.PubFolderListView.as_view(), name='folders'),
@@ -32,4 +32,11 @@ urlpatterns = [
     path('lstn/texts/<int:pk>/', views.LstnTextDetailedView.as_view(), name='lstn-text-detail'),
     path('lstn/sharedfolders/<int:pk>/stats/', views.LstnSharedFolderStatsView.as_view(), name='lstn-sharedfolder-stats'),
     path('lstn/texts/<int:pk>/stats/', views.LstnTextStatsView.as_view(), name='lstn-text-stats'),  
+
+    #Paths for browsing dowload
+    path('browse/<path:path>/AudioData/<str:name>.<str:ext>', browse_views.AudioFileView.as_view(), name='browse-audio'),
+    path('browse/<path:path>/AudioData/', browse_views.AudioBrowseView.as_view(), name='browse-audiofolder'),
+    path('browse/<path:path>/<str:name>.<str:ext>', browse_views.SharedFolderFileView.as_view(), name='browse-file'),
+    path('browse/<path:path>/', browse_views.FolderBrowseView.as_view(), name='browse-folder'),
+
 ]

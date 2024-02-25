@@ -1,0 +1,14 @@
+Using wget2:
+
+    wget2 --recursive --no-host-directories --cut-dirs=2 --cut-file-get-vars --reject="index.html" "<url>"
+
+    If you use --content-disposition with wget2, all files will be dumped in the current directory (subject to naming conflicts).
+    Use --no-directories if you want this behaviour, this will resolve naming conflicts.
+
+
+
+Using wget:
+
+    wget --recursive --content-disposition --no-host-directories --cut-dirs=2 --reject="index.html*" "<url>"
+
+    Use --no-directories if you want all files dumped into the current directory. Naming conflicts are resolved.

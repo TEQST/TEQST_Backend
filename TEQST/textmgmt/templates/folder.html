@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>TEQST Browse Folder</title>
+</head>
+<body>
+    {% for f in object.subfolder.all %}
+        <a href="{% url 'browse-folder' path %}{{ f.name }}/?root={{ root }}&id={{ f.id }}">{{ f.name }}</a><br>
+    {% endfor %}
+    {% if object.is_sharedfolder %}
+        <a href="{% url 'browse-audiofolder' path %}?root={{ root }}&id={{ object.id }}">AudioData</a><br>
+        <a href="{% url 'browse-file' path object.name 'stm' %}?root={{ root }}&id={{ object.id }}">stm-file</a><br>
+        <a href="{% url 'browse-file' path object.name 'log' %}?root={{ root }}&id={{ object.id }}">logfile</a><br>
+    {% endif %}
+</body>
+</html>

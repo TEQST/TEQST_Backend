@@ -108,7 +108,16 @@ class TextRecording(models.Model):
             if perm.contains_speaker(self.speaker):
                 return True
         return False
-        
+
+    def is_below_root(self, root):
+        return self.text.is_below_root(root)
+    
+    def is_below_dl_root(self, download):
+        return self.text.is_below_dl_root(download)
+
+    def get_audio_filename(self):
+        return get_normalized_filename(self)
+
     def active_sentence(self):
         sentence_num = self.srecs.count() + 1
         # if a speaker is finished with a text this number is one higher than the number of sentences in the text
